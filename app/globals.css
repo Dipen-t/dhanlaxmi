@@ -1,26 +1,79 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: oklch(1 0 0);
+  --surface: oklch(0.975 0.004 85);
+  --ink: oklch(0.22 0.02 50);
+  --muted: oklch(0.48 0.02 50);
+  --border: oklch(0.91 0.006 85);
+  --primary: oklch(0.58 0.15 42);
+  --primary-soft: oklch(0.96 0.03 42);
+  --primary-foreground: oklch(1 0 0);
+  --accent: oklch(0.52 0.08 250);
+  --ring: oklch(0.58 0.15 42);
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--ink);
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+dialog.app-dialog {
+  width: min(calc(100vw - 2rem), 24rem);
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg);
+  color: var(--ink);
+  overflow: hidden;
+}
+
+dialog.app-dialog::backdrop {
+  background: oklch(0.22 0.02 50 / 0.45);
+}
+
+dialog.app-dialog:not([open]) {
+  display: none;
+}
+
+dialog.app-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+dialog.app-dialog-wide {
+  width: min(calc(100vw - 2rem), 42rem);
+  max-height: min(calc(100dvh - 1.5rem), 44rem);
+}
+
+dialog.app-dialog-wide .app-dialog-body {
+  max-height: min(calc(100dvh - 6rem), 38rem);
 }
