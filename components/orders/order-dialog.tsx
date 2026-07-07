@@ -159,9 +159,8 @@ export function OrderDialog({
           </div>
 
           <div className="mt-4">
-            {activeTab === "details" && (
-              <div className="space-y-4">
-                <div>
+            <div className={activeTab === "details" ? "space-y-4" : "hidden"}>
+              <div>
                   <label
                     htmlFor="order-id"
                     className="block text-sm font-medium text-foreground"
@@ -172,7 +171,6 @@ export function OrderDialog({
                     id="order-id"
                     name="orderId"
                     type="text"
-                    required
                     maxLength={32}
                     defaultValue={order?.orderId ?? suggestedOrderId}
                     autoComplete="off"
@@ -192,7 +190,6 @@ export function OrderDialog({
                     id="order-date"
                     name="date"
                     type="date"
-                    required
                     defaultValue={order?.date ?? ""}
                     className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                   />
@@ -209,7 +206,6 @@ export function OrderDialog({
                     id="order-venue"
                     name="venue"
                     type="text"
-                    required
                     maxLength={200}
                     defaultValue={order?.venue ?? ""}
                     autoComplete="off"
@@ -229,7 +225,6 @@ export function OrderDialog({
                     id="order-persons"
                     name="numberOfPersons"
                     type="number"
-                    required
                     min={1}
                     max={100000}
                     defaultValue={order?.numberOfPersons ?? 1}
@@ -265,11 +260,10 @@ export function OrderDialog({
                   </div>
                 </fieldset>
               </div>
-            )}
+            </div>
 
-            {activeTab === "materials" && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
+            <div className={activeTab === "materials" ? "space-y-4" : "hidden"}>
+              <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground">Selected Materials</p>
                   <button
                     type="button"
@@ -335,7 +329,7 @@ export function OrderDialog({
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
 
           {error ? (
