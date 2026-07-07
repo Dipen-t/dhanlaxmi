@@ -179,6 +179,7 @@ export async function createOrder(data: OrderInput) {
         }
       }
 
+      const messagePromises = [];
       for (const group of vendorGroups.values()) {
         const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
         let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${date}\nVenue: ${displayVenue}\n\nPlease provide the following raw materials:\n`;
@@ -186,8 +187,11 @@ export async function createOrder(data: OrderInput) {
           message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
         }
         
-        sendWhatsAppMessage(group.vendor.phone, message).catch(console.error);
+        messagePromises.push(sendWhatsAppMessage(group.vendor.phone, message).catch(console.error));
       }
+      
+      // Await all messages concurrently to ensure they finish before the server action returns
+      await Promise.all(messagePromises);
     }
 
     revalidatePath("/orders");
