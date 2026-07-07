@@ -49,6 +49,21 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const orderRawMaterials = pgTable(
+  "order_raw_materials",
+  {
+    orderId: integer("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    rawMaterialId: integer("raw_material_id")
+      .notNull()
+      .references(() => rawMaterials.id, { onDelete: "cascade" }),
+    unitQty: text("unit_qty").notNull(),
+    unitName: text("unit_name").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.orderId, table.rawMaterialId] })]
+);
+
 export const dishCategories = pgTable("dish_categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
@@ -116,9 +131,25 @@ export const vendorsRelations = relations(vendors, ({ many }) => ({
   rawMaterials: many(rawMaterials),
 }));
 
-export const rawMaterialsRelations = relations(rawMaterials, ({ one }) => ({
+export const rawMaterialsRelations = relations(rawMaterials, ({ one, many }) => ({
   vendor: one(vendors, {
     fields: [rawMaterials.vendorId],
     references: [vendors.id],
+  }),
+  orderRawMaterials: many(orderRawMaterials),
+}));
+
+export const ordersRelations = relations(orders, ({ many }) => ({
+  orderRawMaterials: many(orderRawMaterials),
+}));
+
+export const orderRawMaterialsRelations = relations(orderRawMaterials, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderRawMaterials.orderId],
+    references: [orders.id],
+  }),
+  rawMaterial: one(rawMaterials, {
+    fields: [orderRawMaterials.rawMaterialId],
+    references: [rawMaterials.id],
   }),
 }));

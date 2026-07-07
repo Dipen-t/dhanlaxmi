@@ -1,12 +1,20 @@
 "use server";
 
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { orders } from "@/db/schema";
+import { orders, orderRawMaterials, rawMaterials } from "@/db/schema";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
+
 
 export type MealType = "breakfast" | "lunch" | "dinner";
+
+export type OrderRawMaterialRecord = {
+  rawMaterialId: number;
+  unitQty: string;
+  unitName: string;
+};
 
 export type OrderRecord = {
   id: number;
@@ -15,6 +23,7 @@ export type OrderRecord = {
   venue: string;
   numberOfPersons: number;
   mealType: MealType;
+  rawMaterials: OrderRawMaterialRecord[];
 };
 
 function toDateString(date: Date) {
@@ -28,6 +37,7 @@ function serializeOrder(order: {
   venue: string;
   numberOfPersons: number;
   mealType: MealType;
+  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string }[];
 }): OrderRecord {
   return {
     id: order.id,
@@ -36,12 +46,16 @@ function serializeOrder(order: {
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
     mealType: order.mealType,
+    rawMaterials: order.orderRawMaterials ?? [],
   };
 }
 
 export async function getOrders(): Promise<OrderRecord[]> {
   const rows = await db.query.orders.findMany({
     orderBy: desc(orders.date),
+    with: {
+      orderRawMaterials: true,
+    },
   });
 
   return rows.map(serializeOrder);
@@ -100,6 +114,14 @@ export async function createOrder(formData: FormData) {
   const numberOfPersons = Number(formData.get("numberOfPersons"));
   const mealType = String(formData.get("mealType") ?? "");
 
+  const rawMaterialsJson = String(formData.get("rawMaterials") ?? "[]");
+  let materials: OrderRawMaterialRecord[] = [];
+  try {
+    materials = JSON.parse(rawMaterialsJson);
+  } catch (e) {
+    return { error: "Invalid raw materials data." };
+  }
+
   const error = validateOrderFields(
     orderId,
     date,
@@ -112,13 +134,58 @@ export async function createOrder(formData: FormData) {
   }
 
   try {
-    await db.insert(orders).values({
+    const [newOrder] = await db.insert(orders).values({
       orderId,
       date: new Date(date),
       venue,
       numberOfPersons,
       mealType: mealType as MealType,
-    });
+    }).returning({ id: orders.id });
+
+    if (materials.length > 0) {
+      await db.insert(orderRawMaterials).values(
+        materials.map((m) => ({
+          orderId: newOrder.id,
+          rawMaterialId: m.rawMaterialId,
+          unitQty: String(m.unitQty),
+          unitName: String(m.unitName),
+        }))
+      );
+
+      // WhatsApp Notification Logic
+      const materialIds = materials.map((m) => m.rawMaterialId);
+      const dbMaterials = await db.query.rawMaterials.findMany({
+        where: inArray(rawMaterials.id, materialIds),
+        with: { vendor: true },
+      });
+
+      const vendorGroups = new Map<number, { vendor: any; items: any[] }>();
+
+      for (const m of materials) {
+        const dbMaterial = dbMaterials.find((dbm) => dbm.id === m.rawMaterialId);
+        if (dbMaterial && dbMaterial.vendor) {
+          const v = dbMaterial.vendor;
+          if (!vendorGroups.has(v.id)) {
+            vendorGroups.set(v.id, { vendor: v, items: [] });
+          }
+          vendorGroups.get(v.id)!.items.push({
+            name: dbMaterial.name,
+            qty: m.unitQty,
+            unit: m.unitName,
+          });
+        }
+      }
+
+      for (const group of vendorGroups.values()) {
+        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${date}\nVenue: ${venue}\n\nPlease provide the following raw materials:\n`;
+        for (const item of group.items) {
+          message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
+        }
+        
+        sendWhatsAppMessage(group.vendor.phone, message).catch(console.error);
+      }
+    }
+
     revalidatePath("/orders");
     return { success: true as const };
   } catch {
@@ -133,6 +200,14 @@ export async function updateOrder(formData: FormData) {
   const venue = normalizeText(String(formData.get("venue") ?? ""));
   const numberOfPersons = Number(formData.get("numberOfPersons"));
   const mealType = String(formData.get("mealType") ?? "");
+
+  const rawMaterialsJson = String(formData.get("rawMaterials") ?? "[]");
+  let materials: OrderRawMaterialRecord[] = [];
+  try {
+    materials = JSON.parse(rawMaterialsJson);
+  } catch (e) {
+    return { error: "Invalid raw materials data." };
+  }
 
   if (!id || Number.isNaN(id)) {
     return { error: "Invalid order." };
@@ -162,6 +237,22 @@ export async function updateOrder(formData: FormData) {
       })
       .where(eq(orders.id, id))
       .returning({ id: orders.id });
+
+    if (!updated) {
+      return { error: "Order not found." };
+    }
+
+    await db.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
+    if (materials.length > 0) {
+      await db.insert(orderRawMaterials).values(
+        materials.map((m) => ({
+          orderId: id,
+          rawMaterialId: m.rawMaterialId,
+          unitQty: String(m.unitQty),
+          unitName: String(m.unitName),
+        }))
+      );
+    }
 
     if (!updated) {
       return { error: "Order not found." };

@@ -4,6 +4,7 @@ import { LayoutGrid, List, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
+import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
 import { OrderDialog } from "@/components/orders/order-dialog";
 import { OrderGrid } from "@/components/orders/order-grid";
@@ -14,9 +15,10 @@ type ViewMode = "grid" | "list";
 type OrdersViewProps = {
   orders: OrderRecord[];
   suggestedOrderId: string;
+  rawMaterials: MaterialWithVendor[];
 };
 
-export function OrdersView({ orders, suggestedOrderId }: OrdersViewProps) {
+export function OrdersView({ orders, suggestedOrderId, rawMaterials }: OrdersViewProps) {
   const [view, setView] = useState<ViewMode>("grid");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
@@ -146,6 +148,7 @@ export function OrdersView({ orders, suggestedOrderId }: OrdersViewProps) {
         open={dialogOpen}
         order={editingOrder}
         suggestedOrderId={nextOrderId}
+        rawMaterials={rawMaterials}
         onClose={closeDialog}
       />
 
