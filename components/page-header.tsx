@@ -13,7 +13,7 @@ export function PageHeader({ title = "Home" }: PageHeaderProps) {
         </div>
         <div>
           <p className="text-xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance]">
-            Catering Demo
+            Dhan Laxmi Catering Service
           </p>
           <h1 className="text-sm font-normal text-muted">{title}</h1>
         </div>
