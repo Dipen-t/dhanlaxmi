@@ -260,7 +260,6 @@ export function OrderDialog({
                   </div>
                 </fieldset>
               </div>
-            </div>
 
             <div className={activeTab === "materials" ? "space-y-4" : "hidden"}>
               <div className="flex items-center justify-between">
@@ -330,7 +329,6 @@ export function OrderDialog({
                 )}
               </div>
             </div>
-          </div>
 
           {error ? (
             <p role="alert" className="mt-3 text-sm text-primary">
