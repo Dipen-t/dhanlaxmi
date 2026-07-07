@@ -180,7 +180,8 @@ export async function createOrder(data: OrderInput) {
       }
 
       for (const group of vendorGroups.values()) {
-        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${date}\nVenue: ${venue}\n\nPlease provide the following raw materials:\n`;
+        const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
+        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${date}\nVenue: ${displayVenue}\n\nPlease provide the following raw materials:\n`;
         for (const item of group.items) {
           message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
         }
