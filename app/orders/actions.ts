@@ -136,24 +136,34 @@ export async function createOrder(data: OrderInput) {
     return { error };
   }
 
+  const uniqueMaterialIds = new Set(materials.map((m) => m.rawMaterialId));
+  if (uniqueMaterialIds.size !== materials.length) {
+    return { error: "Duplicate raw materials selected. Please remove the duplicates." };
+  }
+
   try {
-    const [newOrder] = await db.insert(orders).values({
-      orderId,
-      date: new Date(date),
-      venue,
-      numberOfPersons,
-      mealType: mealType as MealType,
-    }).returning({ id: orders.id });
+    await db.transaction(async (tx) => {
+      const [newOrder] = await tx.insert(orders).values({
+        orderId,
+        date: new Date(date),
+        venue,
+        numberOfPersons,
+        mealType: mealType as MealType,
+      }).returning({ id: orders.id });
+
+      if (materials.length > 0) {
+        await tx.insert(orderRawMaterials).values(
+          materials.map((m) => ({
+            orderId: newOrder.id,
+            rawMaterialId: m.rawMaterialId,
+            unitQty: String(m.unitQty),
+            unitName: String(m.unitName),
+          }))
+        );
+      }
+    });
 
     if (materials.length > 0) {
-      await db.insert(orderRawMaterials).values(
-        materials.map((m) => ({
-          orderId: newOrder.id,
-          rawMaterialId: m.rawMaterialId,
-          unitQty: String(m.unitQty),
-          unitName: String(m.unitName),
-        }))
-      );
 
       // WhatsApp Notification Logic
       const materialIds = materials.map((m) => m.rawMaterialId);
@@ -225,43 +235,49 @@ export async function updateOrder(data: OrderInput) {
     return { error };
   }
 
+  const uniqueMaterialIds = new Set(materials.map((m) => m.rawMaterialId));
+  if (uniqueMaterialIds.size !== materials.length) {
+    return { error: "Duplicate raw materials selected. Please remove the duplicates." };
+  }
+
   try {
-    const [updated] = await db
-      .update(orders)
-      .set({
-        orderId,
-        date: new Date(date),
-        venue,
-        numberOfPersons,
-        mealType: mealType as MealType,
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, id))
-      .returning({ id: orders.id });
+    await db.transaction(async (tx) => {
+      const [updated] = await tx
+        .update(orders)
+        .set({
+          orderId,
+          date: new Date(date),
+          venue,
+          numberOfPersons,
+          mealType: mealType as MealType,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, id))
+        .returning({ id: orders.id });
 
-    if (!updated) {
-      return { error: "Order not found." };
-    }
+      if (!updated) {
+        throw new Error("Order not found");
+      }
 
-    await db.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
-    if (materials.length > 0) {
-      await db.insert(orderRawMaterials).values(
-        materials.map((m) => ({
-          orderId: id,
-          rawMaterialId: m.rawMaterialId,
-          unitQty: String(m.unitQty),
-          unitName: String(m.unitName),
-        }))
-      );
-    }
-
-    if (!updated) {
-      return { error: "Order not found." };
-    }
+      await tx.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
+      if (materials.length > 0) {
+        await tx.insert(orderRawMaterials).values(
+          materials.map((m) => ({
+            orderId: id,
+            rawMaterialId: m.rawMaterialId,
+            unitQty: String(m.unitQty),
+            unitName: String(m.unitName),
+          }))
+        );
+      }
+    });
 
     revalidatePath("/orders");
     return { success: true as const };
-  } catch {
+  } catch (e: any) {
+    if (e.message === "Order not found") {
+      return { error: "Order not found." };
+    }
     return { error: "An order with this ID already exists." };
   }
 }
