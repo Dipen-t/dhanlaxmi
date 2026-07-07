@@ -107,20 +107,23 @@ function validateOrderFields(
   return null;
 }
 
-export async function createOrder(formData: FormData) {
-  const orderId = normalizeText(String(formData.get("orderId") ?? ""));
-  const date = String(formData.get("date") ?? "");
-  const venue = normalizeText(String(formData.get("venue") ?? ""));
-  const numberOfPersons = Number(formData.get("numberOfPersons"));
-  const mealType = String(formData.get("mealType") ?? "");
+export type OrderInput = {
+  id?: number;
+  orderId: string;
+  date: string;
+  venue: string;
+  numberOfPersons: number;
+  mealType: string;
+  rawMaterials: OrderRawMaterialRecord[];
+};
 
-  const rawMaterialsJson = String(formData.get("rawMaterials") ?? "[]");
-  let materials: OrderRawMaterialRecord[] = [];
-  try {
-    materials = JSON.parse(rawMaterialsJson);
-  } catch (e) {
-    return { error: "Invalid raw materials data." };
-  }
+export async function createOrder(data: OrderInput) {
+  const orderId = normalizeText(data.orderId || "");
+  const date = data.date || "";
+  const venue = normalizeText(data.venue || "");
+  const numberOfPersons = Number(data.numberOfPersons);
+  const mealType = data.mealType || "";
+  const materials = data.rawMaterials || [];
 
   const error = validateOrderFields(
     orderId,
@@ -193,21 +196,14 @@ export async function createOrder(formData: FormData) {
   }
 }
 
-export async function updateOrder(formData: FormData) {
-  const id = Number(formData.get("id"));
-  const orderId = normalizeText(String(formData.get("orderId") ?? ""));
-  const date = String(formData.get("date") ?? "");
-  const venue = normalizeText(String(formData.get("venue") ?? ""));
-  const numberOfPersons = Number(formData.get("numberOfPersons"));
-  const mealType = String(formData.get("mealType") ?? "");
-
-  const rawMaterialsJson = String(formData.get("rawMaterials") ?? "[]");
-  let materials: OrderRawMaterialRecord[] = [];
-  try {
-    materials = JSON.parse(rawMaterialsJson);
-  } catch (e) {
-    return { error: "Invalid raw materials data." };
-  }
+export async function updateOrder(data: OrderInput) {
+  const id = Number(data.id);
+  const orderId = normalizeText(data.orderId || "");
+  const date = data.date || "";
+  const venue = normalizeText(data.venue || "");
+  const numberOfPersons = Number(data.numberOfPersons);
+  const mealType = data.mealType || "";
+  const materials = data.rawMaterials || [];
 
   if (!id || Number.isNaN(id)) {
     return { error: "Invalid order." };

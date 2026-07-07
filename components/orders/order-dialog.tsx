@@ -71,14 +71,28 @@ export function OrderDialog({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (selectedMaterials.length === 0) {
+      setError("Please add at least one raw material.");
+      setActiveTab("materials");
+      return;
+    }
+
     const formData = new FormData(event.currentTarget);
-    formData.set("mealType", mealType);
-    formData.set("rawMaterials", JSON.stringify(selectedMaterials));
+    const data = {
+      id: order?.id,
+      orderId: String(formData.get("orderId") || ""),
+      date: String(formData.get("date") || ""),
+      venue: String(formData.get("venue") || ""),
+      numberOfPersons: Number(formData.get("numberOfPersons")),
+      mealType,
+      rawMaterials: selectedMaterials,
+    };
 
     startTransition(async () => {
       const result = isEditing
-        ? await updateOrder(formData)
-        : await createOrder(formData);
+        ? await updateOrder(data)
+        : await createOrder(data);
 
       if (result.error) {
         setError(result.error);
