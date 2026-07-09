@@ -220,8 +220,12 @@ export async function createOrder(data: OrderInput) {
 
     revalidatePath("/orders");
     return { success: true as const };
-  } catch {
-    return { error: "An order with this ID already exists." };
+  } catch (e: any) {
+    console.error("Error creating order:", e);
+    if (e?.code === "23505" || e?.message?.includes("unique constraint") || e?.message?.includes("already exists")) {
+      return { error: "An order with this ID already exists." };
+    }
+    return { error: e?.message || "Failed to create order due to an unexpected error." };
   }
 }
 
@@ -289,10 +293,14 @@ export async function updateOrder(data: OrderInput) {
     revalidatePath("/orders");
     return { success: true as const };
   } catch (e: any) {
-    if (e.message === "Order not found") {
+    console.error("Error updating order:", e);
+    if (e?.message === "Order not found") {
       return { error: "Order not found." };
     }
-    return { error: "An order with this ID already exists." };
+    if (e?.code === "23505" || e?.message?.includes("unique constraint") || e?.message?.includes("already exists")) {
+      return { error: "An order with this ID already exists." };
+    }
+    return { error: e?.message || "Failed to update order due to an unexpected error." };
   }
 }
 
