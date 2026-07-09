@@ -62,8 +62,22 @@ export async function getOrders(): Promise<OrderRecord[]> {
 }
 
 export async function getSuggestedOrderId(): Promise<string> {
-  const count = await db.$count(orders);
-  return `ORD-${String(count + 1).padStart(3, "0")}`;
+  const allOrders = await db.query.orders.findMany({
+    columns: { orderId: true },
+  });
+
+  let maxNum = 0;
+  for (const o of allOrders) {
+    const match = o.orderId.match(/^ORD-(\d+)$/i);
+    if (match) {
+      const num = parseInt(match[1], 10);
+      if (num > maxNum) {
+        maxNum = num;
+      }
+    }
+  }
+
+  return `ORD-${String(maxNum + 1).padStart(3, "0")}`;
 }
 
 function normalizeText(value: string) {

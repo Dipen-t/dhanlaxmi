@@ -104,10 +104,13 @@ export function OrderDialog({
   }
 
   function addMaterial() {
-    if (rawMaterials.length === 0) return;
+    const availableMaterial = rawMaterials.find(
+      (m) => !selectedMaterials.some((sm) => sm.rawMaterialId === m.id)
+    );
+    if (!availableMaterial) return;
     setSelectedMaterials([
       ...selectedMaterials,
-      { rawMaterialId: rawMaterials[0].id, unitQty: "1", unitName: "kg" },
+      { rawMaterialId: availableMaterial.id, unitQty: "1", unitName: "kg" },
     ]);
   }
 
@@ -267,7 +270,7 @@ export function OrderDialog({
                   <button
                     type="button"
                     onClick={addMaterial}
-                    disabled={rawMaterials.length === 0}
+                    disabled={rawMaterials.length === 0 || rawMaterials.length === selectedMaterials.length}
                     className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface disabled:opacity-50"
                   >
                     <Plus className="size-3.5" />
@@ -282,47 +285,51 @@ export function OrderDialog({
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                     {selectedMaterials.map((item, index) => (
-                      <div key={index} className="flex items-center gap-3 rounded-lg border border-border p-3">
-                        <div className="flex-1 space-y-1">
+                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-lg border border-border p-3">
+                        <div className="w-full sm:flex-1 space-y-1">
                           <label className="sr-only">Material</label>
                           <select
                             value={item.rawMaterialId}
                             onChange={(e) => updateMaterial(index, { rawMaterialId: Number(e.target.value) })}
                             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                           >
-                            {rawMaterials.map((m) => (
+                            {rawMaterials
+                              .filter((m) => m.id === item.rawMaterialId || !selectedMaterials.some((sm) => sm.rawMaterialId === m.id))
+                              .map((m) => (
                               <option key={m.id} value={m.id}>{m.name}</option>
                             ))}
                           </select>
                         </div>
-                        <div className="w-24">
-                          <label className="sr-only">Qty</label>
-                          <input
-                            type="text"
-                            value={item.unitQty}
-                            onChange={(e) => updateMaterial(index, { unitQty: e.target.value })}
-                            placeholder="Qty"
-                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
-                          />
+                        <div className="flex w-full sm:w-auto items-center gap-3">
+                          <div className="flex-1 sm:w-24">
+                            <label className="sr-only">Qty</label>
+                            <input
+                              type="text"
+                              value={item.unitQty}
+                              onChange={(e) => updateMaterial(index, { unitQty: e.target.value })}
+                              placeholder="Qty"
+                              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+                            />
+                          </div>
+                          <div className="flex-1 sm:w-24">
+                            <label className="sr-only">Unit</label>
+                            <input
+                              type="text"
+                              value={item.unitName}
+                              onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
+                              placeholder="Unit (e.g. kg)"
+                              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeMaterial(index)}
+                            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg text-muted hover:text-red-500 hover:bg-red-50"
+                            aria-label="Remove item"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </div>
-                        <div className="w-24">
-                          <label className="sr-only">Unit</label>
-                          <input
-                            type="text"
-                            value={item.unitName}
-                            onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
-                            placeholder="Unit (e.g. kg)"
-                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeMaterial(index)}
-                          className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg text-muted hover:text-red-500 hover:bg-red-50"
-                          aria-label="Remove item"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
                       </div>
                     ))}
                   </div>
