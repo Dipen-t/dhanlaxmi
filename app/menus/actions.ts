@@ -271,8 +271,9 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: 
     // Server expects pure Base64 string for attachments
     const base64Pdf = pdfBuffer.toString("base64");
     const attachment = base64Pdf;
+    const attachmentName = `${sanitizeFilename(menu.name)}.pdf`;
 
-    const result = await sendWhatsAppMessage(phone, text, attachment);
+    const result = await sendWhatsAppMessage(phone, text, attachment, attachmentName);
     if ("error" in result && result.error) {
       return { error: result.error };
     }
