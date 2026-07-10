@@ -256,8 +256,8 @@ export async function shareMenuViaWhatsApp(phone: string, text: string, pdfUrl: 
 
   try {
     const result = await sendWhatsAppMessage(phone, text, pdfUrl);
-    if (!result) {
-      return { error: "Failed to send WhatsApp message. Please check the server configuration." };
+    if ("error" in result && result.error) {
+      return { error: result.error };
     }
 
     return { success: true as const };

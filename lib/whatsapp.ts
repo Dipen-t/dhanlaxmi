@@ -5,7 +5,7 @@ export async function sendWhatsAppMessage(receiver: string, message: string, att
 
   if (!apiUrl || !instanceId || !bearerToken) {
     console.error("WhatsApp configuration is missing from environment variables.");
-    return false;
+    return { error: "WhatsApp configuration is missing." };
   }
 
   // Ensure phone number has country code (e.g., 91 for India) if it's 10 digits
@@ -34,13 +34,13 @@ export async function sendWhatsAppMessage(receiver: string, message: string, att
     const data = await response.json();
     if (data.status === "success") {
       console.log(`WhatsApp message queued for ${formattedReceiver}`);
-      return true;
+      return { success: true };
     } else {
       console.error("WhatsApp message failed:", data);
-      return false;
+      return { error: `WhatsApp API Error: ${JSON.stringify(data)}` };
     }
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);
-    return false;
+    return { error: `Fetch Error: ${error instanceof Error ? error.message : "Unknown error"}` };
   }
 }
