@@ -1,4 +1,4 @@
-export async function sendWhatsAppMessage(receiver: string, message: string) {
+export async function sendWhatsAppMessage(receiver: string, message: string, attachment?: string) {
   const apiUrl = process.env.WHATAPP_API;
   const instanceId = process.env.WHATSAPP_INSTANCE_ID;
   const bearerToken = process.env.WHATSAPP_BEARER_TOKEN;
@@ -18,7 +18,7 @@ export async function sendWhatsAppMessage(receiver: string, message: string) {
     receiver: formattedReceiver,
     message,
     instance_id: instanceId,
-    attachment: "",
+    attachment: attachment || "",
   };
 
   try {

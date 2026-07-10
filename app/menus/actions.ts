@@ -4,6 +4,10 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
+import { generateMenuPdfBuffer } from "@/lib/menus/generate-menu-pdf";
+import { getPdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
+import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
   dishCategories,
   dishes,
@@ -243,4 +247,41 @@ export async function deleteMenu(formData: FormData) {
 
   revalidatePath("/menus");
   return { success: true as const };
+}
+
+export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: string) {
+  if (!phone) {
+    return { error: "Phone number is required." };
+  }
+
+  const menu = await getMenuById(menuId);
+  if (!menu) {
+    return { error: "Menu not found." };
+  }
+
+  if (menu.categories.length === 0) {
+    return { error: "This menu has no categories to export." };
+  }
+
+  try {
+    const logo = await getPdfLogoAssets();
+    const pdfBuffer = await generateMenuPdfBuffer(menu, logo);
+    
+    // We send the PDF as a base64 encoded data URI
+    const base64Pdf = pdfBuffer.toString("base64");
+    const filename = `${sanitizeFilename(menu.name)}.pdf`;
+    // Depending on the WhatsApp API provider, it might expect a data URI or just a base64 string.
+    // Assuming standard data URI format:
+    const attachment = `data:application/pdf;name=${filename};base64,${base64Pdf}`;
+
+    const result = await sendWhatsAppMessage(phone, text, attachment);
+    if (!result) {
+      return { error: "Failed to send WhatsApp message. Please check the server configuration." };
+    }
+
+    return { success: true as const };
+  } catch (error) {
+    console.error("WhatsApp menu share error:", error);
+    return { error: "Could not generate or send PDF. Try again." };
+  }
 }

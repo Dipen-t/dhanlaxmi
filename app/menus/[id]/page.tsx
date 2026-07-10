@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getMenuById } from "@/app/menus/actions";
 import { MenuPdfDownload } from "@/components/menus/menu-pdf-download";
+import { MenuWhatsappShare } from "@/components/menus/menu-whatsapp-share";
 import { PageHeader } from "@/components/page-header";
 
 type MenuDetailPageProps = {
@@ -35,12 +36,20 @@ export default async function MenuDetailPage({ params }: MenuDetailPageProps) {
     <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <PageHeader title={menu.name} />
-        <MenuPdfDownload
-          menuId={menu.id}
-          menuName={menu.name}
-          variant="button"
-          className="shrink-0"
-        />
+        <div className="flex items-center gap-2">
+          <MenuWhatsappShare
+            menuId={menu.id}
+            menuName={menu.name}
+            variant="button"
+            className="shrink-0"
+          />
+          <MenuPdfDownload
+            menuId={menu.id}
+            menuName={menu.name}
+            variant="button"
+            className="shrink-0"
+          />
+        </div>
       </div>
 
       <p className="mb-6 text-sm text-muted [text-wrap:pretty]">
