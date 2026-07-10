@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRef, useTransition } from "react";
 
@@ -53,10 +53,10 @@ export function MenuActions({ menu, onEdit, layout = "inline" }: MenuActionsProp
           className={buttonClass}
           aria-label={`View ${menu.name}`}
         >
-          <span className="px-1 text-xs font-medium">View</span>
+          <Eye className="size-4" strokeWidth={1.75} aria-hidden />
         </Link>
-        <MenuWhatsappShare menuId={menu.id} menuName={menu.name} variant={layout === "inline" ? "icon" : "button"} />
-        <MenuPdfDownload menuId={menu.id} menuName={menu.name} variant={layout === "inline" ? "icon" : "button"} />
+        <MenuWhatsappShare menuId={menu.id} menuName={menu.name} variant="icon" />
+        <MenuPdfDownload menuId={menu.id} menuName={menu.name} variant="icon" />
         <button
           type="button"
           onClick={() => onEdit(menu)}
@@ -64,7 +64,6 @@ export function MenuActions({ menu, onEdit, layout = "inline" }: MenuActionsProp
           className={buttonClass}
         >
           <Pencil className="size-4" strokeWidth={1.75} aria-hidden />
-          {layout === "stacked" && <span className="px-1 text-xs font-medium">Edit</span>}
         </button>
         <button
           type="button"
@@ -73,7 +72,6 @@ export function MenuActions({ menu, onEdit, layout = "inline" }: MenuActionsProp
           className={buttonClass}
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
-          {layout === "stacked" && <span className="px-1 text-xs font-medium">Delete</span>}
         </button>
       </div>
 

@@ -249,13 +249,30 @@ export async function deleteMenu(formData: FormData) {
   return { success: true as const };
 }
 
-export async function shareMenuViaWhatsApp(phone: string, text: string, pdfUrl: string) {
+export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: string) {
   if (!phone) {
     return { error: "Phone number is required." };
   }
 
+  const menu = await getMenuById(menuId);
+  if (!menu) {
+    return { error: "Menu not found." };
+  }
+
+  if (menu.categories.length === 0) {
+    return { error: "This menu has no categories to export." };
+  }
+
   try {
-    const result = await sendWhatsAppMessage(phone, text, pdfUrl);
+    const logo = await getPdfLogoAssets();
+    const pdfBuffer = await generateMenuPdfBuffer(menu, logo);
+    
+    // Server expects Base64 in attachments
+    // Server expects pure Base64 string for attachments
+    const base64Pdf = pdfBuffer.toString("base64");
+    const attachment = base64Pdf;
+
+    const result = await sendWhatsAppMessage(phone, text, attachment);
     if ("error" in result && result.error) {
       return { error: result.error };
     }

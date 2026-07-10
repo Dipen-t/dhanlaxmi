@@ -44,10 +44,9 @@ export function MenuWhatsappShare({
     setSuccess(false);
 
     try {
-      const url = `${window.location.origin}/api/menus/${menuId}/pdf`;
       const text = `Here is the menu for ${menuName}:`;
       
-      const result = await shareMenuViaWhatsApp(phone, text, url);
+      const result = await shareMenuViaWhatsApp(menuId, phone, text);
       
       if (result.error) {
         setError(result.error);
