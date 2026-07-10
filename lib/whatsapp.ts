@@ -31,13 +31,20 @@ export async function sendWhatsAppMessage(receiver: string, message: string, att
       body: JSON.stringify(payload),
     });
 
-    const data = await response.json();
-    if (data.status === "success") {
-      console.log(`WhatsApp message queued for ${formattedReceiver}`);
-      return { success: true };
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      const data = await response.json();
+      if (data.status === "success" || data.success) {
+        console.log(`WhatsApp message queued for ${formattedReceiver}`);
+        return { success: true };
+      } else {
+        console.error("WhatsApp message failed:", data);
+        return { error: `WhatsApp API Error: ${JSON.stringify(data)}` };
+      }
     } else {
-      console.error("WhatsApp message failed:", data);
-      return { error: `WhatsApp API Error: ${JSON.stringify(data)}` };
+      const text = await response.text();
+      console.error(`WhatsApp API returned non-JSON (${response.status}):`, text);
+      return { error: `WhatsApp API Error (${response.status}): Server returned non-JSON response.` };
     }
   } catch (error) {
     console.error("Error sending WhatsApp message:", error);

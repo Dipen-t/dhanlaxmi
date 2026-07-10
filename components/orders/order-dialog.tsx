@@ -44,6 +44,7 @@ export function OrderDialog({
   const [mealType, setMealType] = useState<MealType>("lunch");
   const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
   const [selectedMaterials, setSelectedMaterials] = useState<RawMaterialItem[]>([]);
+  const [formKey, setFormKey] = useState(0);
 
   const isEditing = order !== null;
 
@@ -56,6 +57,7 @@ export function OrderDialog({
       setActiveTab("details");
       setMealType(order?.mealType ?? "lunch");
       setSelectedMaterials(order?.rawMaterials ? [...order.rawMaterials] : []);
+      setFormKey((k) => k + 1);
       dialog.showModal();
     }
 
@@ -128,7 +130,7 @@ export function OrderDialog({
 
   return (
     <dialog ref={dialogRef} onClose={handleClose} className="app-dialog app-dialog-wide">
-      <form onSubmit={handleSubmit} className="flex flex-col">
+      <form key={formKey} onSubmit={handleSubmit} className="flex flex-col">
         <div className="app-dialog-body px-5 pt-5 pb-4">
           <h2 className="text-base font-semibold text-foreground">
             {isEditing ? "Edit order" : "Add order"}
