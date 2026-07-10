@@ -26,6 +26,7 @@ export function VendorDialog({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState(0);
   const [selectedMaterialIds, setSelectedMaterialIds] = useState<number[]>([]);
   const [deliveryLocation, setDeliveryLocation] = useState<DeliveryLocation>(
     "venue",
@@ -38,6 +39,7 @@ export function VendorDialog({
     if (!dialog) return;
 
     if (open && !dialog.open) {
+      setFormKey((k) => k + 1);
       setError(null);
       setDeliveryLocation(vendor?.deliveryLocation ?? "venue");
       setSelectedMaterialIds(vendor?.rawMaterials.map((m) => m.id) ?? []);
@@ -91,7 +93,7 @@ export function VendorDialog({
 
   return (
     <dialog ref={dialogRef} onClose={handleClose} className="app-dialog app-dialog-wide">
-      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <form key={formKey} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="app-dialog-body min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-4">
           <h2 className="text-base font-semibold text-foreground">
             {isEditing ? "Edit vendor" : "Add vendor"}

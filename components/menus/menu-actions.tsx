@@ -6,6 +6,7 @@ import { useRef, useTransition } from "react";
 
 import { deleteMenu, type MenuSummary } from "@/app/menus/actions";
 import { MenuPdfDownload } from "@/components/menus/menu-pdf-download";
+import { MenuWhatsappShare } from "@/components/menus/menu-whatsapp-share";
 
 type MenuActionsProps = {
   menu: MenuSummary;
@@ -54,7 +55,8 @@ export function MenuActions({ menu, onEdit, layout = "inline" }: MenuActionsProp
         >
           <span className="px-1 text-xs font-medium">View</span>
         </Link>
-        <MenuPdfDownload menuId={menu.id} menuName={menu.name} />
+        <MenuWhatsappShare menuId={menu.id} menuName={menu.name} variant={layout === "inline" ? "icon" : "button"} />
+        <MenuPdfDownload menuId={menu.id} menuName={menu.name} variant={layout === "inline" ? "icon" : "button"} />
         <button
           type="button"
           onClick={() => onEdit(menu)}
@@ -62,6 +64,7 @@ export function MenuActions({ menu, onEdit, layout = "inline" }: MenuActionsProp
           className={buttonClass}
         >
           <Pencil className="size-4" strokeWidth={1.75} aria-hidden />
+          {layout === "stacked" && <span className="px-1 text-xs font-medium">Edit</span>}
         </button>
         <button
           type="button"
@@ -70,6 +73,7 @@ export function MenuActions({ menu, onEdit, layout = "inline" }: MenuActionsProp
           className={buttonClass}
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
+          {layout === "stacked" && <span className="px-1 text-xs font-medium">Delete</span>}
         </button>
       </div>
 
