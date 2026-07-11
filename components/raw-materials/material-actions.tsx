@@ -82,8 +82,8 @@ export function MaterialActions({
             </h2>
             <p className="mt-2 text-sm text-muted [text-wrap:pretty]">
               Delete &ldquo;{material.name}&rdquo;? This cannot be undone.
-              {material.vendor
-                ? " It will be removed from the assigned vendor."
+              {material.rawMaterialVendors.length > 0
+                ? " It will be removed from the assigned vendors."
                 : null}
             </p>
           </div>
@@ -110,7 +110,7 @@ export function MaterialActions({
 }
 
 export function VendorBadge({ material }: { material: MaterialWithVendor }) {
-  if (!material.vendor) {
+  if (material.rawMaterialVendors.length === 0) {
     return (
       <span className="inline-flex items-center rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-muted">
         Unassigned
@@ -119,9 +119,13 @@ export function VendorBadge({ material }: { material: MaterialWithVendor }) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
-      <Truck className="size-3" strokeWidth={2} aria-hidden />
-      {material.vendor.name}
-    </span>
+    <div className="flex flex-wrap gap-1">
+      {material.rawMaterialVendors.map((rmv) => (
+        <span key={rmv.vendor.id} className="inline-flex items-center gap-1 rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+          <Truck className="size-3" strokeWidth={2} aria-hidden />
+          {rmv.vendor.name}
+        </span>
+      ))}
+    </div>
   );
 }

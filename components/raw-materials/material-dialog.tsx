@@ -91,9 +91,9 @@ export function MaterialDialog({ open, material, onClose }: MaterialDialogProps)
               placeholder="e.g. Paneer"
             />
           </div>
-          {isEditing && material.vendor ? (
+          {isEditing && material.rawMaterialVendors.length > 0 ? (
             <p className="mt-3 text-xs text-muted [text-wrap:pretty]">
-              Assigned to {material.vendor.name}. Change vendor assignments on
+              Assigned to {material.rawMaterialVendors.map(v => v.vendor.name).join(", ")}. Change vendor assignments on
               the Vendors page.
             </p>
           ) : (

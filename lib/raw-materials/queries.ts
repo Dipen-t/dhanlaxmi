@@ -5,7 +5,7 @@ import { rawMaterials } from "@/db/schema";
 
 export async function getRawMaterials() {
   return db.query.rawMaterials.findMany({
-    with: { vendor: true },
+    with: { rawMaterialVendors: { with: { vendor: true } } },
     orderBy: asc(rawMaterials.name),
   });
 }

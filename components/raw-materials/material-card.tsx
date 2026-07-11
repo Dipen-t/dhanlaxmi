@@ -19,7 +19,7 @@ export function MaterialCard({ material, onEdit, onDelete }: MaterialCardProps) 
           {material.name}
         </h2>
         <div className="mt-2">
-          <VendorBadge vendorName={material.vendor?.name ?? null} />
+          <VendorBadge vendorNames={material.rawMaterialVendors.map(v => v.vendor.name)} />
         </div>
       </div>
 

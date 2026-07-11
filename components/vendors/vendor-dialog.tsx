@@ -86,10 +86,7 @@ export function VendorDialog({
     });
   }
 
-  const selectableMaterials = materials.filter(
-    (material) =>
-      material.vendorId === null || material.vendorId === vendor?.id,
-  );
+  const selectableMaterials = materials;
 
   return (
     <dialog ref={dialogRef} onClose={handleClose} className="app-dialog app-dialog-wide">

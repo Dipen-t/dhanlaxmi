@@ -4,7 +4,7 @@ import { desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { orders, orderRawMaterials, rawMaterials } from "@/db/schema";
+import { orders, orderRawMaterials, rawMaterials, vendors } from "@/db/schema";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 
@@ -14,6 +14,7 @@ export type OrderRawMaterialRecord = {
   rawMaterialId: number;
   unitQty: string;
   unitName: string;
+  vendorId?: number | null;
 };
 
 export type OrderRecord = {
@@ -37,7 +38,7 @@ function serializeOrder(order: {
   venue: string;
   numberOfPersons: number;
   mealType: MealType;
-  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string }[];
+  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; vendorId: number | null }[];
 }): OrderRecord {
   return {
     id: order.id,
@@ -46,7 +47,10 @@ function serializeOrder(order: {
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
     mealType: order.mealType,
-    rawMaterials: order.orderRawMaterials ?? [],
+    rawMaterials: order.orderRawMaterials?.map(rm => ({
+      ...rm,
+      vendorId: rm.vendorId
+    })) ?? [],
   };
 }
 
@@ -171,6 +175,7 @@ export async function createOrder(data: OrderInput) {
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
+          vendorId: m.vendorId || null,
         }))
       );
     }
@@ -181,19 +186,33 @@ export async function createOrder(data: OrderInput) {
       const materialIds = materials.map((m) => m.rawMaterialId);
       const dbMaterials = await db.query.rawMaterials.findMany({
         where: inArray(rawMaterials.id, materialIds),
-        with: { vendor: true },
       });
+
+      const selectedVendorIds = materials
+        .map((m) => m.vendorId)
+        .filter((id): id is number => id != null);
+      
+      const uniqueVendorIds = [...new Set(selectedVendorIds)];
+      let dbVendors: any[] = [];
+      if (uniqueVendorIds.length > 0) {
+        dbVendors = await db.query.vendors.findMany({
+          where: inArray(vendors.id, uniqueVendorIds),
+        });
+      }
 
       const vendorGroups = new Map<number, { vendor: any; items: any[] }>();
 
       for (const m of materials) {
+        if (!m.vendorId) continue;
+        
         const dbMaterial = dbMaterials.find((dbm) => dbm.id === m.rawMaterialId);
-        if (dbMaterial && dbMaterial.vendor) {
-          const v = dbMaterial.vendor;
-          if (!vendorGroups.has(v.id)) {
-            vendorGroups.set(v.id, { vendor: v, items: [] });
+        const dbVendor = dbVendors.find((v) => v.id === m.vendorId);
+        
+        if (dbMaterial && dbVendor) {
+          if (!vendorGroups.has(dbVendor.id)) {
+            vendorGroups.set(dbVendor.id, { vendor: dbVendor, items: [] });
           }
-          vendorGroups.get(v.id)!.items.push({
+          vendorGroups.get(dbVendor.id)!.items.push({
             name: dbMaterial.name,
             qty: m.unitQty,
             unit: m.unitName,
@@ -279,6 +298,7 @@ export async function updateOrder(data: OrderInput) {
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
+          vendorId: m.vendorId || null,
         }))
       );
     }

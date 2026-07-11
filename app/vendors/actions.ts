@@ -4,7 +4,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { rawMaterials, vendors } from "@/db/schema";
+import { rawMaterials, vendors, rawMaterialVendors } from "@/db/schema";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import { getMaterials } from "@/app/raw-materials/actions";
@@ -27,7 +27,7 @@ export type VendorsPageData = {
 export async function getVendorsPageData(): Promise<VendorsPageData> {
   const [vendorRows, materials] = await Promise.all([
     db.query.vendors.findMany({
-      with: { rawMaterials: true },
+      with: { rawMaterialVendors: { with: { rawMaterial: true } } },
       orderBy: asc(vendors.name),
     }),
     getMaterials(),
@@ -39,8 +39,8 @@ export async function getVendorsPageData(): Promise<VendorsPageData> {
       name: vendor.name,
       phone: vendor.phone,
       deliveryLocation: vendor.deliveryLocation,
-      rawMaterials: vendor.rawMaterials
-        .map((material) => ({ id: material.id, name: material.name }))
+      rawMaterials: vendor.rawMaterialVendors
+        .map((rmv) => ({ id: rmv.rawMaterial.id, name: rmv.rawMaterial.name }))
         .sort((a, b) => a.name.localeCompare(b.name)),
     })),
     materials,
@@ -91,26 +91,19 @@ async function syncVendorMaterials(vendorId: number, materialIds: number[]) {
     if (selectedMaterials.length !== uniqueIds.length) {
       return { error: "One or more selected materials no longer exist." };
     }
-
-    for (const material of selectedMaterials) {
-      if (material.vendorId !== null && material.vendorId !== vendorId) {
-        return {
-          error: `"${material.name}" is already assigned to another vendor.`,
-        };
-      }
-    }
   }
 
   await db
-    .update(rawMaterials)
-    .set({ vendorId: null })
-    .where(eq(rawMaterials.vendorId, vendorId));
+    .delete(rawMaterialVendors)
+    .where(eq(rawMaterialVendors.vendorId, vendorId));
 
   if (uniqueIds.length > 0) {
-    await db
-      .update(rawMaterials)
-      .set({ vendorId })
-      .where(inArray(rawMaterials.id, uniqueIds));
+    await db.insert(rawMaterialVendors).values(
+      uniqueIds.map((materialId) => ({
+        vendorId,
+        rawMaterialId: materialId,
+      }))
+    );
   }
 
   return { success: true as const };

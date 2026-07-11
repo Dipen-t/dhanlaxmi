@@ -9,13 +9,12 @@ import { rawMaterials } from "@/db/schema";
 export type MaterialWithVendor = {
   id: number;
   name: string;
-  vendorId: number | null;
-  vendor: { id: number; name: string } | null;
+  rawMaterialVendors: { vendor: { id: number; name: string } }[];
 };
 
 export async function getMaterials(): Promise<MaterialWithVendor[]> {
   return db.query.rawMaterials.findMany({
-    with: { vendor: true },
+    with: { rawMaterialVendors: { with: { vendor: true } } },
     orderBy: asc(rawMaterials.name),
   });
 }

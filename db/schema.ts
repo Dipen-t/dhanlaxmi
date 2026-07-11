@@ -32,9 +32,6 @@ export const vendors = pgTable("vendors", {
 export const rawMaterials = pgTable("raw_materials", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
-  vendorId: integer("vendor_id").references(() => vendors.id, {
-    onDelete: "set null",
-  }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -49,6 +46,19 @@ export const orders = pgTable("orders", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const rawMaterialVendors = pgTable(
+  "raw_material_vendors",
+  {
+    rawMaterialId: integer("raw_material_id")
+      .notNull()
+      .references(() => rawMaterials.id, { onDelete: "cascade" }),
+    vendorId: integer("vendor_id")
+      .notNull()
+      .references(() => vendors.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.rawMaterialId, table.vendorId] })]
+);
+
 export const orderRawMaterials = pgTable(
   "order_raw_materials",
   {
@@ -58,6 +68,9 @@ export const orderRawMaterials = pgTable(
     rawMaterialId: integer("raw_material_id")
       .notNull()
       .references(() => rawMaterials.id, { onDelete: "cascade" }),
+    vendorId: integer("vendor_id").references(() => vendors.id, {
+      onDelete: "set null",
+    }),
     unitQty: text("unit_qty").notNull(),
     unitName: text("unit_name").notNull(),
   },
@@ -128,15 +141,23 @@ export const menuCategoriesRelations = relations(menuCategories, ({ one }) => ({
 }));
 
 export const vendorsRelations = relations(vendors, ({ many }) => ({
-  rawMaterials: many(rawMaterials),
+  rawMaterialVendors: many(rawMaterialVendors),
 }));
 
-export const rawMaterialsRelations = relations(rawMaterials, ({ one, many }) => ({
+export const rawMaterialsRelations = relations(rawMaterials, ({ many }) => ({
+  rawMaterialVendors: many(rawMaterialVendors),
+  orderRawMaterials: many(orderRawMaterials),
+}));
+
+export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one }) => ({
+  rawMaterial: one(rawMaterials, {
+    fields: [rawMaterialVendors.rawMaterialId],
+    references: [rawMaterials.id],
+  }),
   vendor: one(vendors, {
-    fields: [rawMaterials.vendorId],
+    fields: [rawMaterialVendors.vendorId],
     references: [vendors.id],
   }),
-  orderRawMaterials: many(orderRawMaterials),
 }));
 
 export const ordersRelations = relations(orders, ({ many }) => ({
@@ -151,5 +172,9 @@ export const orderRawMaterialsRelations = relations(orderRawMaterials, ({ one })
   rawMaterial: one(rawMaterials, {
     fields: [orderRawMaterials.rawMaterialId],
     references: [rawMaterials.id],
+  }),
+  vendor: one(vendors, {
+    fields: [orderRawMaterials.vendorId],
+    references: [vendors.id],
   }),
 }));

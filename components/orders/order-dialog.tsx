@@ -29,6 +29,7 @@ type RawMaterialItem = {
   rawMaterialId: number;
   unitQty: string;
   unitName: string;
+  vendorId: number | null;
 };
 
 export function OrderDialog({
@@ -56,7 +57,20 @@ export function OrderDialog({
       setError(null);
       setActiveTab("details");
       setMealType(order?.mealType ?? "lunch");
-      setSelectedMaterials(order?.rawMaterials ? [...order.rawMaterials] : []);
+      
+      const initMaterials = rawMaterials.map(rm => {
+        const existing = order?.rawMaterials?.find(m => m.rawMaterialId === rm.id);
+        const defaultVendorId = rm.rawMaterialVendors.length > 0 ? rm.rawMaterialVendors[0].vendor.id : null;
+        
+        return {
+          rawMaterialId: rm.id,
+          unitQty: existing?.unitQty ?? "",
+          unitName: existing?.unitName ?? "kg",
+          vendorId: existing?.vendorId ?? defaultVendorId,
+        };
+      });
+      setSelectedMaterials(initMaterials);
+
       setFormKey((k) => k + 1);
       dialog.showModal();
     }
@@ -74,8 +88,12 @@ export function OrderDialog({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (selectedMaterials.length === 0) {
-      setError("Please add at least one raw material.");
+    const itemsToSubmit = selectedMaterials.filter(
+      (item) => item.unitQty.trim() !== "" && item.unitQty !== "0"
+    );
+
+    if (itemsToSubmit.length === 0) {
+      setError("Please specify a quantity for at least one raw material.");
       setActiveTab("materials");
       return;
     }
@@ -88,7 +106,7 @@ export function OrderDialog({
       venue: String(formData.get("venue") || ""),
       numberOfPersons: Number(formData.get("numberOfPersons")),
       mealType,
-      rawMaterials: selectedMaterials,
+      rawMaterials: itemsToSubmit,
     };
 
     startTransition(async () => {
@@ -105,26 +123,11 @@ export function OrderDialog({
     });
   }
 
-  function addMaterial() {
-    const availableMaterial = rawMaterials.find(
-      (m) => !selectedMaterials.some((sm) => sm.rawMaterialId === m.id)
-    );
-    if (!availableMaterial) return;
-    setSelectedMaterials([
-      ...selectedMaterials,
-      { rawMaterialId: availableMaterial.id, unitQty: "1", unitName: "kg" },
-    ]);
-  }
-
   function updateMaterial(index: number, updates: Partial<RawMaterialItem>) {
+    // Note: the index passed in here is the index in `rawMaterials`, 
+    // which corresponds 1-to-1 with `selectedMaterials`
     const next = [...selectedMaterials];
     next[index] = { ...next[index], ...updates };
-    setSelectedMaterials(next);
-  }
-
-  function removeMaterial(index: number) {
-    const next = [...selectedMaterials];
-    next.splice(index, 1);
     setSelectedMaterials(next);
   }
 
@@ -268,39 +271,40 @@ export function OrderDialog({
 
             <div className={activeTab === "materials" ? "space-y-4" : "hidden"}>
               <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">Selected Materials</p>
-                  <button
-                    type="button"
-                    onClick={addMaterial}
-                    disabled={rawMaterials.length === 0 || rawMaterials.length === selectedMaterials.length}
-                    className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface disabled:opacity-50"
-                  >
-                    <Plus className="size-3.5" />
-                    Add item
-                  </button>
-                </div>
+                <p className="text-sm font-medium text-foreground">Materials Selection</p>
+              </div>
                 
-                {rawMaterials.length === 0 ? (
-                  <p className="text-sm text-muted text-center py-4">No raw materials available. Please add some first.</p>
-                ) : selectedMaterials.length === 0 ? (
-                  <p className="text-sm text-muted text-center py-4">No materials added to this order.</p>
-                ) : (
-                  <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                    {selectedMaterials.map((item, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-lg border border-border p-3">
+              {rawMaterials.length === 0 ? (
+                <p className="text-sm text-muted text-center py-4">No raw materials available. Please add some first.</p>
+              ) : (
+                <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                  {rawMaterials.map((material, index) => {
+                    const item = selectedMaterials.find(sm => sm.rawMaterialId === material.id);
+                    if (!item) return null;
+
+                    return (
+                      <div key={material.id} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-lg border border-border p-3">
                         <div className="w-full sm:flex-1 space-y-1">
-                          <label className="sr-only">Material</label>
-                          <select
-                            value={item.rawMaterialId}
-                            onChange={(e) => updateMaterial(index, { rawMaterialId: Number(e.target.value) })}
-                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
-                          >
-                            {rawMaterials
-                              .filter((m) => m.id === item.rawMaterialId || !selectedMaterials.some((sm) => sm.rawMaterialId === m.id))
-                              .map((m) => (
-                              <option key={m.id} value={m.id}>{m.name}</option>
-                            ))}
-                          </select>
+                          <label className="text-sm font-medium text-foreground [text-wrap:balance]">{material.name}</label>
+                          <div className="mt-1">
+                            {material.rawMaterialVendors.length === 0 ? (
+                              <span className="inline-flex items-center rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-muted">No Vendors</span>
+                            ) : material.rawMaterialVendors.length === 1 ? (
+                              <span className="inline-flex items-center rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+                                {material.rawMaterialVendors[0].vendor.name}
+                              </span>
+                            ) : (
+                              <select
+                                value={item.vendorId ?? ""}
+                                onChange={(e) => updateMaterial(index, { vendorId: Number(e.target.value) })}
+                                className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
+                              >
+                                {material.rawMaterialVendors.map((rmv) => (
+                                  <option key={rmv.vendor.id} value={rmv.vendor.id}>{rmv.vendor.name}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
                         </div>
                         <div className="flex w-full sm:w-auto items-center gap-3">
                           <div className="flex-1 sm:w-24">
@@ -323,20 +327,13 @@ export function OrderDialog({
                               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                             />
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeMaterial(index)}
-                            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg text-muted hover:text-red-500 hover:bg-red-50"
-                            aria-label="Remove item"
-                          >
-                            <Trash2 className="size-4" />
-                          </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             </div>
 
           {error ? (
