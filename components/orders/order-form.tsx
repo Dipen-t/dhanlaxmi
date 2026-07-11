@@ -1,6 +1,5 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
@@ -299,14 +298,6 @@ export function OrderForm({
                         )}
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => updateMaterial(index, { unitQty: "" })}
-                      className="-mr-1 -mt-1 p-1.5 rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-red-500 shrink-0"
-                      aria-label="Clear quantity"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2 mt-auto pt-2.5 border-t border-border/50">
