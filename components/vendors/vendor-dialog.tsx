@@ -185,14 +185,21 @@ export function VendorDialog({
                   <ul className="grid grid-cols-2 gap-2.5">
                     {selectableMaterials.map((material) => {
                       const checked = selectedMaterialIds.includes(material.id);
+                      const isAssignedToOther = vendor
+                        ? material.rawMaterialVendors.some(
+                            (rmv) => rmv.vendor.id !== vendor.id
+                          )
+                        : material.rawMaterialVendors.length > 0;
 
                       return (
                         <li key={material.id}>
                           <label
-                            title={material.name}
+                            title={isAssignedToOther ? `${material.name} (Assigned to other vendors)` : material.name}
                             className={`flex min-h-10 w-full cursor-pointer items-center justify-center rounded-full px-3 py-2 text-center text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring ${
                               checked
                                 ? "bg-primary text-primary-foreground"
+                                : isAssignedToOther
+                                ? "bg-primary-soft text-primary ring-1 ring-primary/30 hover:bg-primary/20"
                                 : "bg-surface text-muted hover:text-foreground"
                             }`}
                           >
