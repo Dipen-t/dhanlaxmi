@@ -54,6 +54,7 @@ export function OrderForm({
 
   const [mealType, setMealType] = useState<MealType>(order?.mealType ?? "lunch");
   const [focusedUnitIndex, setFocusedUnitIndex] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
 
   const [selectedMaterials, setSelectedMaterials] = useState<RawMaterialItem[]>(() => {
     return rawMaterials.map(rm => {
@@ -82,12 +83,14 @@ export function OrderForm({
 
     if (itemsToSubmit.length === 0) {
       setError("Please specify a quantity for at least one raw material.");
+      setActiveTab("materials");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
     if (itemsToSubmit.some(item => item.unitName.trim() === "")) {
       setError("Please specify a unit for all selected materials.");
+      setActiveTab("materials");
       window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
@@ -125,14 +128,40 @@ export function OrderForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-8 pb-12">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-12">
       {error ? (
         <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-200">
           {error}
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+      <div className="flex gap-4 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setActiveTab("details")}
+          className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
+            activeTab === "details"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted hover:text-foreground"
+          }`}
+        >
+          Details
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("materials")}
+          className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
+            activeTab === "materials"
+              ? "border-primary text-primary"
+              : "border-transparent text-muted hover:text-foreground"
+          }`}
+        >
+          Raw Materials
+        </button>
+      </div>
+
+      <div className={activeTab === "details" ? "block" : "hidden"}>
+        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-foreground">Order Details</h2>
         
         {isEditing ? <input type="hidden" name="id" value={order.id} /> : null}
@@ -227,7 +256,9 @@ export function OrderForm({
           </fieldset>
         </div>
       </div>
+      </div>
 
+      <div className={activeTab === "materials" ? "block" : "hidden"}>
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold text-foreground">Materials Selection</h2>
         
@@ -321,6 +352,7 @@ export function OrderForm({
             })}
           </div>
         )}
+      </div>
       </div>
 
       <div className="flex justify-end gap-3 pt-4">
