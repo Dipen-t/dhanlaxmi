@@ -25,6 +25,16 @@ const mealOptions = [
   { value: "dinner", label: "Dinner" },
 ] as const;
 
+const predefinedUnits = [
+  "kg",
+  "liters",
+  "units",
+  "pieces",
+  "boxes",
+  "bottles",
+  "plate",
+];
+
 type RawMaterialItem = {
   rawMaterialId: number;
   unitQty: string;
@@ -45,6 +55,7 @@ export function OrderDialog({
   const [mealType, setMealType] = useState<MealType>("lunch");
   const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
   const [selectedMaterials, setSelectedMaterials] = useState<RawMaterialItem[]>([]);
+  const [focusedUnitIndex, setFocusedUnitIndex] = useState<number | null>(null);
   const [formKey, setFormKey] = useState(0);
 
   const isEditing = order !== null;
@@ -134,15 +145,6 @@ export function OrderDialog({
   return (
     <dialog ref={dialogRef} onClose={handleClose} className="app-dialog app-dialog-wide">
       <form key={formKey} onSubmit={handleSubmit} className="flex flex-col">
-        <datalist id="unit-options">
-          <option value="kg" />
-          <option value="liters" />
-          <option value="units" />
-          <option value="pieces" />
-          <option value="boxes" />
-          <option value="bottles" />
-          <option value="plate" />
-        </datalist>
         <div className="app-dialog-body px-5 pt-5 pb-4">
           <h2 className="text-base font-semibold text-foreground">
             {isEditing ? "Edit order" : "Add order"}
@@ -326,16 +328,36 @@ export function OrderDialog({
                               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                             />
                           </div>
-                          <div className="flex-1 sm:w-24">
+                          <div className="flex-1 sm:w-24 relative">
                             <label className="sr-only">Unit</label>
                             <input
                               type="text"
                               value={item.unitName}
+                              onFocus={() => setFocusedUnitIndex(index)}
+                              onBlur={() => setTimeout(() => setFocusedUnitIndex(null), 150)}
                               onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
                               placeholder="Unit (e.g. kg)"
-                              list="unit-options"
                               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                             />
+                            {focusedUnitIndex === index && (
+                              <ul className="absolute left-0 top-full z-10 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-border bg-background py-1 shadow-lg ring-1 ring-black/5">
+                                {predefinedUnits
+                                  .filter(u => u.toLowerCase().includes(item.unitName.toLowerCase()))
+                                  .map(unit => (
+                                    <li
+                                      key={unit}
+                                      onMouseDown={(e) => {
+                                        e.preventDefault(); // Prevent input from losing focus
+                                        updateMaterial(index, { unitName: unit });
+                                        setFocusedUnitIndex(null);
+                                      }}
+                                      className="cursor-pointer px-3 py-1.5 text-sm text-foreground hover:bg-surface"
+                                    >
+                                      {unit}
+                                    </li>
+                                ))}
+                              </ul>
+                            )}
                           </div>
                           <button
                             type="button"
