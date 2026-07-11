@@ -318,7 +318,7 @@ export function OrderForm({
                         value={item.unitName}
                         onFocus={() => setFocusedUnitIndex(index)}
                         onClick={() => setFocusedUnitIndex(index)}
-                        onBlur={() => setTimeout(() => setFocusedUnitIndex(null), 150)}
+                        onBlur={() => setTimeout(() => setFocusedUnitIndex(prev => prev === index ? null : prev), 150)}
                         onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
                         placeholder="Unit"
                         className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
