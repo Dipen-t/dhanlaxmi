@@ -134,6 +134,15 @@ export function OrderDialog({
   return (
     <dialog ref={dialogRef} onClose={handleClose} className="app-dialog app-dialog-wide">
       <form key={formKey} onSubmit={handleSubmit} className="flex flex-col">
+        <datalist id="unit-options">
+          <option value="kg" />
+          <option value="liters" />
+          <option value="units" />
+          <option value="pieces" />
+          <option value="boxes" />
+          <option value="bottles" />
+          <option value="plate" />
+        </datalist>
         <div className="app-dialog-body px-5 pt-5 pb-4">
           <h2 className="text-base font-semibold text-foreground">
             {isEditing ? "Edit order" : "Add order"}
@@ -324,6 +333,7 @@ export function OrderDialog({
                               value={item.unitName}
                               onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
                               placeholder="Unit (e.g. kg)"
+                              list="unit-options"
                               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                             />
                           </div>
