@@ -28,7 +28,7 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-6 sm:py-8">
       <PageHeader title="Edit Order" />
       <div className="mt-8">
         <OrderForm

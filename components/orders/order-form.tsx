@@ -265,50 +265,60 @@ export function OrderForm({
         {rawMaterials.length === 0 ? (
           <p className="text-sm text-muted py-4">No raw materials available. Please add some first.</p>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {rawMaterials.map((material, index) => {
               const item = selectedMaterials.find(sm => sm.rawMaterialId === material.id);
               if (!item) return null;
 
               return (
-                <div key={material.id} className="flex flex-col gap-3 rounded-lg border border-border p-4 bg-background">
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium text-foreground line-clamp-1" title={material.name}>
-                      {material.name}
-                    </label>
-                    <div className="mt-1">
-                      {material.rawMaterialVendors.length === 0 ? (
-                        <span className="inline-flex items-center rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-muted">No Vendors</span>
-                      ) : material.rawMaterialVendors.length === 1 ? (
-                        <span className="inline-flex items-center rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary line-clamp-1" title={material.rawMaterialVendors[0].vendor.name}>
-                          {material.rawMaterialVendors[0].vendor.name}
-                        </span>
-                      ) : (
-                        <select
-                          value={item.vendorId ?? ""}
-                          onChange={(e) => updateMaterial(index, { vendorId: Number(e.target.value) })}
-                          className="w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
-                        >
-                          {material.rawMaterialVendors.map((rmv) => (
-                            <option key={rmv.vendor.id} value={rmv.vendor.id}>{rmv.vendor.name}</option>
-                          ))}
-                        </select>
-                      )}
+                <div key={material.id} className="relative flex flex-col rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/50">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="min-w-0 flex-1">
+                      <label className="block text-sm font-semibold text-foreground truncate" title={material.name}>
+                        {material.name}
+                      </label>
+                      <div className="mt-1">
+                        {material.rawMaterialVendors.length === 0 ? (
+                          <span className="inline-flex items-center rounded bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted uppercase tracking-wider">No Vendors</span>
+                        ) : material.rawMaterialVendors.length === 1 ? (
+                          <span className="inline-flex items-center rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary uppercase tracking-wider truncate max-w-full" title={material.rawMaterialVendors[0].vendor.name}>
+                            {material.rawMaterialVendors[0].vendor.name}
+                          </span>
+                        ) : (
+                          <select
+                            value={item.vendorId ?? ""}
+                            onChange={(e) => updateMaterial(index, { vendorId: Number(e.target.value) })}
+                            className="w-full rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
+                          >
+                            {material.rawMaterialVendors.map((rmv) => (
+                              <option key={rmv.vendor.id} value={rmv.vendor.id}>{rmv.vendor.name}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => updateMaterial(index, { unitQty: "" })}
+                      className="-mr-1 -mt-1 p-1.5 rounded-lg text-muted transition-colors hover:bg-red-50 hover:text-red-500 shrink-0"
+                      aria-label="Clear quantity"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </div>
                   
-                  <div className="flex items-center gap-2 mt-auto pt-2">
-                    <div className="flex-1">
+                  <div className="grid grid-cols-2 gap-2 mt-auto pt-2.5 border-t border-border/50">
+                    <div className="relative">
                       <label className="sr-only">Qty</label>
                       <input
                         type="text"
                         value={item.unitQty}
                         onChange={(e) => updateMaterial(index, { unitQty: e.target.value })}
                         placeholder="Qty"
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+                        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
                       />
                     </div>
-                    <div className="flex-1 relative">
+                    <div className="relative">
                       <label className="sr-only">Unit</label>
                       <input
                         type="text"
@@ -318,10 +328,10 @@ export function OrderForm({
                         onBlur={() => setTimeout(() => setFocusedUnitIndex(null), 150)}
                         onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
                         placeholder="Unit"
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+                        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
                       />
                       {focusedUnitIndex === index && (
-                        <ul className="absolute left-0 top-full z-10 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-border bg-background py-1 shadow-lg ring-1 ring-black/5">
+                        <ul className="absolute left-0 top-full z-10 mt-1 max-h-40 w-full overflow-auto rounded-md border border-border bg-background py-1 shadow-lg ring-1 ring-black/5">
                           {predefinedUnits.map(unit => (
                             <li
                               key={unit}
@@ -330,7 +340,7 @@ export function OrderForm({
                                 updateMaterial(index, { unitName: unit });
                                 setFocusedUnitIndex(null);
                               }}
-                              className="cursor-pointer px-3 py-1.5 text-sm text-foreground hover:bg-surface"
+                              className="cursor-pointer px-3 py-1 text-sm text-foreground hover:bg-surface"
                             >
                               {unit}
                             </li>
@@ -338,14 +348,6 @@ export function OrderForm({
                         </ul>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => updateMaterial(index, { unitQty: "" })}
-                      className="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg text-muted hover:text-red-500 hover:bg-red-50 transition-colors"
-                      aria-label="Clear quantity"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
                   </div>
                 </div>
               );
