@@ -265,7 +265,7 @@ export function OrderForm({
         {rawMaterials.length === 0 ? (
           <p className="text-sm text-muted py-4">No raw materials available. Please add some first.</p>
         ) : (
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
             {rawMaterials.map((material, index) => {
               const item = selectedMaterials.find(sm => sm.rawMaterialId === material.id);
               if (!item) return null;
@@ -357,18 +357,18 @@ export function OrderForm({
       </div>
       </div>
 
-      <div className="flex justify-end gap-3 pt-4">
+      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-background/80 p-3 shadow-2xl backdrop-blur-md border border-border">
         <button
           type="button"
           onClick={handleCancel}
-          className="inline-flex min-h-11 items-center rounded-lg border border-border bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-11 items-center rounded-lg border border-border bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={isPending}
-          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shadow-md"
         >
           {isPending ? "Saving…" : isEditing ? "Save changes" : "Create order"}
         </button>
