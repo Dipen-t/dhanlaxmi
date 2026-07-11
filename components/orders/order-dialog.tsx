@@ -348,7 +348,6 @@ export function OrderDialog({
                             {focusedUnitIndex === index && (
                               <ul className="absolute left-0 top-full z-10 mt-1 max-h-40 w-full overflow-auto rounded-lg border border-border bg-background py-1 shadow-lg ring-1 ring-black/5">
                                 {predefinedUnits
-                                  .filter(u => u.toLowerCase().includes(item.unitName.toLowerCase()))
                                   .map(unit => (
                                     <li
                                       key={unit}
