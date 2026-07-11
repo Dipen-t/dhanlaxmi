@@ -135,29 +135,31 @@ export function OrderForm({
         </div>
       ) : null}
 
-      <div className="flex gap-4 border-b border-border">
-        <button
-          type="button"
-          onClick={() => setActiveTab("details")}
-          className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
-            activeTab === "details"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted hover:text-foreground"
-          }`}
-        >
-          Details
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("materials")}
-          className={`border-b-2 px-1 pb-3 text-sm font-medium transition-colors ${
-            activeTab === "materials"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted hover:text-foreground"
-          }`}
-        >
-          Raw Materials
-        </button>
+      <div className="flex justify-end mb-[-1rem] relative z-10">
+        <div className="inline-flex items-center rounded-lg bg-surface p-1 border border-border">
+          <button
+            type="button"
+            onClick={() => setActiveTab("details")}
+            className={`inline-flex items-center justify-center rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "details"
+                ? "bg-background text-foreground shadow-sm ring-1 ring-border/5"
+                : "text-muted hover:text-foreground hover:bg-background/50"
+            }`}
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("materials")}
+            className={`inline-flex items-center justify-center rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
+              activeTab === "materials"
+                ? "bg-background text-foreground shadow-sm ring-1 ring-border/5"
+                : "text-muted hover:text-foreground hover:bg-background/50"
+            }`}
+          >
+            Raw Materials
+          </button>
+        </div>
       </div>
 
       <div className={activeTab === "details" ? "block" : "hidden"}>
