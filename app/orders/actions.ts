@@ -65,6 +65,17 @@ export async function getOrders(): Promise<OrderRecord[]> {
   return rows.map(serializeOrder);
 }
 
+export async function getOrder(id: string): Promise<OrderRecord | null> {
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, Number(id)),
+    with: {
+      orderRawMaterials: true,
+    },
+  });
+
+  return order ? serializeOrder(order) : null;
+}
+
 export async function getSuggestedOrderId(): Promise<string> {
   const allOrders = await db.query.orders.findMany({
     columns: { orderId: true },

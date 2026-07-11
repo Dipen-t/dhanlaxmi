@@ -3,10 +3,11 @@
 import { LayoutGrid, List, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { useRouter } from "next/navigation";
+
 import type { OrderRecord } from "@/app/orders/actions";
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
-import { OrderDialog } from "@/components/orders/order-dialog";
 import { OrderGrid } from "@/components/orders/order-grid";
 import { OrderList } from "@/components/orders/order-list";
 
@@ -19,9 +20,8 @@ type OrdersViewProps = {
 };
 
 export function OrdersView({ orders, suggestedOrderId, rawMaterials }: OrdersViewProps) {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>("grid");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState<OrderRecord | null>(null);
   const [query, setQuery] = useState("");
   const [nextOrderId, setNextOrderId] = useState(suggestedOrderId);
 
@@ -61,18 +61,11 @@ export function OrdersView({ orders, suggestedOrderId, rawMaterials }: OrdersVie
   }
 
   function openCreate() {
-    setEditingOrder(null);
-    setDialogOpen(true);
+    router.push("/orders/new");
   }
 
   function openEdit(order: OrderRecord) {
-    setEditingOrder(order);
-    setDialogOpen(true);
-  }
-
-  function closeDialog() {
-    setDialogOpen(false);
-    setEditingOrder(null);
+    router.push(`/orders/${order.id}/edit`);
   }
 
   return (
@@ -143,14 +136,6 @@ export function OrdersView({ orders, suggestedOrderId, rawMaterials }: OrdersVie
       ) : (
         <OrderList orders={filteredOrders} onEdit={openEdit} />
       )}
-
-      <OrderDialog
-        open={dialogOpen}
-        order={editingOrder}
-        suggestedOrderId={nextOrderId}
-        rawMaterials={rawMaterials}
-        onClose={closeDialog}
-      />
 
       <FloatingAddButton onClick={openCreate} label="Add order" />
     </>
