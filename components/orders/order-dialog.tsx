@@ -337,6 +337,14 @@ export function OrderDialog({
                               className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
                             />
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => updateMaterial(index, { unitQty: "" })}
+                            className="inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg text-muted hover:text-red-500 hover:bg-red-50"
+                            aria-label="Clear quantity"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
                         </div>
                       </div>
                     );
