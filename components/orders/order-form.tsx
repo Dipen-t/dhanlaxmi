@@ -324,7 +324,7 @@ export function OrderForm({
                         className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
                       />
                       {focusedUnitIndex === index && (
-                        <ul className="absolute left-0 top-full z-10 mt-1 max-h-40 w-full overflow-auto rounded-md border border-border bg-background py-1 shadow-lg ring-1 ring-black/5">
+                        <ul className="absolute left-0 top-full z-20 mt-1 max-h-40 min-w-[120px] overflow-auto rounded-md border border-border bg-background py-1 shadow-xl ring-1 ring-black/5">
                           {predefinedUnits.map(unit => (
                             <li
                               key={unit}
