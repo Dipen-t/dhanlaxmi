@@ -76,7 +76,7 @@ export function OrderDialog({
         return {
           rawMaterialId: rm.id,
           unitQty: existing?.unitQty ?? "",
-          unitName: existing?.unitName ?? "kg",
+          unitName: existing?.unitName ?? "",
           vendorId: existing?.vendorId ?? defaultVendorId,
         };
       });
@@ -105,6 +105,12 @@ export function OrderDialog({
 
     if (itemsToSubmit.length === 0) {
       setError("Please specify a quantity for at least one raw material.");
+      setActiveTab("materials");
+      return;
+    }
+
+    if (itemsToSubmit.some(item => item.unitName.trim() === "")) {
+      setError("Please specify a unit for all selected materials.");
       setActiveTab("materials");
       return;
     }
