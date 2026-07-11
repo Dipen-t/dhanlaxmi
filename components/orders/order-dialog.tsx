@@ -340,6 +340,7 @@ export function OrderDialog({
                               type="text"
                               value={item.unitName}
                               onFocus={() => setFocusedUnitIndex(index)}
+                              onClick={() => setFocusedUnitIndex(index)}
                               onBlur={() => setTimeout(() => setFocusedUnitIndex(null), 150)}
                               onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
                               placeholder="Unit (e.g. kg)"
