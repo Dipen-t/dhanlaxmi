@@ -170,6 +170,9 @@ export function OrderMaterialsPanel({
                 const complete = isComplete(item);
                 const partial = hasQty(item) && !complete;
                 const active = editingId === material.id;
+                const vendorName = item.vendorId 
+                  ? material.rawMaterialVendors.find(v => v.vendor.id === item.vendorId)?.vendor.name 
+                  : null;
 
                 return (
                   <button
@@ -202,7 +205,7 @@ export function OrderMaterialsPanel({
                           active ? "text-primary-foreground/90" : "text-primary"
                         }`}
                       >
-                        {item.unitQty} {item.unitName}
+                        {item.unitQty} {item.unitName}{vendorName ? ` ${vendorName}` : ""}
                       </span>
                     ) : partial ? (
                       <span
