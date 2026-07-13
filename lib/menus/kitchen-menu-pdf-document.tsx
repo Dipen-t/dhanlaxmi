@@ -154,27 +154,27 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   dishItem: {
-    width: "14.28%",
+    width: "33.33%",
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 4,
-    paddingVertical: 4,
+    paddingRight: 8,
+    paddingVertical: 5,
   },
   dishItemSingleColumn: {
     width: "100%",
   },
   dishQuantity: {
-    fontSize: 9,
+    fontSize: 10,
     fontFamily: "SourceSans",
     color: colors.tealDeep,
     marginLeft: 4,
     fontWeight: 600,
   },
   dishName: {
-    fontSize: 9.5,
+    fontSize: 10.5,
     fontFamily: "SourceSans",
     color: colors.ink,
-    lineHeight: 1.1,
+    lineHeight: 1.2,
   },
   counterGrid: {
     flexDirection: "row",
