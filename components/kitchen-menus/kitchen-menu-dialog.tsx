@@ -182,11 +182,11 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(100dvh,44rem)] w-full max-w-[42rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
+        className="relative z-10 flex max-h-[min(100dvh,56rem)] w-full max-w-[56rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           maxHeight:
-            "min(100dvh - env(safe-area-inset-top, 0px), 44rem)",
+            "min(100dvh - env(safe-area-inset-top, 0px), 56rem)",
         }}
       >
         <form
@@ -194,26 +194,17 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
           onSubmit={handleSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 pb-4 [-webkit-overflow-scrolling:touch] sm:px-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-2 [-webkit-overflow-scrolling:touch] sm:px-4">
             <h2
               id={titleId}
-              className="text-lg font-semibold tracking-[-0.02em] text-foreground"
+              className="text-base font-semibold text-foreground"
             >
               {isEditing ? "Edit kitchen menu" : "Create kitchen menu"}
             </h2>
-            <p className="mt-1 text-sm text-muted text-pretty">
-              Name the menu, then pick which individual dishes to include in the kitchen PDF.
-            </p>
             {isEditing ? <input type="hidden" name="id" value={menu.id} /> : null}
 
-            <div className="mt-5 space-y-5">
+            <div className="mt-3 space-y-3">
               <div>
-                <label
-                  htmlFor="menu-name"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Menu name
-                </label>
                 <input
                   id="menu-name"
                   name="name"
@@ -223,33 +214,26 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   defaultValue={menu?.name ?? ""}
                   autoComplete="off"
                   enterKeyHint="done"
-                  className="mt-1.5 min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. Wedding Lunch Kitchen Menu"
+                  className="min-h-10 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  placeholder="Menu name"
                 />
               </div>
 
               <fieldset>
-                <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div>
-                    <legend className="block text-sm font-medium text-foreground">
-                      Dishes
-                    </legend>
-                    <p className="mt-1 text-sm text-muted text-pretty">
-                      {selectedDishIds.size} dishes selected
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={clearAll}
-                      className="inline-flex min-h-10 touch-manipulation items-center rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
-                    >
-                      Clear All
-                    </button>
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-muted">
+                    {selectedDishIds.size} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    className="text-xs font-medium text-muted hover:text-foreground"
+                  >
+                    Clear All
+                  </button>
                 </div>
 
-                <div className="mt-3 max-h-[min(22rem,42dvh)] space-y-3 overflow-y-auto overscroll-contain rounded-xl border border-border p-3 [-webkit-overflow-scrolling:touch]">
+                <div className="mt-1.5 max-h-[min(28rem,55dvh)] space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1 [-webkit-overflow-scrolling:touch]">
                   {catalog.length === 0 ? (
                     <p className="px-3 py-6 text-center text-sm text-muted">
                       No categories in the catalog yet.
@@ -261,57 +245,57 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                       const isExpanded = expandedCategories.has(category.id);
 
                       return (
-                        <div key={category.id} className="rounded-lg border border-border overflow-hidden">
-                          <div className="flex items-center justify-between bg-surface/50 px-3 py-2.5">
+                        <div key={category.id} className="rounded border border-border overflow-hidden">
+                          <div className="flex items-center justify-between bg-surface/50 px-2 py-1">
                             <button
                               type="button"
                               onClick={() => toggleCategoryExpansion(category.id)}
-                              className="flex flex-1 items-center gap-2 text-left"
+                              className="flex flex-1 items-center gap-1.5 text-left min-w-0"
                             >
                               {isExpanded ? (
-                                <ChevronDown className="size-4 text-muted" />
+                                <ChevronDown className="size-3 text-muted shrink-0" />
                               ) : (
-                                <ChevronRight className="size-4 text-muted" />
+                                <ChevronRight className="size-3 text-muted shrink-0" />
                               )}
-                              <span className="font-semibold text-foreground text-sm">
+                              <span className="font-semibold text-foreground text-xs truncate">
                                 {category.name}
                               </span>
-                              <span className="text-xs text-muted">
-                                ({selectedCount}/{category.dishes.length})
+                              <span className="text-[10px] text-muted shrink-0">
+                                {selectedCount}/{category.dishes.length}
                               </span>
                             </button>
                             {category.dishes.length > 0 && (
                               <button
                                 type="button"
                                 onClick={() => toggleAllInCategory(category)}
-                                className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                                className="text-[10px] font-medium text-primary hover:text-primary/80 shrink-0 ml-1"
                               >
-                                {allSelected ? "Deselect All" : "Select All"}
+                                {allSelected ? "None" : "All"}
                               </button>
                             )}
                           </div>
                           
                           {isExpanded && (
-                            <div className="divide-y divide-border/50 border-t border-border">
+                            <div className="grid grid-cols-3 gap-0 border-t border-border">
                               {category.dishes.length === 0 ? (
-                                <p className="px-4 py-3 text-sm text-muted italic">No dishes in this category.</p>
+                                <p className="col-span-3 px-2 py-1.5 text-xs text-muted italic">Empty</p>
                               ) : (
                                 category.dishes.map((dish) => {
                                   const checked = selectedDishIds.has(dish.id);
                                   return (
                                     <label
                                       key={dish.id}
-                                      className={`flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface/50 ${
-                                        checked ? "bg-primary-soft/10" : ""
+                                      className={`flex cursor-pointer items-center gap-1.5 px-1.5 py-1 text-xs border-b border-r border-border/40 hover:bg-surface/50 ${
+                                        checked ? "bg-primary-soft/20 font-medium" : "text-foreground"
                                       }`}
                                     >
                                       <input
                                         type="checkbox"
                                         checked={checked}
                                         onChange={() => toggleDish(dish.id)}
-                                        className="size-4 rounded border-border text-primary accent-primary focus:ring-ring"
+                                        className="size-3 rounded-sm border-border text-primary accent-primary"
                                       />
-                                      <span className="text-sm text-foreground">{dish.name}</span>
+                                      <span className="truncate leading-tight">{dish.name}</span>
                                     </label>
                                   );
                                 })
@@ -327,30 +311,26 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
             </div>
 
             {error ? (
-              <p role="alert" className="mt-4 text-sm font-medium text-red-600">
+              <p role="alert" className="mt-2 text-xs font-medium text-red-600">
                 {error}
               </p>
             ) : null}
           </div>
 
-          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-5 py-4 sm:px-6">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-3 py-2 sm:px-4">
             <button
               type="button"
               onClick={handleClose}
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-9 touch-manipulation items-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-surface"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="inline-flex min-h-9 touch-manipulation items-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
-              {isPending
-                ? "Saving…"
-                : isEditing
-                  ? "Save changes"
-                  : "Create menu"}
+              {isPending ? "Saving…" : isEditing ? "Save" : "Create"}
             </button>
           </div>
         </form>
