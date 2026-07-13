@@ -276,16 +276,16 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                           </div>
                           
                           {isExpanded && (
-                            <div className="grid grid-cols-3 gap-0 border-t border-border">
+                            <div className="grid grid-cols-7 gap-0 border-t border-border">
                               {category.dishes.length === 0 ? (
-                                <p className="col-span-3 px-2 py-1.5 text-xs text-muted italic">Empty</p>
+                                <p className="col-span-7 px-2 py-1.5 text-xs text-muted italic">Empty</p>
                               ) : (
                                 category.dishes.map((dish) => {
                                   const checked = selectedDishIds.has(dish.id);
                                   return (
                                     <label
                                       key={dish.id}
-                                      className={`flex cursor-pointer items-center gap-1.5 px-1.5 py-1 text-xs border-b border-r border-border/40 hover:bg-surface/50 ${
+                                      className={`flex cursor-pointer items-center gap-1 px-1 py-1 text-[10px] border-b border-r border-border/40 hover:bg-surface/50 ${
                                         checked ? "bg-primary-soft/20 font-medium" : "text-foreground"
                                       }`}
                                     >

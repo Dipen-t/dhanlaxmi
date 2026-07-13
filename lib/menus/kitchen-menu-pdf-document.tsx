@@ -155,10 +155,10 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   dishItem: {
-    width: "50%",
+    width: "14.28%",
     flexDirection: "row",
     alignItems: "center",
-    paddingRight: 10,
+    paddingRight: 4,
     paddingVertical: 4,
   },
   dishItemSingleColumn: {
@@ -190,11 +190,10 @@ const styles = StyleSheet.create({
     marginBottom: 1,
   },
   dishName: {
-    flex: 1,
     fontSize: 9.5,
     fontFamily: "SourceSans",
     color: colors.ink,
-    lineHeight: 1.35,
+    lineHeight: 1.1,
   },
   counterGrid: {
     flexDirection: "row",
@@ -283,14 +282,19 @@ function CategorySection({
             }
           >
             {isQtyField ? (
-              <View style={styles.qtyField}>
-                <Text style={styles.qtyLabel}>Qty</Text>
-                <View style={styles.qtyLine} />
-              </View>
+              <>
+                <Text style={styles.dishName}>{dish.name}</Text>
+                <View style={styles.qtyField}>
+                  <Text style={[styles.qtyLabel, { marginLeft: 2 }]}>Qty</Text>
+                  <View style={styles.qtyLine} />
+                </View>
+              </>
             ) : (
-              <View style={styles.checkbox} />
+              <>
+                <View style={styles.checkbox} />
+                <Text style={styles.dishName}>{dish.name}</Text>
+              </>
             )}
-            <Text style={styles.dishName}>{dish.name}</Text>
           </View>
         ))}
       </View>
