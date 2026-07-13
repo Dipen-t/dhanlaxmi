@@ -134,11 +134,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   selectionRule: {
-    fontFamily: "SourceSans",
-    fontSize: 10,
-    color: colors.muted,
-    marginTop: 4,
-    textAlign: "center",
+    display: "none",
   },
   dishGrid: {
     flexDirection: "row",
@@ -239,7 +235,6 @@ function CategorySection({
         <View style={styles.categoryTitleRow}>
           <Text style={styles.categoryName}>{category.name}</Text>
         </View>
-        <Text style={styles.selectionRule}>{category.selectionRule}</Text>
       </View>
 
       <View style={styles.dishGrid}>
