@@ -14,6 +14,7 @@ import {
 export type KitchenDishItem = {
   id: number;
   name: string;
+  quantity?: string;
 };
 
 export type KitchenCategoryWithDishes = {
@@ -27,13 +28,21 @@ export type KitchenCategoryWithDishes = {
 export type KitchenMenuSummary = {
   id: number;
   name: string;
+  venue?: string | null;
+  date?: Date | null;
+  numberOfPersons?: number | null;
+  mealType?: "Lunch" | "Dinner" | null;
   dishCount: number;
-  dishIds: number[];
+  dishes: { id: number; quantity?: string }[];
 };
 
 export type KitchenMenuDetail = {
   id: number;
   name: string;
+  venue?: string | null;
+  date?: Date | null;
+  numberOfPersons?: number | null;
+  mealType?: "Lunch" | "Dinner" | null;
   categories: KitchenCategoryWithDishes[];
 };
 
@@ -65,8 +74,15 @@ export async function getKitchenMenus(): Promise<KitchenMenuSummary[]> {
   return rows.map((menu) => ({
     id: menu.id,
     name: menu.name,
+    venue: menu.venue,
+    date: menu.date,
+    numberOfPersons: menu.numberOfPersons,
+    mealType: menu.mealType as any,
     dishCount: menu.kitchenMenuDishes.length,
-    dishIds: menu.kitchenMenuDishes.map((kmd) => kmd.kitchenDishId),
+    dishes: menu.kitchenMenuDishes.map((kmd) => ({
+      id: kmd.kitchenDishId,
+      quantity: kmd.quantity ?? undefined,
+    })),
   }));
 }
 
@@ -108,6 +124,7 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
     categoryMap.get(category.id)!.dishes.push({
       id: dish.id,
       name: dish.name,
+      quantity: kmd.quantity ?? undefined,
       _sortOrder: dish.sortOrder,
     } as KitchenDishItem & { _sortOrder: number });
   }
@@ -131,6 +148,10 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
   return {
     id: menu.id,
     name: menu.name,
+    venue: menu.venue,
+    date: menu.date,
+    numberOfPersons: menu.numberOfPersons,
+    mealType: menu.mealType as any,
     categories,
   };
 }
@@ -139,15 +160,20 @@ function normalizeName(name: string) {
   return name.trim();
 }
 
-function parseDishIds(formData: FormData) {
-  return formData
-    .getAll("dishIds")
-    .map((value) => Number(value))
-    .filter((id) => !Number.isNaN(id));
+function parseDishes(formData: FormData): { id: number; quantity?: string }[] {
+  const data = formData.get("dishes");
+  if (!data || typeof data !== "string") return [];
+  try {
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item) => typeof item.id === "number");
+  } catch {
+    return [];
+  }
 }
 
-async function syncKitchenMenuDishes(kitchenMenuId: number, dishIds: number[]) {
-  const uniqueIds = [...new Set(dishIds)];
+async function syncKitchenMenuDishes(kitchenMenuId: number, dishes: { id: number; quantity?: string }[]) {
+  const uniqueIds = [...new Set(dishes.map((d) => d.id))];
 
   if (uniqueIds.length > 0) {
     const found = await db.query.kitchenDishes.findMany({
@@ -163,9 +189,10 @@ async function syncKitchenMenuDishes(kitchenMenuId: number, dishIds: number[]) {
 
   if (uniqueIds.length > 0) {
     await db.insert(kitchenMenuDishes).values(
-      uniqueIds.map((kitchenDishId) => ({
+      dishes.map((dish) => ({
         kitchenMenuId,
-        kitchenDishId,
+        kitchenDishId: dish.id,
+        quantity: dish.quantity || null,
       })),
     );
   }
@@ -175,7 +202,15 @@ async function syncKitchenMenuDishes(kitchenMenuId: number, dishIds: number[]) {
 
 export async function createKitchenMenu(formData: FormData) {
   const name = normalizeName(String(formData.get("name") ?? ""));
-  const dishIds = parseDishIds(formData);
+  const venue = String(formData.get("venue") ?? "").trim() || null;
+  const dateStr = String(formData.get("date") ?? "").trim();
+  const date = dateStr ? new Date(dateStr) : null;
+  const numberOfPersonsStr = String(formData.get("numberOfPersons") ?? "").trim();
+  const numberOfPersons = numberOfPersonsStr ? parseInt(numberOfPersonsStr, 10) : null;
+  const mealTypeRaw = String(formData.get("mealType") ?? "").trim();
+  const mealType = ["Lunch", "Dinner"].includes(mealTypeRaw) ? mealTypeRaw as "Lunch" | "Dinner" : null;
+  
+  const dishes = parseDishes(formData);
 
   if (!name) {
     return { error: "Menu name is required." };
@@ -183,16 +218,16 @@ export async function createKitchenMenu(formData: FormData) {
   if (name.length > 120) {
     return { error: "Menu name must be 120 characters or less." };
   }
-  if (dishIds.length === 0) {
+  if (dishes.length === 0) {
     return { error: "Select at least one dish." };
   }
 
   const [created] = await db
     .insert(kitchenMenus)
-    .values({ name })
+    .values({ name, venue, date, numberOfPersons, mealType })
     .returning({ id: kitchenMenus.id });
 
-  const syncResult = await syncKitchenMenuDishes(created.id, dishIds);
+  const syncResult = await syncKitchenMenuDishes(created.id, dishes);
   if (syncResult.error) {
     await db.delete(kitchenMenus).where(eq(kitchenMenus.id, created.id));
     return { error: syncResult.error };
@@ -206,7 +241,15 @@ export async function createKitchenMenu(formData: FormData) {
 export async function updateKitchenMenu(formData: FormData) {
   const id = Number(formData.get("id"));
   const name = normalizeName(String(formData.get("name") ?? ""));
-  const dishIds = parseDishIds(formData);
+  const venue = String(formData.get("venue") ?? "").trim() || null;
+  const dateStr = String(formData.get("date") ?? "").trim();
+  const date = dateStr ? new Date(dateStr) : null;
+  const numberOfPersonsStr = String(formData.get("numberOfPersons") ?? "").trim();
+  const numberOfPersons = numberOfPersonsStr ? parseInt(numberOfPersonsStr, 10) : null;
+  const mealTypeRaw = String(formData.get("mealType") ?? "").trim();
+  const mealType = ["Lunch", "Dinner"].includes(mealTypeRaw) ? mealTypeRaw as "Lunch" | "Dinner" : null;
+
+  const dishes = parseDishes(formData);
 
   if (!id || Number.isNaN(id)) {
     return { error: "Invalid kitchen menu." };
@@ -214,13 +257,13 @@ export async function updateKitchenMenu(formData: FormData) {
   if (!name) {
     return { error: "Menu name is required." };
   }
-  if (dishIds.length === 0) {
+  if (dishes.length === 0) {
     return { error: "Select at least one dish." };
   }
 
   const [updated] = await db
     .update(kitchenMenus)
-    .set({ name, updatedAt: new Date() })
+    .set({ name, venue, date, numberOfPersons, mealType, updatedAt: new Date() })
     .where(eq(kitchenMenus.id, id))
     .returning({ id: kitchenMenus.id });
 
@@ -228,7 +271,7 @@ export async function updateKitchenMenu(formData: FormData) {
     return { error: "Kitchen menu not found." };
   }
 
-  const syncResult = await syncKitchenMenuDishes(id, dishIds);
+  const syncResult = await syncKitchenMenuDishes(id, dishes);
   if (syncResult.error) {
     return { error: syncResult.error };
   }

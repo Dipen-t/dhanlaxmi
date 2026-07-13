@@ -100,17 +100,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.ink,
     marginBottom: 2,
-    minWidth: 56,
+    minWidth: 40,
+  },
+  fieldValue: {
+    fontSize: 9.5,
+    fontFamily: "SourceSans",
+    color: colors.ink,
+    marginLeft: 4,
   },
   sectionIntro: {
-    fontFamily: "Cormorant",
-    fontSize: 9.5,
-    fontStyle: "italic",
-    color: colors.muted,
-    marginTop: 6,
-    marginBottom: 14,
-    letterSpacing: 0.2,
-    textAlign: "center",
+    display: "none",
   },
   categoryBlock: {
     marginBottom: 14,
@@ -164,30 +163,12 @@ const styles = StyleSheet.create({
   dishItemSingleColumn: {
     width: "100%",
   },
-  checkbox: {
-    width: 11,
-    height: 11,
-    borderWidth: 1.2,
-    borderColor: colors.tealDeep,
-    marginRight: 5,
-    borderRadius: 1.5,
-    backgroundColor: colors.white,
-  },
-  qtyField: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginRight: 5,
-  },
-  qtyLabel: {
-    fontSize: 8,
+  dishQuantity: {
+    fontSize: 9,
+    fontFamily: "SourceSans",
     color: colors.tealDeep,
-    marginRight: 2,
-  },
-  qtyLine: {
-    width: 25,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.ink,
-    marginBottom: 1,
+    marginLeft: 4,
+    fontWeight: 600,
   },
   dishName: {
     fontSize: 9.5,
@@ -281,19 +262,13 @@ function CategorySection({
                 : styles.dishItem
             }
           >
-            {isQtyField ? (
+            {dish.quantity ? (
               <>
                 <Text style={styles.dishName}>{dish.name}</Text>
-                <View style={styles.qtyField}>
-                  <Text style={[styles.qtyLabel, { marginLeft: 2 }]}>Qty</Text>
-                  <View style={styles.qtyLine} />
-                </View>
+                <Text style={styles.dishQuantity}>- {dish.quantity}</Text>
               </>
             ) : (
-              <>
-                <View style={styles.checkbox} />
-                <Text style={styles.dishName}>{dish.name}</Text>
-              </>
+              <Text style={styles.dishName}>{dish.name}</Text>
             )}
           </View>
         ))}
@@ -314,18 +289,40 @@ export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
             <Text style={styles.menuSubtitle}>Kitchen Operations Menu</Text>
 
             <View style={styles.fieldsCard}>
-              <View style={styles.fieldsRow}>
+              <View style={[styles.fieldsRow, { marginBottom: 8 }]}>
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Per Pax:</Text>
-                  <View style={styles.fieldLine} />
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Rate:</Text>
-                  <View style={styles.fieldLine} />
+                  <Text style={styles.fieldLabel}>Venue:</Text>
+                  {menu.venue ? (
+                    <Text style={styles.fieldValue}>{menu.venue}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
                 </View>
                 <View style={styles.field}>
                   <Text style={styles.fieldLabel}>Date:</Text>
-                  <View style={styles.fieldLine} />
+                  {menu.date ? (
+                    <Text style={styles.fieldValue}>{new Date(menu.date).toLocaleDateString()}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
+                </View>
+              </View>
+              <View style={styles.fieldsRow}>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Persons:</Text>
+                  {menu.numberOfPersons ? (
+                    <Text style={styles.fieldValue}>{menu.numberOfPersons}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Meal:</Text>
+                  {menu.mealType ? (
+                    <Text style={styles.fieldValue}>{menu.mealType}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
                 </View>
               </View>
             </View>

@@ -134,6 +134,10 @@ export const kitchenDishes = pgTable("kitchen_dishes", {
 export const kitchenMenus = pgTable("kitchen_menus", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  venue: text("venue"),
+  date: timestamp("date"),
+  numberOfPersons: integer("number_of_persons"),
+  mealType: text("meal_type", { enum: ["Lunch", "Dinner"] }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -147,6 +151,7 @@ export const kitchenMenuDishes = pgTable(
     kitchenDishId: integer("kitchen_dish_id")
       .notNull()
       .references(() => kitchenDishes.id, { onDelete: "cascade" }),
+    quantity: text("quantity"),
   },
   (table) => [primaryKey({ columns: [table.kitchenMenuId, table.kitchenDishId] })]
 );

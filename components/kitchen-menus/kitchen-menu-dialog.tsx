@@ -25,6 +25,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [selectedDishIds, setSelectedDishIds] = useState<Set<number>>(new Set());
+  const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
 
   const isEditing = menu !== null;
@@ -38,12 +39,19 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
 
     setFormKey((key) => key + 1);
     setError(null);
-    setSelectedDishIds(new Set(menu?.dishIds ?? []));
+    const initialQuantities: Record<number, string> = {};
+    if (menu?.dishes) {
+      menu.dishes.forEach((d) => {
+        if (d.quantity) initialQuantities[d.id] = d.quantity;
+      });
+    }
+    setQuantities(initialQuantities);
+    setSelectedDishIds(new Set(menu?.dishes?.map((d) => d.id) ?? []));
     // Expand categories that have selected dishes when editing, or first category if creating
-    if (menu?.dishIds && menu.dishIds.length > 0) {
+    if (menu?.dishes && menu.dishes.length > 0) {
       const categoriesToExpand = new Set<number>();
       for (const category of catalog) {
-        if (category.dishes.some((dish) => menu.dishIds.includes(dish.id))) {
+        if (category.dishes.some((dish) => menu.dishes.some(md => md.id === dish.id))) {
           categoriesToExpand.add(category.id);
         }
       }
@@ -143,9 +151,11 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
       return;
     }
 
-    selectedDishIds.forEach((id) => {
-      formData.append("dishIds", String(id));
-    });
+    const dishesArray = Array.from(selectedDishIds).map(id => ({
+      id,
+      quantity: quantities[id] || undefined,
+    }));
+    formData.append("dishes", JSON.stringify(dishesArray));
 
     startTransition(async () => {
       try {
@@ -204,7 +214,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
             {isEditing ? <input type="hidden" name="id" value={menu.id} /> : null}
 
             <div className="mt-3 space-y-3">
-              <div>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
                 <input
                   id="menu-name"
                   name="name"
@@ -214,9 +224,38 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   defaultValue={menu?.name ?? ""}
                   autoComplete="off"
                   enterKeyHint="done"
-                  className="min-h-10 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  className="col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30 sm:col-span-5"
                   placeholder="Menu name"
                 />
+                <input
+                  name="venue"
+                  type="text"
+                  defaultValue={menu?.venue ?? ""}
+                  placeholder="Venue"
+                  className="col-span-2 sm:col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                />
+                <input
+                  name="date"
+                  type="date"
+                  defaultValue={menu?.date ? new Date(menu.date).toISOString().split('T')[0] : ""}
+                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                />
+                <input
+                  name="numberOfPersons"
+                  type="number"
+                  placeholder="Persons"
+                  defaultValue={menu?.numberOfPersons ?? ""}
+                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                />
+                <select
+                  name="mealType"
+                  defaultValue={menu?.mealType ?? ""}
+                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
+                >
+                  <option value="">Meal</option>
+                  <option value="Lunch">Lunch</option>
+                  <option value="Dinner">Dinner</option>
+                </select>
               </div>
 
               <fieldset>
@@ -283,20 +322,32 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                                 category.dishes.map((dish) => {
                                   const checked = selectedDishIds.has(dish.id);
                                   return (
-                                    <label
+                                    <div
                                       key={dish.id}
-                                      className={`flex cursor-pointer items-center gap-1 px-1 py-1 text-[10px] border-b border-r border-border/40 hover:bg-surface/50 ${
+                                      className={`flex flex-col gap-1 px-1 py-1 text-[10px] border-b border-r border-border/40 hover:bg-surface/50 ${
                                         checked ? "bg-primary-soft/20 font-medium" : "text-foreground"
                                       }`}
                                     >
-                                      <input
-                                        type="checkbox"
-                                        checked={checked}
-                                        onChange={() => toggleDish(dish.id)}
-                                        className="size-3 rounded-sm border-border text-primary accent-primary"
-                                      />
-                                      <span className="truncate leading-tight">{dish.name}</span>
-                                    </label>
+                                      <label className="flex cursor-pointer items-center gap-1 w-full min-w-0">
+                                        <input
+                                          type="checkbox"
+                                          checked={checked}
+                                          onChange={() => toggleDish(dish.id)}
+                                          className="size-3 rounded-sm border-border text-primary accent-primary shrink-0"
+                                        />
+                                        <span className="truncate leading-tight">{dish.name}</span>
+                                      </label>
+                                      {checked && category.isQtyField && (
+                                        <input
+                                          type="text"
+                                          value={quantities[dish.id] || ""}
+                                          onChange={(e) => setQuantities(q => ({ ...q, [dish.id]: e.target.value }))}
+                                          placeholder="Qty..."
+                                          className="w-full mt-0.5 min-h-5 rounded border border-border px-1 text-[9px] bg-background font-normal placeholder:text-muted outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
+                                          onClick={(e) => e.stopPropagation()}
+                                        />
+                                      )}
+                                    </div>
                                   );
                                 })
                               )}
