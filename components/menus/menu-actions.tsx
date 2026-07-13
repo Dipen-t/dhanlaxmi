@@ -71,6 +71,14 @@ export function MenuActions({
           className="contents"
           buttonClassName={secondaryClass}
         />
+        <MenuPdfDownload
+          menuId={menu.id}
+          menuName={menu.name}
+          pdfType="kitchen"
+          variant="icon"
+          className="contents"
+          buttonClassName={secondaryClass}
+        />
         <button
           type="button"
           onClick={() => onEdit(menu)}

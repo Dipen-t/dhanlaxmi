@@ -8,6 +8,7 @@ import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 type MenuPdfDownloadProps = {
   menuId: number;
   menuName: string;
+  pdfType?: "client" | "kitchen";
   variant?: "icon" | "button";
   className?: string;
   buttonClassName?: string;
@@ -24,6 +25,7 @@ function isIpadOrIos() {
 export function MenuPdfDownload({
   menuId,
   menuName,
+  pdfType = "client",
   variant = "icon",
   className = "",
   buttonClassName,
@@ -40,13 +42,15 @@ export function MenuPdfDownload({
     setIsLoading(true);
     setError(null);
 
-    const filename = `${sanitizeFilename(menuName)}.pdf`;
+    const suffix = pdfType === "kitchen" ? "-kitchen" : "";
+    const filename = `${sanitizeFilename(menuName)}${suffix}.pdf`;
     // Open synchronously so iPad Safari keeps the user gesture after fetch.
     const previewWindow =
       preferShare || isIpadOrIos() ? window.open("about:blank", "_blank") : null;
 
     try {
-      const response = await fetch(`/api/menus/${menuId}/pdf`);
+      const endpoint = pdfType === "kitchen" ? "kitchen-pdf" : "pdf";
+      const response = await fetch(`/api/menus/${menuId}/${endpoint}`);
 
       if (!response.ok) {
         previewWindow?.close();
@@ -146,8 +150,8 @@ export function MenuPdfDownload({
           {isLoading
             ? "Preparing…"
             : preferShare
-              ? "Share / save PDF"
-              : "Download PDF"}
+              ? (pdfType === "kitchen" ? "Share / save Kitchen PDF" : "Share / save PDF")
+              : (pdfType === "kitchen" ? "Download Kitchen PDF" : "Download PDF")}
         </button>
       ) : (
         <button
@@ -156,8 +160,8 @@ export function MenuPdfDownload({
           disabled={isLoading}
           aria-label={
             preferShare
-              ? `Share or save ${menuName} as PDF`
-              : `Download ${menuName} as PDF`
+              ? `Share or save ${menuName} as ${pdfType === "kitchen" ? "Kitchen " : ""}PDF`
+              : `Download ${menuName} as ${pdfType === "kitchen" ? "Kitchen " : ""}PDF`
           }
           className={`${baseClass} min-w-11 px-2`}
         >

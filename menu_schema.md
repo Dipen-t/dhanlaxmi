@@ -53,10 +53,10 @@ Select any number of dishes.
 # QTY TAKER
 #WRITE QTY BESIDE THESE
 
-- Malai Paneer
-- Sada Paneer
-- Mushroom
-- Extra Paneer
+- Malai Paneer QTY FIELD
+- Sada Paneer QTY FIELD
+- Mushroom QTY FIELD
+- Extra Paneer QTY FIELD
 
 ---
 
@@ -201,19 +201,15 @@ Select any.
 
 ---
 
-# Counter Requirements
 
-These are **counts only**.
-
-No dishes are associated with these fields.
 
 | Field | Description |
 |------|-------------|
-| Tandoor | QTY
-| Bhai | QTY
-| Paneer | QTY
-| Mushroom | QTY
-| Hi-Tea | QTY
+| Tandoor | QTY FIELD
+| Bhai | QTY FIELD
+| Paneer | QTY FIELD
+| Mushroom | QTY FIELD
+| Hi-Tea | QTY FIELD
 Example:
 
 - Tandoor: 2
