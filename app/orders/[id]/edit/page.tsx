@@ -10,14 +10,19 @@ export const metadata: Metadata = {
 };
 
 type EditOrderPageProps = {
-  params: {
-    id: string;
-  };
+  params: Promise<{ id: string }>;
 };
 
 export default async function EditOrderPage({ params }: EditOrderPageProps) {
+  const { id } = await params;
+  const orderId = Number(id);
+
+  if (!Number.isFinite(orderId) || orderId <= 0) {
+    notFound();
+  }
+
   const [order, suggestedOrderId, rawMaterials] = await Promise.all([
-    getOrder(params.id),
+    getOrder(String(orderId)),
     getSuggestedOrderId(),
     getMaterials(),
   ]);
@@ -27,7 +32,7 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6">
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-2 sm:px-6">
       <OrderForm
         order={order}
         suggestedOrderId={suggestedOrderId}

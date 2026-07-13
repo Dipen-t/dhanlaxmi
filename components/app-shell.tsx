@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 
 import { BackButton } from "@/components/back-button";
+import { ClickSoundProvider } from "@/components/click-sound-provider";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -16,6 +17,7 @@ export function AppShell({ children }: AppShellProps) {
     <div
       className={`relative flex min-h-full flex-1 flex-col${showFloatingActions ? " pb-20" : ""}`}
     >
+      <ClickSoundProvider />
       {children}
       <BackButton />
     </div>

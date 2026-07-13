@@ -15,13 +15,13 @@ const HEADER_CLEARANCE = 58;
 
 const colors = {
   white: "#FFFFFF",
-  cream: "#FFFCF9",
-  ink: "#1F1A17",
-  muted: "#6B625C",
-  terracotta: "#B85C38",
-  terracottaDeep: "#9A4A2E",
-  terracottaLine: "#D4A88C",
-  rule: "#E5DDD5",
+  cream: "#F7FAFA",
+  ink: "#1A2423",
+  muted: "#5A6967",
+  teal: "#0F766E",
+  tealDeep: "#0D5C56",
+  tealLine: "#A5D4CE",
+  rule: "#D5E0DE",
 };
 
 const styles = StyleSheet.create({
@@ -55,7 +55,7 @@ const styles = StyleSheet.create({
   menuTitle: {
     fontFamily: "Playball",
     fontSize: 28,
-    color: colors.terracottaDeep,
+    color: colors.tealDeep,
     marginBottom: 2,
     textAlign: "center",
   },
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontFamily: "SourceSans",
     fontWeight: 600,
-    color: colors.terracotta,
+    color: colors.teal,
     marginRight: 5,
   },
   fieldLine: {
@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
   flankLine: {
     flex: 1,
     height: 1,
-    backgroundColor: colors.terracottaLine,
+    backgroundColor: colors.tealLine,
   },
   categoryName: {
     fontFamily: "Cormorant",
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textTransform: "uppercase",
     letterSpacing: 0.7,
-    color: colors.terracottaDeep,
+    color: colors.tealDeep,
     paddingHorizontal: 12,
     textAlign: "center",
   },
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     width: 11,
     height: 11,
     borderWidth: 1.2,
-    borderColor: colors.terracottaDeep,
+    borderColor: colors.tealDeep,
     marginRight: 5,
     borderRadius: 1.5,
     backgroundColor: colors.white,
@@ -189,13 +189,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     borderTopWidth: 1,
-    borderTopColor: colors.terracottaLine,
+    borderTopColor: colors.tealLine,
     paddingTop: 5,
   },
   footerBrand: {
     fontFamily: "Playball",
     fontSize: 10,
-    color: colors.terracottaDeep,
+    color: colors.tealDeep,
   },
   footerPage: {
     fontFamily: "SourceSans",

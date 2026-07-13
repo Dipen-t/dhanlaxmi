@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import {
@@ -23,7 +24,8 @@ export function VendorDialog({
   materials,
   onClose,
 }: VendorDialogProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
@@ -35,21 +37,38 @@ export function VendorDialog({
   const isEditing = vendor !== null;
 
   useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!dialog) return;
+    setMounted(true);
+  }, []);
 
-    if (open && !dialog.open) {
-      setFormKey((k) => k + 1);
-      setError(null);
-      setDeliveryLocation(vendor?.deliveryLocation ?? "venue");
-      setSelectedMaterialIds(vendor?.rawMaterials.map((m) => m.id) ?? []);
-      dialog.showModal();
+  useEffect(() => {
+    if (!open) return;
+
+    setFormKey((key) => key + 1);
+    setError(null);
+    setDeliveryLocation(vendor?.deliveryLocation ?? "venue");
+    setSelectedMaterialIds(vendor?.rawMaterials.map((m) => m.id) ?? []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when opening / vendor changes
+  }, [open, vendor?.id]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
     }
 
-    if (!open && dialog.open) {
-      dialog.close();
-    }
-  }, [open, vendor]);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   function handleClose() {
     setError(null);
@@ -66,6 +85,8 @@ export function VendorDialog({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    event.stopPropagation();
+
     const formData = new FormData(event.currentTarget);
 
     selectedMaterialIds.forEach((id) => {
@@ -73,177 +94,234 @@ export function VendorDialog({
     });
 
     startTransition(async () => {
-      const result = isEditing
-        ? await updateVendor(formData)
-        : await createVendor(formData);
+      try {
+        const result = isEditing
+          ? await updateVendor(formData)
+          : await createVendor(formData);
 
-      if (result.error) {
-        setError(result.error);
-        return;
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        handleClose();
+      } catch {
+        setError("Something went wrong. Please try again.");
       }
-
-      handleClose();
     });
   }
 
   const selectableMaterials = materials;
 
-  return (
-    <dialog ref={dialogRef} onClose={handleClose} className="app-dialog app-dialog-wide">
-      <form key={formKey} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="app-dialog-body min-h-0 flex-1 overflow-y-auto px-5 pt-5 pb-4">
-          <h2 className="text-base font-semibold text-foreground">
-            {isEditing ? "Edit vendor" : "Add vendor"}
-          </h2>
-          {isEditing ? <input type="hidden" name="id" value={vendor.id} /> : null}
-          <input type="hidden" name="deliveryLocation" value={deliveryLocation} />
+  if (!mounted || !open) {
+    return null;
+  }
 
-          <div className="mt-4 space-y-4">
-            <div>
-              <label
-                htmlFor="vendor-name"
-                className="block text-sm font-medium text-foreground"
-              >
-                Vendor name
-              </label>
-              <input
-                id="vendor-name"
-                name="name"
-                type="text"
-                required
-                maxLength={120}
-                defaultValue={vendor?.name ?? ""}
-                autoComplete="organization"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                placeholder="e.g. Fresh Farms Supply"
-              />
+  return createPortal(
+    <div className="fixed inset-0 z-200 flex items-end justify-center p-0 sm:items-center sm:p-4">
+      <button
+        type="button"
+        aria-label="Close dialog"
+        className="absolute inset-0 bg-[oklch(0.22_0.02_175/0.45)]"
+        onClick={handleClose}
+      />
+
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative z-10 flex max-h-[min(100dvh,44rem)] w-full max-w-[42rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl"
+        style={{
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          maxHeight: "min(100dvh - env(safe-area-inset-top, 0px), 44rem)",
+        }}
+      >
+        <form
+          key={formKey}
+          onSubmit={handleSubmit}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 pb-4 [-webkit-overflow-scrolling:touch] sm:px-6">
+            <h2
+              id={titleId}
+              className="text-lg font-semibold tracking-[-0.02em] text-foreground"
+            >
+              {isEditing ? "Edit vendor" : "Add vendor"}
+            </h2>
+            <p className="mt-1 text-sm text-muted text-pretty">
+              Set contact details, delivery location, and assigned materials.
+            </p>
+            {isEditing ? (
+              <input type="hidden" name="id" value={vendor.id} />
+            ) : null}
+            <input
+              type="hidden"
+              name="deliveryLocation"
+              value={deliveryLocation}
+            />
+
+            <div className="mt-5 space-y-5">
+              <div>
+                <label
+                  htmlFor="vendor-name"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Vendor name
+                </label>
+                <input
+                  id="vendor-name"
+                  name="name"
+                  type="text"
+                  required
+                  maxLength={120}
+                  defaultValue={vendor?.name ?? ""}
+                  autoComplete="organization"
+                  enterKeyHint="next"
+                  className="mt-1.5 min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                  placeholder="e.g. Fresh Farms Supply"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="vendor-phone"
+                  className="block text-sm font-medium text-foreground"
+                >
+                  Phone number
+                </label>
+                <input
+                  id="vendor-phone"
+                  name="phone"
+                  type="tel"
+                  required
+                  maxLength={20}
+                  defaultValue={vendor?.phone ?? ""}
+                  autoComplete="tel"
+                  enterKeyHint="done"
+                  className="mt-1.5 min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                  placeholder="e.g. +91 98765 43210"
+                />
+              </div>
+
+              <fieldset>
+                <legend className="block text-sm font-medium text-foreground">
+                  Deliver to
+                </legend>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(
+                    [
+                      { value: "venue", label: "Venue" },
+                      { value: "godown", label: "Godown" },
+                    ] as const
+                  ).map((option) => (
+                    <label
+                      key={option.value}
+                      className={`inline-flex min-h-11 touch-manipulation cursor-pointer items-center rounded-lg border px-4 text-sm font-medium transition-colors ${
+                        deliveryLocation === option.value
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-border text-muted hover:text-foreground"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="deliveryLocationChoice"
+                        value={option.value}
+                        checked={deliveryLocation === option.value}
+                        onChange={() => setDeliveryLocation(option.value)}
+                        className="sr-only"
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+
+              <fieldset>
+                <legend className="block text-sm font-medium text-foreground">
+                  Raw materials
+                </legend>
+                <div className="mt-2 max-h-[min(22rem,42dvh)] min-h-[calc(5*2.5rem+4*0.625rem+1.5rem)] space-y-0 overflow-y-auto overscroll-contain rounded-xl border border-border p-3 [-webkit-overflow-scrolling:touch]">
+                  {selectableMaterials.length === 0 ? (
+                    <p className="px-2 py-3 text-sm text-muted">
+                      No materials available to assign.
+                    </p>
+                  ) : (
+                    <ul className="grid grid-cols-2 gap-2.5">
+                      {selectableMaterials.map((material) => {
+                        const checked = selectedMaterialIds.includes(
+                          material.id,
+                        );
+                        const isAssignedToOther = vendor
+                          ? material.rawMaterialVendors.some(
+                              (rmv) => rmv.vendor.id !== vendor.id,
+                            )
+                          : material.rawMaterialVendors.length > 0;
+
+                        return (
+                          <li key={material.id}>
+                            <label
+                              title={
+                                isAssignedToOther
+                                  ? `${material.name} (Assigned to other vendors)`
+                                  : material.name
+                              }
+                              className={`flex min-h-11 w-full touch-manipulation cursor-pointer items-center justify-center rounded-full px-3 py-2 text-center text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring ${
+                                checked
+                                  ? "bg-primary text-primary-foreground"
+                                  : isAssignedToOther
+                                    ? "bg-primary-soft text-primary ring-1 ring-primary/30 hover:bg-primary/20"
+                                    : "bg-surface text-muted hover:text-foreground"
+                              }`}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleMaterial(material.id)}
+                                className="sr-only"
+                              />
+                              <span className="line-clamp-1">
+                                {material.name}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </div>
+              </fieldset>
             </div>
 
-            <div>
-              <label
-                htmlFor="vendor-phone"
-                className="block text-sm font-medium text-foreground"
-              >
-                Phone number
-              </label>
-              <input
-                id="vendor-phone"
-                name="phone"
-                type="tel"
-                required
-                maxLength={20}
-                defaultValue={vendor?.phone ?? ""}
-                autoComplete="tel"
-                className="mt-1.5 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                placeholder="e.g. +91 98765 43210"
-              />
-            </div>
-
-            <fieldset>
-              <legend className="block text-sm font-medium text-foreground">
-                Deliver to
-              </legend>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(
-                  [
-                    { value: "venue", label: "Venue" },
-                    { value: "godown", label: "Godown" },
-                  ] as const
-                ).map((option) => (
-                  <label
-                    key={option.value}
-                    className={`inline-flex min-h-10 cursor-pointer items-center rounded-lg border px-4 text-sm font-medium transition-colors ${
-                      deliveryLocation === option.value
-                        ? "border-primary bg-primary-soft text-primary"
-                        : "border-border text-muted hover:text-foreground"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="deliveryLocationChoice"
-                      value={option.value}
-                      checked={deliveryLocation === option.value}
-                      onChange={() => setDeliveryLocation(option.value)}
-                      className="sr-only"
-                    />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset>
-              <legend className="block text-sm font-medium text-foreground">
-                Raw materials
-              </legend>
-              <div className="mt-2 min-h-[calc(5*2.5rem+4*0.625rem+1.5rem)] max-h-96 overflow-y-auto rounded-lg border border-border p-3">
-                {selectableMaterials.length === 0 ? (
-                  <p className="px-2 py-3 text-sm text-muted">
-                    No materials available to assign.
-                  </p>
-                ) : (
-                  <ul className="grid grid-cols-2 gap-2.5">
-                    {selectableMaterials.map((material) => {
-                      const checked = selectedMaterialIds.includes(material.id);
-                      const isAssignedToOther = vendor
-                        ? material.rawMaterialVendors.some(
-                            (rmv) => rmv.vendor.id !== vendor.id
-                          )
-                        : material.rawMaterialVendors.length > 0;
-
-                      return (
-                        <li key={material.id}>
-                          <label
-                            title={isAssignedToOther ? `${material.name} (Assigned to other vendors)` : material.name}
-                            className={`flex min-h-10 w-full cursor-pointer items-center justify-center rounded-full px-3 py-2 text-center text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring ${
-                              checked
-                                ? "bg-primary text-primary-foreground"
-                                : isAssignedToOther
-                                ? "bg-primary-soft text-primary ring-1 ring-primary/30 hover:bg-primary/20"
-                                : "bg-surface text-muted hover:text-foreground"
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleMaterial(material.id)}
-                              className="sr-only"
-                            />
-                            <span className="line-clamp-1">{material.name}</span>
-                          </label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            </fieldset>
+            {error ? (
+              <p role="alert" className="mt-4 text-sm font-medium text-red-600">
+                {error}
+              </p>
+            ) : null}
           </div>
 
-          {error ? (
-            <p role="alert" className="mt-3 text-sm text-primary">
-              {error}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-          <button
-            type="button"
-            onClick={handleClose}
-            className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-          >
-            {isPending ? "Saving…" : isEditing ? "Save changes" : "Add vendor"}
-          </button>
-        </div>
-      </form>
-    </dialog>
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-5 py-4 sm:px-6">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isPending}
+              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+            >
+              {isPending
+                ? "Saving…"
+                : isEditing
+                  ? "Save changes"
+                  : "Add vendor"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>,
+    document.body,
   );
 }

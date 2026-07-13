@@ -2,15 +2,16 @@
 
 :root {
   --bg: oklch(1 0 0);
-  --surface: oklch(0.975 0.004 85);
-  --ink: oklch(0.22 0.02 50);
-  --muted: oklch(0.48 0.02 50);
-  --border: oklch(0.91 0.006 85);
-  --primary: oklch(0.58 0.15 42);
-  --primary-soft: oklch(0.96 0.03 42);
+  --surface: oklch(0.975 0.008 175);
+  --ink: oklch(0.24 0.02 175);
+  --muted: oklch(0.46 0.025 175);
+  --border: oklch(0.91 0.01 175);
+  --primary: oklch(0.48 0.11 175);
+  --primary-soft: oklch(0.96 0.03 175);
   --primary-foreground: oklch(1 0 0);
-  --accent: oklch(0.52 0.08 250);
-  --ring: oklch(0.58 0.15 42);
+  --accent: oklch(0.52 0.08 245);
+  --ring: oklch(0.48 0.11 175);
+  --backdrop: oklch(0.22 0.02 175 / 0.45);
 }
 
 @theme inline {
@@ -46,7 +47,7 @@ body {
 
 dialog.app-dialog {
   width: min(calc(100vw - 2rem), 24rem);
-  max-height: calc(100dvh - 2rem);
+  max-height: calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   margin: auto;
   padding: 0;
   border: 1px solid var(--border);
@@ -57,7 +58,7 @@ dialog.app-dialog {
 }
 
 dialog.app-dialog::backdrop {
-  background: oklch(0.22 0.02 50 / 0.45);
+  background: var(--backdrop);
 }
 
 dialog.app-dialog:not([open]) {
@@ -71,9 +72,15 @@ dialog.app-dialog[open] {
 
 dialog.app-dialog-wide {
   width: min(calc(100vw - 2rem), 42rem);
-  max-height: min(calc(100dvh - 1.5rem), 44rem);
+  max-height: min(
+    calc(100dvh - 1.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)),
+    44rem
+  );
 }
 
 dialog.app-dialog-wide .app-dialog-body {
-  max-height: min(calc(100dvh - 6rem), 38rem);
+  max-height: min(
+    calc(100dvh - 7.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)),
+    34rem
+  );
 }

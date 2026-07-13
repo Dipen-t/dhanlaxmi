@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-13T08:38:00.000Z",
+  "title": "Design System: Dhanlaxmi Catering",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Clay terracotta",
+        "canonical": "oklch(0.58 0.15 42)",
+        "tonalRamp": [
+          "oklch(0.22 0.08 42)",
+          "oklch(0.32 0.11 42)",
+          "oklch(0.42 0.13 42)",
+          "oklch(0.52 0.14 42)",
+          "oklch(0.58 0.15 42)",
+          "oklch(0.72 0.10 42)",
+          "oklch(0.86 0.05 42)",
+          "oklch(0.96 0.03 42)"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Clay wash",
+        "canonical": "oklch(0.96 0.03 42)",
+        "tonalRamp": [
+          "oklch(0.55 0.08 42)",
+          "oklch(0.65 0.07 42)",
+          "oklch(0.75 0.05 42)",
+          "oklch(0.82 0.04 42)",
+          "oklch(0.88 0.035 42)",
+          "oklch(0.92 0.03 42)",
+          "oklch(0.96 0.03 42)",
+          "oklch(0.98 0.015 42)"
+        ]
+      },
+      "primary-foreground": {
+        "role": "primary",
+        "displayName": "On primary",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.55 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.82 0 0)",
+          "oklch(0.88 0 0)",
+          "oklch(0.93 0 0)",
+          "oklch(0.97 0 0)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "accent": {
+        "role": "secondary",
+        "displayName": "Cool slate accent",
+        "canonical": "oklch(0.52 0.08 250)",
+        "tonalRamp": [
+          "oklch(0.22 0.05 250)",
+          "oklch(0.32 0.06 250)",
+          "oklch(0.42 0.07 250)",
+          "oklch(0.52 0.08 250)",
+          "oklch(0.62 0.06 250)",
+          "oklch(0.75 0.04 250)",
+          "oklch(0.88 0.02 250)",
+          "oklch(0.96 0.01 250)"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Pure white",
+        "canonical": "oklch(1 0 0)",
+        "tonalRamp": [
+          "oklch(0.55 0 0)",
+          "oklch(0.65 0 0)",
+          "oklch(0.75 0 0)",
+          "oklch(0.85 0 0)",
+          "oklch(0.91 0 0)",
+          "oklch(0.95 0 0)",
+          "oklch(0.98 0 0)",
+          "oklch(1 0 0)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Warm mist surface",
+        "canonical": "oklch(0.975 0.004 85)",
+        "tonalRamp": [
+          "oklch(0.55 0.01 85)",
+          "oklch(0.68 0.008 85)",
+          "oklch(0.78 0.006 85)",
+          "oklch(0.86 0.005 85)",
+          "oklch(0.91 0.005 85)",
+          "oklch(0.95 0.004 85)",
+          "oklch(0.975 0.004 85)",
+          "oklch(0.99 0.002 85)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "oklch(0.22 0.02 50)",
+        "tonalRamp": [
+          "oklch(0.15 0.02 50)",
+          "oklch(0.22 0.02 50)",
+          "oklch(0.32 0.02 50)",
+          "oklch(0.42 0.02 50)",
+          "oklch(0.52 0.02 50)",
+          "oklch(0.65 0.015 50)",
+          "oklch(0.8 0.01 50)",
+          "oklch(0.92 0.005 50)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted ink",
+        "canonical": "oklch(0.48 0.02 50)",
+        "tonalRamp": [
+          "oklch(0.22 0.02 50)",
+          "oklch(0.32 0.02 50)",
+          "oklch(0.4 0.02 50)",
+          "oklch(0.48 0.02 50)",
+          "oklch(0.58 0.015 50)",
+          "oklch(0.7 0.01 50)",
+          "oklch(0.84 0.008 50)",
+          "oklch(0.94 0.004 50)"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline border",
+        "canonical": "oklch(0.91 0.006 85)",
+        "tonalRamp": [
+          "oklch(0.55 0.01 85)",
+          "oklch(0.68 0.008 85)",
+          "oklch(0.78 0.007 85)",
+          "oklch(0.85 0.006 85)",
+          "oklch(0.91 0.006 85)",
+          "oklch(0.94 0.005 85)",
+          "oklch(0.97 0.003 85)",
+          "oklch(0.99 0.002 85)"
+        ]
+      },
+      "ring": {
+        "role": "primary",
+        "displayName": "Focus ring",
+        "canonical": "oklch(0.58 0.15 42)",
+        "tonalRamp": [
+          "oklch(0.22 0.08 42)",
+          "oklch(0.32 0.11 42)",
+          "oklch(0.42 0.13 42)",
+          "oklch(0.52 0.14 42)",
+          "oklch(0.58 0.15 42)",
+          "oklch(0.72 0.10 42)",
+          "oklch(0.86 0.05 42)",
+          "oklch(0.96 0.03 42)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "brand": {
+        "displayName": "Brand",
+        "purpose": "Service name in the page header — strongest type on screen."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section prompts and page-level questions."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Nav tile titles, row titles, dialog headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Descriptions, form help, list secondary lines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chips, tags, meta."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Codes and technical snippets only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "none-at-rest",
+        "value": "none",
+        "purpose": "Default for lists, tiles, cards, toolbars."
+      },
+      {
+        "name": "dialog-backdrop",
+        "value": "oklch(0.22 0.02 50 / 0.45)",
+        "purpose": "Native dialog backdrop dim."
+      }
+    ],
+    "motion": [
+      {
+        "name": "color-transition",
+        "value": "transition-colors",
+        "purpose": "Default state changes for hover/focus fills and borders."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation/transition duration 0.01ms under prefers-reduced-motion",
+        "purpose": "Global reduced-motion collapse in globals.css."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Clay fill action; min 40px tall for tablet taps.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Save order</button>",
+      "css": ".ds-btn-primary { display: inline-flex; min-height: 40px; align-items: center; border: none; border-radius: 8px; background: var(--primary, oklch(0.58 0.15 42)); color: var(--primary-foreground, oklch(1 0 0)); padding: 10px 16px; font: 500 0.875rem/1.25 Geist, system-ui, sans-serif; cursor: pointer; transition: opacity 0.15s ease; } .ds-btn-primary:hover { opacity: 0.9; } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--ring, oklch(0.58 0.15 42)); } .ds-btn-primary:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Bordered cancel/secondary action.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Cancel</button>",
+      "css": ".ds-btn-secondary { display: inline-flex; min-height: 40px; align-items: center; border: 1px solid var(--border, oklch(0.91 0.006 85)); border-radius: 8px; background: var(--bg, oklch(1 0 0)); color: var(--ink, oklch(0.22 0.02 50)); padding: 10px 16px; font: 500 0.875rem/1.25 Geist, system-ui, sans-serif; cursor: pointer; transition: background-color 0.15s ease; } .ds-btn-secondary:hover { background: var(--surface, oklch(0.975 0.004 85)); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--ring, oklch(0.58 0.15 42)); }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Standard form field with clay focus ring.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Vendor name\" />",
+      "css": ".ds-input { width: 100%; border: 1px solid var(--border, oklch(0.91 0.006 85)); border-radius: 8px; background: var(--bg, oklch(1 0 0)); color: var(--ink, oklch(0.22 0.02 50)); padding: 10px 12px; font: 400 0.875rem/1.4 Geist, system-ui, sans-serif; outline: none; transition: border-color 0.15s ease, box-shadow 0.15s ease; } .ds-input::placeholder { color: var(--muted, oklch(0.48 0.02 50)); } .ds-input:focus { border-color: var(--primary, oklch(0.58 0.15 42)); box-shadow: 0 0 0 2px color-mix(in oklch, var(--ring, oklch(0.58 0.15 42)) 30%, transparent); }"
+    },
+    {
+      "name": "Primary Chip",
+      "kind": "chip",
+      "refersTo": "chip-primary",
+      "description": "Status/count chip on clay wash.",
+      "html": "<span class=\"ds-chip-primary\">3 materials</span>",
+      "css": ".ds-chip-primary { display: inline-flex; align-items: center; border-radius: 6px; background: var(--primary-soft, oklch(0.96 0.03 42)); color: var(--primary, oklch(0.58 0.15 42)); padding: 2px 8px; font: 500 0.75rem/1.3 Geist, system-ui, sans-serif; }"
+    },
+    {
+      "name": "Nav Tile",
+      "kind": "nav",
+      "refersTo": "nav-tile",
+      "description": "Home destination tile — places to go, not content cards.",
+      "html": "<a class=\"ds-nav-tile\" href=\"#\"><span class=\"ds-nav-tile-icon\" aria-hidden=\"true\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z\"/><path d=\"M3 6h18\"/><path d=\"M16 10a4 4 0 0 1-8 0\"/></svg></span><span class=\"ds-nav-tile-copy\"><span class=\"ds-nav-tile-title\">Orders</span><span class=\"ds-nav-tile-desc\">Create and track event orders</span></span><svg class=\"ds-nav-tile-chevron\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></a>",
+      "css": ".ds-nav-tile { display: flex; min-height: 56px; align-items: center; gap: 16px; border: 1px solid var(--border, oklch(0.91 0.006 85)); border-radius: 12px; background: var(--bg, oklch(1 0 0)); padding: 16px 20px; text-decoration: none; color: inherit; transition: border-color 0.15s ease, background-color 0.15s ease; } .ds-nav-tile:hover { border-color: color-mix(in oklch, var(--primary, oklch(0.58 0.15 42)) 30%, transparent); background: var(--surface, oklch(0.975 0.004 85)); } .ds-nav-tile:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--ring, oklch(0.58 0.15 42)); } .ds-nav-tile-icon { display: flex; width: 48px; height: 48px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 8px; background: var(--primary-soft, oklch(0.96 0.03 42)); color: var(--primary, oklch(0.58 0.15 42)); transition: background-color 0.15s ease, color 0.15s ease; } .ds-nav-tile:hover .ds-nav-tile-icon { background: var(--primary, oklch(0.58 0.15 42)); color: var(--primary-foreground, oklch(1 0 0)); } .ds-nav-tile-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; gap: 2px; } .ds-nav-tile-title { font: 600 1rem/1.4 Geist, system-ui, sans-serif; color: var(--ink, oklch(0.22 0.02 50)); } .ds-nav-tile-desc { font: 400 0.875rem/1.4 Geist, system-ui, sans-serif; color: var(--muted, oklch(0.48 0.02 50)); } .ds-nav-tile-chevron { flex-shrink: 0; color: var(--muted, oklch(0.48 0.02 50)); transition: transform 0.15s ease, color 0.15s ease; } .ds-nav-tile:hover .ds-nav-tile-chevron { transform: translateX(2px); color: var(--primary, oklch(0.58 0.15 42)); }"
+    },
+    {
+      "name": "List Surface",
+      "kind": "card",
+      "refersTo": "list-surface",
+      "description": "Bordered list shell with row dividers — no shadow.",
+      "html": "<ul class=\"ds-list\"><li class=\"ds-list-row\">Paneer 500g</li><li class=\"ds-list-row\">Basmati rice 10kg</li></ul>",
+      "css": ".ds-list { margin: 0; padding: 0; list-style: none; border: 1px solid var(--border, oklch(0.91 0.006 85)); border-radius: 12px; background: var(--bg, oklch(1 0 0)); overflow: hidden; } .ds-list-row { padding: 14px 16px; font: 400 0.875rem/1.4 Geist, system-ui, sans-serif; color: var(--ink, oklch(0.22 0.02 50)); border-bottom: 1px solid var(--border, oklch(0.91 0.006 85)); } .ds-list-row:last-child { border-bottom: none; }"
+    },
+    {
+      "name": "Back FAB",
+      "kind": "custom",
+      "refersTo": "button-icon",
+      "description": "Fixed home path — 48px circle with soft blur veil.",
+      "html": "<a class=\"ds-back-fab\" href=\"#\" aria-label=\"Back to home\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"/></svg></a>",
+      "css": ".ds-back-fab { display: inline-flex; width: 48px; height: 48px; align-items: center; justify-content: center; border: 1px solid color-mix(in oklch, var(--border, oklch(0.91 0.006 85)) 50%, transparent); border-radius: 9999px; background: color-mix(in oklch, var(--bg, oklch(1 0 0)) 30%, transparent); color: var(--ink, oklch(0.22 0.02 50)); backdrop-filter: blur(12px); text-decoration: none; transition: background-color 0.15s ease; } .ds-back-fab:hover { background: color-mix(in oklch, var(--bg, oklch(1 0 0)) 50%, transparent); } .ds-back-fab:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--bg, #fff), 0 0 0 4px var(--ring, oklch(0.58 0.15 42)); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Dhanlaxmi Catering",
+    "overview": "This is the visual system for a tablet-first catering operations tool. Screens should feel like a calm kitchen desk on an iPad: soft, touch-forward controls, pure white working surfaces, and one clay terracotta accent that marks action without decorating the room. Density stays low; every screen has one job.\n\nThe system rejects marketing landing-page aesthetics (hero metrics, gradient text, cream/sand backgrounds), dense desktop-only admin panels, and hamburger-only navigation without a clear path home. Brand shows in the page header name and the terracotta mark — not in hero copy or campaign chrome.",
+    "keyCharacteristics": [
+      "Pure white canvas + soft surface tint; restrained clay terracotta accent",
+      "Geist sans throughout; brand name outranks page title",
+      "Flat at rest; light lift only on dialogs and floating actions",
+      "Large tap targets (40–48px) for gloves / wet hands",
+      "Navigation tiles are destinations, not content cards"
+    ],
+    "rules": [
+      {
+        "name": "The One Clay Rule",
+        "body": "Clay terracotta occupies ≤10% of any screen. If a layout feels “branded orange,” pull color back into buttons, chips, and the header mark only.",
+        "section": "colors"
+      },
+      {
+        "name": "The Kitchen Contrast Rule",
+        "body": "Ink on white is the default reading pair. Do not lighten muted text further for “elegance.”",
+        "section": "colors"
+      },
+      {
+        "name": "The Brand-First Header Rule",
+        "body": "The catering service name stays larger/stronger than the current page title. Never invert that hierarchy.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "No decorative drop shadows on content. If it looks like a SaaS dashboard card stack, remove the shadow and keep the border.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do design for iPad Safari / home-screen first: large tap targets (≥40px, prefer 44–48px for primary actions).",
+      "Do keep brand name visually above page title in the header.",
+      "Do use clay terracotta for actions, focus, and scarce status — not for backgrounds.",
+      "Do prefer bordered list shells and nav tiles over elevated cards.",
+      "Do honor prefers-reduced-motion (global transitions collapse).",
+      "Do keep ink-on-white as the default reading pair for kitchen / outdoor readability."
+    ],
+    "donts": [
+      "Don't use marketing landing page aesthetics (hero metrics, gradient text, cream/sand backgrounds).",
+      "Don't build dense desktop-only admin panels as the primary layout.",
+      "Don't ship hamburger-only navigation on mobile without a clear home path back.",
+      "Don't add side-stripe (border-left accent) decorations or gradient text.",
+      "Don't stack nested cards or decorative multi-layer shadows.",
+      "Don't shrink controls below glove-friendly tap size to “fit more on desktop.”"
+    ]
+  }
+}

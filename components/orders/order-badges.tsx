@@ -16,7 +16,7 @@ export function formatOrderDate(date: string) {
 
 export function MealBadge({ mealType }: { mealType: MealType }) {
   return (
-    <span className="inline-flex items-center rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
+    <span className="inline-flex items-center rounded-md bg-primary-soft px-2.5 py-1 text-sm font-medium text-primary">
       {mealLabels[mealType]}
     </span>
   );
@@ -24,7 +24,7 @@ export function MealBadge({ mealType }: { mealType: MealType }) {
 
 export function PersonsBadge({ count }: { count: number }) {
   return (
-    <span className="inline-flex items-center rounded-md bg-surface px-2 py-0.5 text-xs font-medium text-muted">
+    <span className="inline-flex items-center rounded-md bg-surface px-2.5 py-1 text-sm font-medium text-muted">
       {count} {count === 1 ? "person" : "persons"}
     </span>
   );

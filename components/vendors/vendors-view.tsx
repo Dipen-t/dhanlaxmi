@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Search } from "lucide-react";
+import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
@@ -18,7 +18,7 @@ type VendorsViewProps = {
 };
 
 export function VendorsView({ vendors, materials }: VendorsViewProps) {
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<VendorWithMaterials | null>(
     null,
@@ -70,56 +70,88 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
     setEditingVendor(null);
   }
 
+  const hasQuery = query.trim().length > 0;
+
   return (
     <>
-      <div className="mb-5 flex items-center gap-3">
-        <label className="relative block min-w-0 flex-1">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted"
-            strokeWidth={1.75}
-            aria-hidden
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search vendors or materials"
-            className="w-full rounded-lg border border-border bg-background py-2.5 pr-3 pl-10 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-          />
-        </label>
+      <div className="sticky top-0 z-20 -mx-4 mb-5 border-b border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        <div className="flex items-center gap-3">
+          <label className="relative block min-w-0 flex-1">
+            <span className="sr-only">Search vendors</span>
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
+              strokeWidth={1.75}
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search vendors or materials"
+              autoComplete="off"
+              suppressHydrationWarning
+              className="min-h-11 w-full rounded-lg border border-border bg-background py-2.5 pr-10 pl-10 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+            />
+            {hasQuery ? (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                aria-label="Clear search"
+                className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X className="size-4" strokeWidth={1.75} aria-hidden />
+              </button>
+            ) : null}
+          </label>
 
-        <div
-          className="inline-flex shrink-0 rounded-lg border border-border p-1"
-          role="group"
-          aria-label="View mode"
-        >
-          <button
-            type="button"
-            aria-pressed={view === "grid"}
-            onClick={() => setViewMode("grid")}
-            className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              view === "grid"
-                ? "bg-primary-soft text-primary"
-                : "text-muted hover:text-foreground"
-            }`}
+          <div
+            className="inline-flex shrink-0 rounded-lg border border-border p-1"
+            role="group"
+            aria-label="View mode"
           >
-            <LayoutGrid className="size-4" strokeWidth={1.75} aria-hidden />
-            <span className="sr-only">Grid view</span>
-          </button>
-          <button
-            type="button"
-            aria-pressed={view === "list"}
-            onClick={() => setViewMode("list")}
-            className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-              view === "list"
-                ? "bg-primary-soft text-primary"
-                : "text-muted hover:text-foreground"
-            }`}
-          >
-            <List className="size-4" strokeWidth={1.75} aria-hidden />
-            <span className="sr-only">List view</span>
-          </button>
+            <button
+              type="button"
+              aria-pressed={view === "list"}
+              onClick={() => setViewMode("list")}
+              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                view === "list"
+                  ? "bg-primary-soft text-primary"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <List className="size-4" strokeWidth={1.75} aria-hidden />
+              <span className="sr-only">List view</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === "grid"}
+              onClick={() => setViewMode("grid")}
+              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                view === "grid"
+                  ? "bg-primary-soft text-primary"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <LayoutGrid className="size-4" strokeWidth={1.75} aria-hidden />
+              <span className="sr-only">Grid view</span>
+            </button>
+          </div>
         </div>
+
+        {vendors.length > 0 ? (
+          <p className="mt-2.5 text-sm text-muted">
+            {hasQuery ? (
+              <>
+                {filteredVendors.length} match
+                {filteredVendors.length === 1 ? "" : "es"}
+              </>
+            ) : (
+              <>
+                {vendors.length} vendor{vendors.length === 1 ? "" : "s"}
+              </>
+            )}
+          </p>
+        ) : null}
       </div>
 
       {vendors.length === 0 ? (
@@ -131,7 +163,18 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
         </div>
       ) : filteredVendors.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-6 py-10 text-center">
-          <p className="text-sm text-muted">No vendors match your search.</p>
+          <p className="text-base font-medium text-foreground">No matches</p>
+          <p className="mt-1 text-sm text-muted">
+            Nothing found for &ldquo;{query.trim()}&rdquo;. Try another name,
+            phone, or material.
+          </p>
+          <button
+            type="button"
+            onClick={() => setQuery("")}
+            className="mt-4 inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Clear search
+          </button>
         </div>
       ) : view === "grid" ? (
         <VendorGrid vendors={filteredVendors} onEdit={openEdit} />

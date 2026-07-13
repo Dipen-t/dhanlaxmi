@@ -66,8 +66,13 @@ export async function getOrders(): Promise<OrderRecord[]> {
 }
 
 export async function getOrder(id: string): Promise<OrderRecord | null> {
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId) || numericId <= 0) {
+    return null;
+  }
+
   const order = await db.query.orders.findFirst({
-    where: eq(orders.id, Number(id)),
+    where: eq(orders.id, numericId),
     with: {
       orderRawMaterials: true,
     },

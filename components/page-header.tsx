@@ -1,22 +1,29 @@
 import { UtensilsCrossed } from "lucide-react";
 
+import { SoundMuteButton } from "@/components/sound-mute-button";
+
 type PageHeaderProps = {
   title?: string;
 };
 
-export function PageHeader({ title = "Home" }: PageHeaderProps) {
+export function PageHeader({ title }: PageHeaderProps) {
   return (
-    <header className="mb-8">
-      <div className="flex items-center gap-3">
-        <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <UtensilsCrossed className="size-5" strokeWidth={2} aria-hidden />
+    <header className="mb-6 md:mb-8">
+      <div className="flex items-center gap-3 md:gap-4">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground md:size-12">
+          <UtensilsCrossed className="size-5 md:size-6" strokeWidth={2} aria-hidden />
         </div>
-        <div>
-          <p className="text-xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance]">
+        <div className="min-w-0 flex-1">
+          <p className="text-xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance] md:text-2xl">
             Dhan Laxmi Catering Service
           </p>
-          <h1 className="text-sm font-normal text-muted">{title}</h1>
+          {title ? (
+            <h1 className="mt-0.5 text-sm font-normal text-muted md:text-base">
+              {title}
+            </h1>
+          ) : null}
         </div>
+        <SoundMuteButton />
       </div>
     </header>
   );

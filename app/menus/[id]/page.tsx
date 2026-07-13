@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getMenuById } from "@/app/menus/actions";
 import { MenuPdfDownload } from "@/components/menus/menu-pdf-download";
+import { MenuWhatsappShare } from "@/components/menus/menu-whatsapp-share";
 import { PageHeader } from "@/components/page-header";
 
 type MenuDetailPageProps = {
@@ -31,47 +32,63 @@ export default async function MenuDetailPage({ params }: MenuDetailPageProps) {
     notFound();
   }
 
-  return (
-    <div className="mx-auto w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <PageHeader title={menu.name} />
-        <MenuPdfDownload
-          menuId={menu.id}
-          menuName={menu.name}
-          variant="button"
-          className="shrink-0"
-        />
-      </div>
+  const dishTotal = menu.categories.reduce(
+    (sum, category) => sum + category.dishes.length,
+    0,
+  );
 
-      <p className="mb-6 text-sm text-muted [text-wrap:pretty]">
-        Preview for sharing with clients. Each section shows how many dishes
-        the client can pick.
-      </p>
+  return (
+    <div className="mx-auto w-full px-4 py-6 sm:px-6 sm:py-8">
+      <PageHeader title={menu.name} />
+
+      <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-base text-muted text-pretty">
+            {menu.categories.length}{" "}
+            {menu.categories.length === 1 ? "category" : "categories"} ·{" "}
+            {dishTotal} dishes · preview for sharing
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <MenuWhatsappShare
+              menuId={menu.id}
+              menuName={menu.name}
+              variant="button"
+            />
+            <MenuPdfDownload
+              menuId={menu.id}
+              menuName={menu.name}
+              variant="button"
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="space-y-4">
         {menu.categories.map((category) => (
           <section
             key={category.id}
-            className="rounded-xl border border-border bg-background p-4"
+            className="overflow-hidden rounded-xl border border-border bg-background"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface/60 px-4 py-3 sm:px-5">
+              <h2 className="text-base font-semibold tracking-[-0.01em] text-foreground md:text-lg">
                 {category.name}
               </h2>
-              <span className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
+              <span className="rounded-md bg-primary-soft px-2.5 py-1 text-sm font-medium text-primary">
                 {category.selectionRule}
               </span>
             </div>
-            <ol className="mt-3 space-y-2">
+            <ol className="divide-y divide-border">
               {category.dishes.map((dish, index) => (
                 <li
                   key={dish.id}
-                  className="flex items-start gap-3 rounded-lg border border-border px-3 py-2 text-sm"
+                  className="flex items-start gap-3 px-4 py-3 sm:px-5"
                 >
-                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded border border-border text-xs text-muted">
+                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md border border-border text-sm font-medium tabular-nums text-muted">
                     {index + 1}
                   </span>
-                  <span className="text-foreground">{dish.name}</span>
+                  <span className="pt-0.5 text-base text-foreground">
+                    {dish.name}
+                  </span>
                 </li>
               ))}
             </ol>

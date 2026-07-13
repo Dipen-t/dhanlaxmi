@@ -16,7 +16,7 @@ export default async function NewOrderPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-4 py-4 sm:px-6">
+    <div className="mx-auto w-full max-w-[1600px] px-4 py-2 sm:px-6">
       <OrderForm
         order={null}
         suggestedOrderId={suggestedOrderId}

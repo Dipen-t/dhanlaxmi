@@ -1,7 +1,14 @@
 "use client";
 
+import {
+  Coffee,
+  Moon,
+  Package,
+  Sun,
+  type LucideIcon,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import {
   createOrder,
@@ -10,6 +17,11 @@ import {
   type OrderRecord,
 } from "@/app/orders/actions";
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
+import {
+  OrderMaterialsPanel,
+  type OrderMaterialDraft,
+} from "@/components/orders/order-materials-panel";
+import { PersonsStepper } from "@/components/orders/persons-stepper";
 
 type OrderFormProps = {
   order: OrderRecord | null;
@@ -17,28 +29,41 @@ type OrderFormProps = {
   rawMaterials: MaterialWithVendor[];
 };
 
-const mealOptions = [
-  { value: "breakfast", label: "Breakfast" },
-  { value: "lunch", label: "Lunch" },
-  { value: "dinner", label: "Dinner" },
-] as const;
-
-const predefinedUnits = [
-  "kg",
-  "liters",
-  "units",
-  "pieces",
-  "boxes",
-  "bottles",
-  "plate",
+const mealOptions: {
+  value: MealType;
+  label: string;
+  icon: LucideIcon;
+}[] = [
+  { value: "breakfast", label: "Breakfast", icon: Coffee },
+  { value: "lunch", label: "Lunch", icon: Sun },
+  { value: "dinner", label: "Dinner", icon: Moon },
 ];
 
-type RawMaterialItem = {
-  rawMaterialId: number;
-  unitQty: string;
-  unitName: string;
-  vendorId: number | null;
-};
+function isMaterialComplete(item: OrderMaterialDraft) {
+  return (
+    item.unitQty.trim() !== "" &&
+    item.unitQty !== "0" &&
+    item.unitName.trim() !== ""
+  );
+}
+
+function orderMaterialsByCompletion(
+  materials: MaterialWithVendor[],
+  selected: OrderMaterialDraft[],
+) {
+  const completeIds = new Set(
+    selected.filter(isMaterialComplete).map((item) => item.rawMaterialId),
+  );
+
+  return [...materials]
+    .sort((a, b) => {
+      const aComplete = completeIds.has(a.id);
+      const bComplete = completeIds.has(b.id);
+      if (aComplete !== bComplete) return aComplete ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    })
+    .map((material) => material.id);
+}
 
 export function OrderForm({
   order,
@@ -48,26 +73,57 @@ export function OrderForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  
+
   const isEditing = order !== null;
 
   const [mealType, setMealType] = useState<MealType>(order?.mealType ?? "lunch");
-  const [focusedUnitIndex, setFocusedUnitIndex] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
 
-  const [selectedMaterials, setSelectedMaterials] = useState<RawMaterialItem[]>(() => {
-    return rawMaterials.map(rm => {
-      const existing = order?.rawMaterials?.find(m => m.rawMaterialId === rm.id);
-      const defaultVendorId = rm.rawMaterialVendors.length > 0 ? rm.rawMaterialVendors[0].vendor.id : null;
-      
-      return {
-        rawMaterialId: rm.id,
-        unitQty: existing?.unitQty ?? "",
-        unitName: existing?.unitName ?? "",
-        vendorId: existing?.vendorId ?? defaultVendorId,
-      };
-    });
-  });
+  const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
+    () => {
+      return rawMaterials.map((rm) => {
+        const existing = order?.rawMaterials?.find(
+          (m) => m.rawMaterialId === rm.id,
+        );
+        const defaultVendorId =
+          rm.rawMaterialVendors.length > 0
+            ? rm.rawMaterialVendors[0].vendor.id
+            : null;
+
+        return {
+          rawMaterialId: rm.id,
+          unitQty: existing?.unitQty ?? "",
+          unitName: existing?.unitName ?? "",
+          vendorId: existing?.vendorId ?? defaultVendorId,
+        };
+      });
+    },
+  );
+
+  const selectedMaterialsRef = useRef(selectedMaterials);
+  selectedMaterialsRef.current = selectedMaterials;
+
+  const [orderedMaterialIds, setOrderedMaterialIds] = useState<number[]>(() =>
+    orderMaterialsByCompletion(rawMaterials, selectedMaterials),
+  );
+
+  function refreshMaterialOrder(next = selectedMaterialsRef.current) {
+    setOrderedMaterialIds(orderMaterialsByCompletion(rawMaterials, next));
+  }
+
+  const sortedMaterials = useMemo(() => {
+    const byId = new Map(
+      rawMaterials.map((material) => [material.id, material]),
+    );
+    return orderedMaterialIds
+      .map((id) => byId.get(id))
+      .filter((material): material is MaterialWithVendor => Boolean(material));
+  }, [orderedMaterialIds, rawMaterials]);
+
+  function switchTab(tab: "details" | "materials") {
+    setActiveTab(tab);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   function handleCancel() {
     router.push("/orders");
@@ -77,20 +133,18 @@ export function OrderForm({
     event.preventDefault();
 
     const itemsToSubmit = selectedMaterials.filter(
-      (item) => item.unitQty.trim() !== "" && item.unitQty !== "0"
+      (item) => item.unitQty.trim() !== "" && item.unitQty !== "0",
     );
 
     if (itemsToSubmit.length === 0) {
       setError("Please specify a quantity for at least one raw material.");
-      setActiveTab("materials");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      switchTab("materials");
       return;
     }
 
-    if (itemsToSubmit.some(item => item.unitName.trim() === "")) {
+    if (itemsToSubmit.some((item) => item.unitName.trim() === "")) {
       setError("Please specify a unit for all selected materials.");
-      setActiveTab("materials");
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      switchTab("materials");
       return;
     }
 
@@ -120,251 +174,217 @@ export function OrderForm({
     });
   }
 
-  function updateMaterial(index: number, updates: Partial<RawMaterialItem>) {
-    const next = [...selectedMaterials];
-    next[index] = { ...next[index], ...updates };
-    setSelectedMaterials(next);
+  function updateMaterial(
+    rawMaterialId: number,
+    updates: Partial<OrderMaterialDraft>,
+  ) {
+    setSelectedMaterials((prev) => {
+      const next = prev.map((item) =>
+        item.rawMaterialId === rawMaterialId ? { ...item, ...updates } : item,
+      );
+      selectedMaterialsRef.current = next;
+      return next;
+    });
   }
 
+  const materialsMode = activeTab === "materials";
+
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6 pb-12">
+    <form
+      onSubmit={handleSubmit}
+      className={
+        materialsMode
+          ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-19 sm:px-6"
+          : "flex flex-col gap-5 pb-28"
+      }
+    >
       {error ? (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-200">
+        <div
+          role="alert"
+          className="shrink-0 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
           {error}
         </div>
       ) : null}
 
-      <div className="flex justify-end mb-[-1rem] relative z-10">
-        <div className="inline-flex items-center rounded-lg bg-surface p-1 border border-border">
-          <button
-            type="button"
-            onClick={() => setActiveTab("details")}
-            className={`inline-flex items-center justify-center rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === "details"
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/5"
-                : "text-muted hover:text-foreground hover:bg-background/50"
-            }`}
-          >
-            Details
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("materials")}
-            className={`inline-flex items-center justify-center rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-              activeTab === "materials"
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border/5"
-                : "text-muted hover:text-foreground hover:bg-background/50"
-            }`}
-          >
-            Raw Materials
-          </button>
-        </div>
-      </div>
+      <div
+        hidden={activeTab !== "details"}
+        className={activeTab === "details" ? "block" : "hidden"}
+      >
+        <div className="rounded-xl border border-border bg-background p-5 sm:p-6">
+          <h2 className="mb-5 text-lg font-semibold text-foreground">
+            Order details
+          </h2>
 
-      <div className={activeTab === "details" ? "block" : "hidden"}>
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Order Details</h2>
-        
-        {isEditing ? <input type="hidden" name="id" value={order.id} /> : null}
+          {isEditing ? <input type="hidden" name="id" value={order.id} /> : null}
 
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          <div>
-            <label htmlFor="order-id" className="block text-sm font-medium text-foreground mb-1.5">
-              Order ID
-            </label>
-            <input
-              id="order-id"
-              name="orderId"
-              type="text"
-              maxLength={32}
-              defaultValue={order?.orderId ?? suggestedOrderId}
-              autoComplete="off"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-              placeholder="e.g. ORD-001"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="order-date" className="block text-sm font-medium text-foreground mb-1.5">
-              Event date
-            </label>
-            <input
-              id="order-date"
-              name="date"
-              type="date"
-              defaultValue={order?.date ?? ""}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="order-venue" className="block text-sm font-medium text-foreground mb-1.5">
-              Venue
-            </label>
-            <input
-              id="order-venue"
-              name="venue"
-              type="text"
-              maxLength={200}
-              defaultValue={order?.venue ?? ""}
-              autoComplete="off"
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-              placeholder="e.g. Grand Ballroom"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="order-persons" className="block text-sm font-medium text-foreground mb-1.5">
-              Number of persons
-            </label>
-            <input
-              id="order-persons"
-              name="numberOfPersons"
-              type="number"
-              min={1}
-              max={100000}
-              defaultValue={order?.numberOfPersons ?? 1}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
-            />
-          </div>
-
-          <fieldset className="md:col-span-2 lg:col-span-4">
-            <legend className="block text-sm font-medium text-foreground mb-2">
-              Meal type
-            </legend>
-            <div className="flex flex-wrap gap-3">
-              {mealOptions.map((option) => (
-                <label
-                  key={option.value}
-                  className={`inline-flex min-h-10 cursor-pointer items-center justify-center rounded-full px-5 text-sm font-medium transition-colors ${
-                    mealType === option.value
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-surface text-muted hover:text-foreground"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="mealTypeChoice"
-                    value={option.value}
-                    checked={mealType === option.value}
-                    onChange={() => setMealType(option.value)}
-                    className="sr-only"
-                  />
-                  {option.label}
-                </label>
-              ))}
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
+            <div className="min-w-0">
+              <label
+                htmlFor="order-id"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Order ID
+              </label>
+              <input
+                id="order-id"
+                name="orderId"
+                type="text"
+                maxLength={32}
+                defaultValue={order?.orderId ?? suggestedOrderId}
+                autoComplete="off"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. ORD-001"
+              />
             </div>
-          </fieldset>
+
+            <div className="min-w-0">
+              <label
+                htmlFor="order-date"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Event date
+              </label>
+              <input
+                id="order-date"
+                name="date"
+                type="date"
+                defaultValue={order?.date ?? ""}
+                className="w-full min-w-0 max-w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+              />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2">
+              <label
+                htmlFor="order-venue"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Venue
+              </label>
+              <input
+                id="order-venue"
+                name="venue"
+                type="text"
+                maxLength={200}
+                defaultValue={order?.venue ?? ""}
+                autoComplete="off"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. Grand Ballroom"
+              />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2 sm:max-w-md">
+              <label
+                htmlFor="order-persons"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Number of persons
+              </label>
+              <PersonsStepper
+                id="order-persons"
+                name="numberOfPersons"
+                defaultValue={order?.numberOfPersons ?? 1}
+                min={1}
+                max={100000}
+              />
+            </div>
+
+            <fieldset className="min-w-0 sm:col-span-2">
+              <legend className="mb-2.5 block text-sm font-medium text-foreground">
+                Meal type
+              </legend>
+              <div
+                role="radiogroup"
+                aria-label="Meal type"
+                className="grid grid-cols-1 gap-2 sm:grid-cols-3"
+              >
+                {mealOptions.map((option) => {
+                  const selected = mealType === option.value;
+                  const Icon = option.icon;
+
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => setMealType(option.value)}
+                      className={`inline-flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-16 ${
+                        selected
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-surface text-foreground hover:border-primary/40 hover:bg-primary-soft"
+                      }`}
+                    >
+                      <Icon className="size-5" strokeWidth={1.75} aria-hidden />
+                      {option.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </fieldset>
+          </div>
         </div>
       </div>
+
+      <div
+        hidden={activeTab !== "materials"}
+        className={
+          materialsMode
+            ? "flex min-h-0 flex-1 flex-col"
+            : "hidden"
+        }
+      >
+        <OrderMaterialsPanel
+          materials={rawMaterials}
+          sortedMaterials={sortedMaterials}
+          selectedMaterials={selectedMaterials}
+          onUpdate={updateMaterial}
+          onCommitOrder={refreshMaterialOrder}
+        />
       </div>
 
-      <div className={activeTab === "materials" ? "block" : "hidden"}>
-      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-        <h2 className="mb-4 text-lg font-semibold text-foreground">Materials Selection</h2>
-        
-        {rawMaterials.length === 0 ? (
-          <p className="text-sm text-muted py-4">No raw materials available. Please add some first.</p>
-        ) : (
-          <div className="grid gap-3 grid-cols-2 sm:grid-cols-3 md:grid-cols-6">
-            {rawMaterials.map((material, index) => {
-              const item = selectedMaterials.find(sm => sm.rawMaterialId === material.id);
-              if (!item) return null;
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl sm:border sm:px-3 sm:py-3 sm:shadow-lg">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-end gap-2 sm:mx-0">
+          <button
+            type="button"
+            onClick={handleCancel}
+            className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Cancel
+          </button>
 
-              return (
-                <div key={material.id} className="relative flex flex-col rounded-xl border border-border bg-card p-3 shadow-sm transition-colors hover:border-primary/50">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="min-w-0 flex-1">
-                      <label className="block text-sm font-semibold text-foreground truncate" title={material.name}>
-                        {material.name}
-                      </label>
-                      <div className="mt-1">
-                        {material.rawMaterialVendors.length === 0 ? (
-                          <span className="inline-flex items-center rounded bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted uppercase tracking-wider">No Vendors</span>
-                        ) : material.rawMaterialVendors.length === 1 ? (
-                          <span className="inline-flex items-center rounded bg-primary-soft px-1.5 py-0.5 text-[10px] font-medium text-primary uppercase tracking-wider truncate max-w-full" title={material.rawMaterialVendors[0].vendor.name}>
-                            {material.rawMaterialVendors[0].vendor.name}
-                          </span>
-                        ) : (
-                          <select
-                            value={item.vendorId ?? ""}
-                            onChange={(e) => updateMaterial(index, { vendorId: Number(e.target.value) })}
-                            className="w-full rounded border border-border bg-background px-1 py-0.5 text-xs text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
-                          >
-                            {material.rawMaterialVendors.map((rmv) => (
-                              <option key={rmv.vendor.id} value={rmv.vendor.id}>{rmv.vendor.name}</option>
-                            ))}
-                          </select>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 mt-auto pt-2.5 border-t border-border/50">
-                    <div className="relative">
-                      <label className="sr-only">Qty</label>
-                      <input
-                        type="text"
-                        value={item.unitQty}
-                        onChange={(e) => updateMaterial(index, { unitQty: e.target.value })}
-                        placeholder="Qty"
-                        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
-                      />
-                    </div>
-                    <div className="relative">
-                      <label className="sr-only">Unit</label>
-                      <input
-                        type="text"
-                        value={item.unitName}
-                        onFocus={() => setFocusedUnitIndex(index)}
-                        onClick={() => setFocusedUnitIndex(index)}
-                        onBlur={() => setTimeout(() => setFocusedUnitIndex(prev => prev === index ? null : prev), 150)}
-                        onChange={(e) => updateMaterial(index, { unitName: e.target.value })}
-                        placeholder="Unit"
-                        className="w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-ring/30"
-                      />
-                      {focusedUnitIndex === index && (
-                        <ul className="absolute left-0 top-full z-20 mt-1 max-h-40 min-w-[120px] overflow-auto rounded-md border border-border bg-background py-1 shadow-xl ring-1 ring-black/5">
-                          {predefinedUnits.map(unit => (
-                            <li
-                              key={unit}
-                              onMouseDown={(e) => {
-                                e.preventDefault(); // Prevent input from losing focus
-                                updateMaterial(index, { unitName: unit });
-                                setFocusedUnitIndex(null);
-                              }}
-                              className="cursor-pointer px-3 py-1 text-sm text-foreground hover:bg-surface"
-                            >
-                              {unit}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      </div>
-
-      <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl bg-background/80 p-3 shadow-2xl backdrop-blur-md border border-border">
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="inline-flex min-h-11 items-center rounded-lg border border-border bg-background px-6 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="inline-flex min-h-11 items-center rounded-lg bg-primary px-6 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shadow-md"
-        >
-          {isPending ? "Saving…" : isEditing ? "Save changes" : "Create order"}
-        </button>
+          {activeTab === "details" ? (
+            <button
+              type="button"
+              onClick={() => switchTab("materials")}
+              className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
+            >
+              Continue to materials
+              <Package className="size-4" strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => switchTab("details")}
+                className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Back to details
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
+              >
+                {isPending
+                  ? "Saving…"
+                  : isEditing
+                    ? "Save changes"
+                    : "Create order"}
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </form>
   );
