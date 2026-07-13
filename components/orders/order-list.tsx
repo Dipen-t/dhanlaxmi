@@ -31,6 +31,11 @@ export function OrderList({ orders, onEdit }: OrderListProps) {
                 <MealBadge mealType={order.mealType} />
                 <PersonsBadge count={order.numberOfPersons} />
               </div>
+              {order.vendors?.length > 0 && (
+                <div className="text-sm text-muted text-pretty">
+                  <span className="font-medium">Vendors:</span> {order.vendors.join(", ")}
+                </div>
+              )}
             </button>
 
             <div className="flex shrink-0 items-center pr-1">

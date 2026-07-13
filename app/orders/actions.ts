@@ -25,6 +25,7 @@ export type OrderRecord = {
   numberOfPersons: number;
   mealType: MealType;
   rawMaterials: OrderRawMaterialRecord[];
+  vendors: string[];
 };
 
 function toDateString(date: Date) {
@@ -38,8 +39,12 @@ function serializeOrder(order: {
   venue: string;
   numberOfPersons: number;
   mealType: MealType;
-  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; vendorId: number | null }[];
+  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; vendorId: number | null; vendor?: { name: string } | null }[];
 }): OrderRecord {
+  const vendors = Array.from(new Set((order.orderRawMaterials || [])
+    .map(rm => rm.vendor?.name)
+    .filter((name): name is string => !!name)));
+
   return {
     id: order.id,
     orderId: order.orderId,
@@ -51,6 +56,7 @@ function serializeOrder(order: {
       ...rm,
       vendorId: rm.vendorId
     })) ?? [],
+    vendors,
   };
 }
 
@@ -58,7 +64,11 @@ export async function getOrders(): Promise<OrderRecord[]> {
   const rows = await db.query.orders.findMany({
     orderBy: desc(orders.date),
     with: {
-      orderRawMaterials: true,
+      orderRawMaterials: {
+        with: {
+          vendor: true,
+        },
+      },
     },
   });
 
@@ -74,7 +84,11 @@ export async function getOrder(id: string): Promise<OrderRecord | null> {
   const order = await db.query.orders.findFirst({
     where: eq(orders.id, numericId),
     with: {
-      orderRawMaterials: true,
+      orderRawMaterials: {
+        with: {
+          vendor: true,
+        },
+      },
     },
   });
 

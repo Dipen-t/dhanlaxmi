@@ -32,6 +32,11 @@ export function OrderGrid({ orders, onEdit }: OrderGridProps) {
                 <MealBadge mealType={order.mealType} />
                 <PersonsBadge count={order.numberOfPersons} />
               </div>
+              {order.vendors?.length > 0 && (
+                <div className="mt-3 text-sm text-muted text-pretty">
+                  <span className="font-medium">Vendors:</span> {order.vendors.join(", ")}
+                </div>
+              )}
             </button>
 
             <div className="mt-4 border-t border-border pt-3">
