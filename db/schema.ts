@@ -113,16 +113,37 @@ export const menuCategories = pgTable(
   (table) => [primaryKey({ columns: [table.menuId, table.categoryId] })],
 );
 
+export const kitchenMenus = pgTable("kitchen_menus", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const kitchenMenuDishes = pgTable(
+  "kitchen_menu_dishes",
+  {
+    kitchenMenuId: integer("kitchen_menu_id")
+      .notNull()
+      .references(() => kitchenMenus.id, { onDelete: "cascade" }),
+    dishId: integer("dish_id")
+      .notNull()
+      .references(() => dishes.id, { onDelete: "cascade" }),
+  },
+  (table) => [primaryKey({ columns: [table.kitchenMenuId, table.dishId] })]
+);
+
 export const dishCategoriesRelations = relations(dishCategories, ({ many }) => ({
   dishes: many(dishes),
   menuCategories: many(menuCategories),
 }));
 
-export const dishesRelations = relations(dishes, ({ one }) => ({
+export const dishesRelations = relations(dishes, ({ one, many }) => ({
   category: one(dishCategories, {
     fields: [dishes.categoryId],
     references: [dishCategories.id],
   }),
+  kitchenMenuDishes: many(kitchenMenuDishes),
 }));
 
 export const menusRelations = relations(menus, ({ many }) => ({
@@ -176,5 +197,20 @@ export const orderRawMaterialsRelations = relations(orderRawMaterials, ({ one })
   vendor: one(vendors, {
     fields: [orderRawMaterials.vendorId],
     references: [vendors.id],
+  }),
+}));
+
+export const kitchenMenusRelations = relations(kitchenMenus, ({ many }) => ({
+  kitchenMenuDishes: many(kitchenMenuDishes),
+}));
+
+export const kitchenMenuDishesRelations = relations(kitchenMenuDishes, ({ one }) => ({
+  kitchenMenu: one(kitchenMenus, {
+    fields: [kitchenMenuDishes.kitchenMenuId],
+    references: [kitchenMenus.id],
+  }),
+  dish: one(dishes, {
+    fields: [kitchenMenuDishes.dishId],
+    references: [dishes.id],
   }),
 }));

@@ -3,6 +3,7 @@ import {
   Package,
   Truck,
   UtensilsCrossed,
+  ChefHat,
   type LucideIcon,
 } from "lucide-react";
 
@@ -34,8 +35,14 @@ export const homeTiles: HomeTile[] = [
   },
   {
     href: "/menus",
-    title: "Menus",
+    title: "Client Menus",
     description: "Client menus with dish categories",
     icon: UtensilsCrossed,
+  },
+  {
+    href: "/kitchen-menus",
+    title: "Kitchen Menus",
+    description: "Kitchen printouts with selected dishes",
+    icon: ChefHat,
   },
 ];

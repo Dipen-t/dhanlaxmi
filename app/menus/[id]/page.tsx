@@ -59,12 +59,6 @@ export default async function MenuDetailPage({ params }: MenuDetailPageProps) {
               menuName={menu.name}
               variant="button"
             />
-            <MenuPdfDownload
-              menuId={menu.id}
-              menuName={menu.name}
-              pdfType="kitchen"
-              variant="button"
-            />
           </div>
         </div>
       </div>

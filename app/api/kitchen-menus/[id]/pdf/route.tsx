@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getMenuById } from "@/app/menus/actions";
+import { getKitchenMenuById } from "@/app/kitchen-menus/actions";
 import { generateKitchenMenuPdfBuffer } from "@/lib/menus/generate-kitchen-menu-pdf";
 import { getPdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
@@ -17,18 +17,18 @@ export async function GET(_request: Request, context: RouteContext) {
   const menuId = Number(id);
 
   if (!menuId || Number.isNaN(menuId)) {
-    return NextResponse.json({ error: "Invalid menu." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid kitchen menu." }, { status: 400 });
   }
 
-  const menu = await getMenuById(menuId);
+  const menu = await getKitchenMenuById(menuId);
 
   if (!menu) {
-    return NextResponse.json({ error: "Menu not found." }, { status: 404 });
+    return NextResponse.json({ error: "Kitchen menu not found." }, { status: 404 });
   }
 
   if (menu.categories.length === 0) {
     return NextResponse.json(
-      { error: "This menu has no categories to export." },
+      { error: "This kitchen menu has no dishes to export." },
       { status: 422 },
     );
   }
