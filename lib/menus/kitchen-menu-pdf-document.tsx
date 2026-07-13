@@ -15,13 +15,13 @@ const HEADER_CLEARANCE = 58;
 
 const colors = {
   white: "#FFFFFF",
-  cream: "#F7FAFA",
-  ink: "#1A2423",
-  muted: "#5A6967",
-  teal: "#0F766E",
-  tealDeep: "#0D5C56",
-  tealLine: "#A5D4CE",
-  rule: "#D5E0DE",
+  cream: "#FFFFFF",
+  ink: "#000000",
+  muted: "#333333",
+  teal: "#000000",
+  tealDeep: "#000000",
+  tealLine: "#000000",
+  rule: "#000000",
 };
 
 const styles = StyleSheet.create({
@@ -53,19 +53,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   menuTitle: {
-    fontFamily: "Playball",
-    fontSize: 28,
-    color: colors.tealDeep,
-    marginBottom: 2,
+    fontFamily: "SourceSans",
+    fontSize: 24,
+    fontWeight: 700,
+    color: colors.ink,
+    marginBottom: 4,
     textAlign: "center",
   },
   menuSubtitle: {
-    fontFamily: "Cormorant",
-    fontSize: 10,
-    fontStyle: "italic",
-    color: colors.muted,
-    letterSpacing: 0.6,
-    marginBottom: 12,
+    fontFamily: "SourceSans",
+    fontSize: 12,
+    color: colors.ink,
+    marginBottom: 16,
     textAlign: "center",
   },
   fieldsCard: {
@@ -131,21 +130,19 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tealLine,
   },
   categoryName: {
-    fontFamily: "Cormorant",
-    fontWeight: 600,
-    fontSize: 12,
+    fontFamily: "SourceSans",
+    fontWeight: 700,
+    fontSize: 14,
     textTransform: "uppercase",
-    letterSpacing: 0.7,
-    color: colors.tealDeep,
+    color: colors.ink,
     paddingHorizontal: 12,
     textAlign: "center",
   },
   selectionRule: {
-    fontFamily: "Cormorant",
-    fontSize: 9,
-    fontStyle: "italic",
+    fontFamily: "SourceSans",
+    fontSize: 10,
     color: colors.muted,
-    marginTop: 3,
+    marginTop: 4,
     textAlign: "center",
   },
   dishGrid: {
@@ -206,9 +203,9 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
   footerBrand: {
-    fontFamily: "Playball",
+    fontFamily: "SourceSans",
     fontSize: 10,
-    color: colors.tealDeep,
+    color: colors.ink,
   },
   footerPage: {
     fontFamily: "SourceSans",
@@ -328,10 +325,6 @@ export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
             </View>
           </View>
         </View>
-
-        <Text style={styles.sectionIntro}>
-          Kitchen preparation sheet. Mark dishes and note down required quantities.
-        </Text>
 
         {menu.categories.map((category) => (
           <CategorySection key={category.id} category={category} />
