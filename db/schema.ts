@@ -1,4 +1,5 @@
 import { relations } from "drizzle-orm";
+import { boolean } from "drizzle-orm/pg-core";
 import {
   integer,
   pgEnum,
@@ -113,6 +114,23 @@ export const menuCategories = pgTable(
   (table) => [primaryKey({ columns: [table.menuId, table.categoryId] })],
 );
 
+export const kitchenDishCategories = pgTable("kitchen_dish_categories", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  selectionRule: text("selection_rule").notNull(),
+  isQtyField: boolean("is_qty_field").notNull().default(false),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
+export const kitchenDishes = pgTable("kitchen_dishes", {
+  id: serial("id").primaryKey(),
+  categoryId: integer("category_id")
+    .notNull()
+    .references(() => kitchenDishCategories.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
+});
+
 export const kitchenMenus = pgTable("kitchen_menus", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
@@ -126,11 +144,11 @@ export const kitchenMenuDishes = pgTable(
     kitchenMenuId: integer("kitchen_menu_id")
       .notNull()
       .references(() => kitchenMenus.id, { onDelete: "cascade" }),
-    dishId: integer("dish_id")
+    kitchenDishId: integer("kitchen_dish_id")
       .notNull()
-      .references(() => dishes.id, { onDelete: "cascade" }),
+      .references(() => kitchenDishes.id, { onDelete: "cascade" }),
   },
-  (table) => [primaryKey({ columns: [table.kitchenMenuId, table.dishId] })]
+  (table) => [primaryKey({ columns: [table.kitchenMenuId, table.kitchenDishId] })]
 );
 
 export const dishCategoriesRelations = relations(dishCategories, ({ many }) => ({
@@ -138,12 +156,11 @@ export const dishCategoriesRelations = relations(dishCategories, ({ many }) => (
   menuCategories: many(menuCategories),
 }));
 
-export const dishesRelations = relations(dishes, ({ one, many }) => ({
+export const dishesRelations = relations(dishes, ({ one }) => ({
   category: one(dishCategories, {
     fields: [dishes.categoryId],
     references: [dishCategories.id],
   }),
-  kitchenMenuDishes: many(kitchenMenuDishes),
 }));
 
 export const menusRelations = relations(menus, ({ many }) => ({
@@ -200,6 +217,18 @@ export const orderRawMaterialsRelations = relations(orderRawMaterials, ({ one })
   }),
 }));
 
+export const kitchenDishCategoriesRelations = relations(kitchenDishCategories, ({ many }) => ({
+  kitchenDishes: many(kitchenDishes),
+}));
+
+export const kitchenDishesRelations = relations(kitchenDishes, ({ one, many }) => ({
+  category: one(kitchenDishCategories, {
+    fields: [kitchenDishes.categoryId],
+    references: [kitchenDishCategories.id],
+  }),
+  kitchenMenuDishes: many(kitchenMenuDishes),
+}));
+
 export const kitchenMenusRelations = relations(kitchenMenus, ({ many }) => ({
   kitchenMenuDishes: many(kitchenMenuDishes),
 }));
@@ -209,8 +238,8 @@ export const kitchenMenuDishesRelations = relations(kitchenMenuDishes, ({ one })
     fields: [kitchenMenuDishes.kitchenMenuId],
     references: [kitchenMenus.id],
   }),
-  dish: one(dishes, {
-    fields: [kitchenMenuDishes.dishId],
-    references: [dishes.id],
+  kitchenDish: one(kitchenDishes, {
+    fields: [kitchenMenuDishes.kitchenDishId],
+    references: [kitchenDishes.id],
   }),
 }));

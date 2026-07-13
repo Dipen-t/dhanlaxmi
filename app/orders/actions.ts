@@ -252,7 +252,10 @@ export async function createOrder(data: OrderInput) {
 
       for (const group of vendorGroups.values()) {
         const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
-        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${date}\nVenue: ${displayVenue}\n\nPlease provide the following raw materials:\n`;
+        // Format date as dd/mm/yyyy for the WhatsApp message
+        const [yyyy, mm, dd] = date.split("-");
+        const formattedDate = `${dd}/${mm}/${yyyy}`;
+        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n\nPlease provide the following raw materials:\n`;
         for (const item of group.items) {
           message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
         }

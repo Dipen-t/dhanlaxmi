@@ -1,9 +1,9 @@
-import type { MenuDetail } from "@/app/menus/actions";
+import type { KitchenMenuDetail } from "@/app/kitchen-menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { registerPdfFonts } from "@/lib/menus/register-pdf-fonts";
 
 export async function generateKitchenMenuPdfBuffer(
-  menu: MenuDetail,
+  menu: KitchenMenuDetail,
   logo: PdfLogoAssets,
 ): Promise<Buffer> {
   registerPdfFonts();

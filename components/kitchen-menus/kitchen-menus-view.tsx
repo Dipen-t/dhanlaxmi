@@ -4,8 +4,7 @@ import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import type { CategoryWithDishes } from "@/app/menus/actions";
-import type { KitchenMenuSummary } from "@/app/kitchen-menus/actions";
+import type { KitchenCategoryWithDishes, KitchenMenuSummary } from "@/app/kitchen-menus/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
 import { KitchenMenuDialog } from "@/components/kitchen-menus/kitchen-menu-dialog";
 import { KitchenMenuGrid } from "@/components/kitchen-menus/kitchen-menu-grid";
@@ -15,7 +14,7 @@ type ViewMode = "grid" | "list";
 
 type KitchenMenusViewProps = {
   menus: KitchenMenuSummary[];
-  catalog: CategoryWithDishes[];
+  catalog: KitchenCategoryWithDishes[];
 };
 
 export function KitchenMenusView({ menus, catalog }: KitchenMenusViewProps) {

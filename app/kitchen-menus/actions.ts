@@ -5,12 +5,24 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import {
-  dishCategories,
-  dishes,
+  kitchenDishCategories,
+  kitchenDishes,
   kitchenMenuDishes,
   kitchenMenus,
 } from "@/db/schema";
-import type { CategoryWithDishes, DishItem } from "@/app/menus/actions";
+
+export type KitchenDishItem = {
+  id: number;
+  name: string;
+};
+
+export type KitchenCategoryWithDishes = {
+  id: number;
+  name: string;
+  selectionRule: string;
+  isQtyField: boolean;
+  dishes: KitchenDishItem[];
+};
 
 export type KitchenMenuSummary = {
   id: number;
@@ -22,8 +34,25 @@ export type KitchenMenuSummary = {
 export type KitchenMenuDetail = {
   id: number;
   name: string;
-  categories: CategoryWithDishes[];
+  categories: KitchenCategoryWithDishes[];
 };
+
+export async function getKitchenCatalog(): Promise<KitchenCategoryWithDishes[]> {
+  const rows = await db.query.kitchenDishCategories.findMany({
+    with: { kitchenDishes: true },
+    orderBy: asc(kitchenDishCategories.sortOrder),
+  });
+
+  return rows.map((category) => ({
+    id: category.id,
+    name: category.name,
+    selectionRule: category.selectionRule,
+    isQtyField: category.isQtyField,
+    dishes: category.kitchenDishes
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((dish) => ({ id: dish.id, name: dish.name })),
+  }));
+}
 
 export async function getKitchenMenus(): Promise<KitchenMenuSummary[]> {
   const rows = await db.query.kitchenMenus.findMany({
@@ -33,14 +62,12 @@ export async function getKitchenMenus(): Promise<KitchenMenuSummary[]> {
     orderBy: asc(kitchenMenus.name),
   });
 
-  return rows.map((menu) => {
-    return {
-      id: menu.id,
-      name: menu.name,
-      dishCount: menu.kitchenMenuDishes.length,
-      dishIds: menu.kitchenMenuDishes.map((kmd) => kmd.dishId),
-    };
-  });
+  return rows.map((menu) => ({
+    id: menu.id,
+    name: menu.name,
+    dishCount: menu.kitchenMenuDishes.length,
+    dishIds: menu.kitchenMenuDishes.map((kmd) => kmd.kitchenDishId),
+  }));
 }
 
 export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail | null> {
@@ -49,7 +76,7 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
     with: {
       kitchenMenuDishes: {
         with: {
-          dish: {
+          kitchenDish: {
             with: { category: true },
           },
         },
@@ -61,10 +88,10 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
     return null;
   }
 
-  const categoryMap = new Map<number, CategoryWithDishes>();
+  const categoryMap = new Map<number, KitchenCategoryWithDishes & { _sortOrder: number }>();
 
   for (const kmd of menu.kitchenMenuDishes) {
-    const dish = kmd.dish;
+    const dish = kmd.kitchenDish;
     const category = dish.category;
 
     if (!categoryMap.has(category.id)) {
@@ -72,27 +99,28 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
         id: category.id,
         name: category.name,
         selectionRule: category.selectionRule,
+        isQtyField: category.isQtyField,
         dishes: [],
-        // Temporary sort order just for sorting the categories later
         _sortOrder: category.sortOrder,
-      } as CategoryWithDishes & { _sortOrder: number });
+      });
     }
 
     categoryMap.get(category.id)!.dishes.push({
       id: dish.id,
       name: dish.name,
       _sortOrder: dish.sortOrder,
-    } as DishItem & { _sortOrder: number });
+    } as KitchenDishItem & { _sortOrder: number });
   }
 
   const categories = Array.from(categoryMap.values())
-    .sort((a: any, b: any) => a._sortOrder - b._sortOrder)
-    .map((c: any) => {
-      c.dishes.sort((a: any, b: any) => a._sortOrder - b._sortOrder);
-      // Clean up the temporary field
-      const { _sortOrder: _, ...cleanedCategory } = c;
+    .sort((a, b) => a._sortOrder - b._sortOrder)
+    .map((c) => {
+      (c.dishes as (KitchenDishItem & { _sortOrder?: number })[]).sort(
+        (a, b) => (a._sortOrder ?? 0) - (b._sortOrder ?? 0),
+      );
+      const { _sortOrder: _, ...cleaned } = c;
       return {
-        ...cleanedCategory,
+        ...cleaned,
         dishes: c.dishes.map((d: any) => {
           const { _sortOrder: __, ...cleanedDish } = d;
           return cleanedDish;
@@ -122,8 +150,8 @@ async function syncKitchenMenuDishes(kitchenMenuId: number, dishIds: number[]) {
   const uniqueIds = [...new Set(dishIds)];
 
   if (uniqueIds.length > 0) {
-    const found = await db.query.dishes.findMany({
-      where: inArray(dishes.id, uniqueIds),
+    const found = await db.query.kitchenDishes.findMany({
+      where: inArray(kitchenDishes.id, uniqueIds),
     });
 
     if (found.length !== uniqueIds.length) {
@@ -135,9 +163,9 @@ async function syncKitchenMenuDishes(kitchenMenuId: number, dishIds: number[]) {
 
   if (uniqueIds.length > 0) {
     await db.insert(kitchenMenuDishes).values(
-      uniqueIds.map((dishId) => ({
+      uniqueIds.map((kitchenDishId) => ({
         kitchenMenuId,
-        dishId,
+        kitchenDishId,
       })),
     );
   }

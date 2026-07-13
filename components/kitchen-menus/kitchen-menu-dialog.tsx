@@ -8,13 +8,13 @@ import {
   createKitchenMenu,
   updateKitchenMenu,
   type KitchenMenuSummary,
+  type KitchenCategoryWithDishes,
 } from "@/app/kitchen-menus/actions";
-import type { CategoryWithDishes } from "@/app/menus/actions";
 
 type KitchenMenuDialogProps = {
   open: boolean;
   menu: KitchenMenuSummary | null;
-  catalog: CategoryWithDishes[];
+  catalog: KitchenCategoryWithDishes[];
   onClose: () => void;
 };
 
@@ -106,7 +106,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
     });
   }
 
-  function toggleAllInCategory(category: CategoryWithDishes) {
+  function toggleAllInCategory(category: KitchenCategoryWithDishes) {
     setSelectedDishIds((current) => {
       const next = new Set(current);
       const allSelected = category.dishes.every((d) => next.has(d.id));

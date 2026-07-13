@@ -7,7 +7,7 @@ import {
   View,
 } from "@react-pdf/renderer";
 
-import type { MenuDetail } from "@/app/menus/actions";
+import type { KitchenMenuDetail } from "@/app/kitchen-menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 
 const PAGE_HORIZONTAL_PADDING = 36;
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
 });
 
 type MenuPdfDocumentProps = {
-  menu: MenuDetail;
+  menu: KitchenMenuDetail;
   logo: PdfLogoAssets;
 };
 
@@ -256,10 +256,10 @@ function PageHeader({ logo }: { logo: PdfLogoAssets }) {
 function CategorySection({
   category,
 }: {
-  category: MenuDetail["categories"][number];
+  category: KitchenMenuDetail["categories"][number];
 }) {
   const useSingleColumn = category.dishes.length <= 3;
-  const isQtyTaker = category.name.toUpperCase().trim() === "QTY TAKER";
+  const isQtyField = category.isQtyField;
 
   return (
     <View style={styles.categoryBlock} wrap={false}>
@@ -282,7 +282,7 @@ function CategorySection({
                 : styles.dishItem
             }
           >
-            {isQtyTaker ? (
+            {isQtyField ? (
               <View style={styles.qtyField}>
                 <Text style={styles.qtyLabel}>Qty</Text>
                 <View style={styles.qtyLine} />
@@ -299,8 +299,6 @@ function CategorySection({
 }
 
 export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
-  const counterRequirements = ["Tandoor", "Bhai", "Paneer", "Mushroom", "Hi-Tea"];
-
   return (
     <Document title={`${menu.name} - Kitchen`} author="Dhalaxmi Catering Service">
       <Page size="A4" style={styles.page}>
@@ -337,28 +335,6 @@ export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
         {menu.categories.map((category) => (
           <CategorySection key={category.id} category={category} />
         ))}
-
-        <View style={styles.categoryBlock} wrap={false}>
-          <View style={styles.categoryHeader}>
-            <View style={styles.categoryTitleRow}>
-              <View style={styles.flankLine} />
-              <Text style={styles.categoryName}>COUNTER REQUIREMENTS</Text>
-              <View style={styles.flankLine} />
-            </View>
-            <Text style={styles.selectionRule}>Write required counts for each.</Text>
-          </View>
-          <View style={styles.counterGrid}>
-            {counterRequirements.map((req) => (
-              <View key={req} style={styles.counterItem}>
-                <Text style={styles.counterName}>{req}:</Text>
-                <View style={styles.qtyField}>
-                  <Text style={styles.qtyLabel}>Qty</Text>
-                  <View style={styles.qtyLine} />
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
 
         <View style={styles.footer} fixed>
           <Text style={styles.footerBrand}>Dhalaxmi Catering Service</Text>

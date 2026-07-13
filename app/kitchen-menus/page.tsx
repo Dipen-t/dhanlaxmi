@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 
-import { getKitchenMenus } from "@/app/kitchen-menus/actions";
-import { getCatalogCategories } from "@/app/menus/actions";
+import { getKitchenMenus, getKitchenCatalog } from "@/app/kitchen-menus/actions";
 import { KitchenMenusView } from "@/components/kitchen-menus/kitchen-menus-view";
 import { PageHeader } from "@/components/page-header";
 import { SectionListSkeleton } from "@/components/section-list-skeleton";
@@ -16,7 +15,7 @@ export const dynamic = "force-dynamic";
 async function KitchenMenusContent() {
   const [menus, catalog] = await Promise.all([
     getKitchenMenus(),
-    getCatalogCategories(),
+    getKitchenCatalog(),
   ]);
 
   return <KitchenMenusView menus={menus} catalog={catalog} />;
