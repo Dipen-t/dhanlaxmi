@@ -111,10 +111,7 @@ const styles = StyleSheet.create({
     display: "none",
   },
   categoryBlock: {
-    marginBottom: 14,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.rule,
+    marginBottom: 4,
   },
   categoryHeader: {
     marginBottom: 7,
@@ -125,9 +122,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   flankLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.tealLine,
+    display: "none",
   },
   categoryName: {
     fontFamily: "SourceSans",
@@ -242,9 +237,7 @@ function CategorySection({
     <View style={styles.categoryBlock} wrap={false}>
       <View style={styles.categoryHeader}>
         <View style={styles.categoryTitleRow}>
-          <View style={styles.flankLine} />
           <Text style={styles.categoryName}>{category.name}</Text>
-          <View style={styles.flankLine} />
         </View>
         <Text style={styles.selectionRule}>{category.selectionRule}</Text>
       </View>
