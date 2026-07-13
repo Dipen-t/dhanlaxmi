@@ -192,11 +192,11 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(100dvh,56rem)] w-full max-w-[56rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
+        className="relative z-10 flex max-h-[min(100dvh,72rem)] w-full max-w-[72rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           maxHeight:
-            "min(100dvh - env(safe-area-inset-top, 0px), 56rem)",
+            "min(100dvh - env(safe-area-inset-top, 0px), 72rem)",
         }}
       >
         <form
@@ -207,7 +207,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-2 [-webkit-overflow-scrolling:touch] sm:px-4">
             <h2
               id={titleId}
-              className="text-base font-semibold text-foreground"
+              className="text-lg font-semibold text-foreground"
             >
               {isEditing ? "Edit kitchen menu" : "Create kitchen menu"}
             </h2>
@@ -272,7 +272,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   </button>
                 </div>
 
-                <div className="mt-1.5 max-h-[min(28rem,55dvh)] space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1 [-webkit-overflow-scrolling:touch]">
+                <div className="mt-1.5 max-h-[min(45rem,75dvh)] space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1 [-webkit-overflow-scrolling:touch]">
                   {catalog.length === 0 ? (
                     <p className="px-3 py-6 text-center text-sm text-muted">
                       No categories in the catalog yet.
