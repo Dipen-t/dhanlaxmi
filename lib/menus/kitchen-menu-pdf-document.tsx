@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     display: "none",
   },
   categoryBlock: {
-    marginBottom: 4,
+    marginBottom: 16,
   },
   categoryHeader: {
     marginBottom: 7,
