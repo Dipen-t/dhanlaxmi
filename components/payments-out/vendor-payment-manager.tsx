@@ -5,6 +5,7 @@ import { Trash2, X, ChevronDown } from "lucide-react";
 import type { OrderWithVendorPayments, OrderVendorRecord } from "@/app/payments-out/actions";
 import { addVendorPayment, deleteVendorPayment } from "@/app/payments-out/actions";
 import { formatCurrency } from "@/components/payments/payment-badges";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function VendorPaymentManager({ 
   order, 
@@ -19,6 +20,22 @@ export function VendorPaymentManager({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDestructive: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDestructive: false,
+    onConfirm: () => {},
+  });
+
+  const closeDialog = () => setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
 
   const selectedVendor = order.vendors.find(v => v.vendorId === selectedVendorId);
 
@@ -59,17 +76,25 @@ export function VendorPaymentManager({
     setLoading(false);
   };
 
-  const handleDelete = async (paymentId: number) => {
-    if (!confirm("Are you sure you want to delete this payment?")) return;
-    setError("");
-    setLoading(true);
+  const handleDelete = (paymentId: number) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Payment",
+      message: "Are you sure you want to delete this payment? This action cannot be undone.",
+      isDestructive: true,
+      onConfirm: async () => {
+        closeDialog();
+        setError("");
+        setLoading(true);
 
-    const res = await deleteVendorPayment(paymentId);
+        const res = await deleteVendorPayment(paymentId);
 
-    if (res?.error) {
-      setError(res.error);
-    }
-    setLoading(false);
+        if (res?.error) {
+          setError(res.error);
+        }
+        setLoading(false);
+      }
+    });
   };
 
   return (
@@ -203,6 +228,15 @@ export function VendorPaymentManager({
 
         </div>
       </div>
+      
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        isDestructive={confirmDialog.isDestructive}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 }

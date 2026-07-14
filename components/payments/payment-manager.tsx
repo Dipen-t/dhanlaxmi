@@ -5,6 +5,7 @@ import { Trash2, X, Check } from "lucide-react";
 import type { OrderWithBalance } from "@/app/payments/actions";
 import { addPayment, waiveBalance, deletePayment } from "@/app/payments/actions";
 import { StatusBadge, formatCurrency } from "./payment-badges";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 export function PaymentManager({ 
   order, 
@@ -18,6 +19,22 @@ export function PaymentManager({
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    isDestructive: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    isDestructive: false,
+    onConfirm: () => {},
+  });
+
+  const closeDialog = () => setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
 
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,35 +74,51 @@ export function PaymentManager({
       return;
     }
 
-    if (!confirm(`Are you sure you want to waive ${formatCurrency(waiveAmount)}?`)) return;
-    setError("");
-    setLoading(true);
+    setConfirmDialog({
+      isOpen: true,
+      title: "Waive Balance",
+      message: `Are you sure you want to waive ${formatCurrency(waiveAmount)}? This will record the waived amount and adjust the balance.`,
+      isDestructive: true,
+      onConfirm: async () => {
+        closeDialog();
+        setError("");
+        setLoading(true);
 
-    const res = await waiveBalance({
-      orderId: order.id,
-      amount: waiveAmount,
-      date: new Date().toISOString().slice(0, 10),
+        const res = await waiveBalance({
+          orderId: order.id,
+          amount: waiveAmount,
+          date: new Date().toISOString().slice(0, 10),
+        });
+
+        if (res?.error) {
+          setError(res.error);
+        } else {
+          onClose();
+        }
+        setLoading(false);
+      }
     });
-
-    if (res?.error) {
-      setError(res.error);
-    } else {
-      onClose();
-    }
-    setLoading(false);
   };
 
-  const handleDelete = async (paymentId: number) => {
-    if (!confirm("Are you sure you want to delete this payment?")) return;
-    setError("");
-    setLoading(true);
+  const handleDelete = (paymentId: number) => {
+    setConfirmDialog({
+      isOpen: true,
+      title: "Delete Payment",
+      message: "Are you sure you want to delete this payment? This action cannot be undone.",
+      isDestructive: true,
+      onConfirm: async () => {
+        closeDialog();
+        setError("");
+        setLoading(true);
 
-    const res = await deletePayment(paymentId);
+        const res = await deletePayment(paymentId);
 
-    if (res?.error) {
-      setError(res.error);
-    }
-    setLoading(false);
+        if (res?.error) {
+          setError(res.error);
+        }
+        setLoading(false);
+      }
+    });
   };
 
   return (
@@ -237,6 +270,15 @@ export function PaymentManager({
 
         </div>
       </div>
+      
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        isDestructive={confirmDialog.isDestructive}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeDialog}
+      />
     </div>
   );
 }
