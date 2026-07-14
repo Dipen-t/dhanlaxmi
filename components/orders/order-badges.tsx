@@ -29,3 +29,18 @@ export function PersonsBadge({ count }: { count: number }) {
     </span>
   );
 }
+
+export function PaymentBadge({ payment, isPaymentAmount }: { payment?: string | null, isPaymentAmount: boolean }) {
+  if (isPaymentAmount && payment) {
+    return (
+      <span className="inline-flex items-center rounded-md bg-green-50 px-2.5 py-1 text-sm font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+        Paid: {payment}
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center rounded-md bg-red-50 px-2.5 py-1 text-sm font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+      Unpaid
+    </span>
+  );
+}

@@ -28,21 +28,28 @@ export function OrdersView({ orders }: OrdersViewProps) {
   }, []);
 
   const filteredOrders = useMemo(() => {
+    let result = orders;
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return orders;
+    
+    if (normalized) {
+      result = orders.filter((order) => {
+        const haystack = [
+          order.orderId,
+          order.venue,
+          order.mealType,
+          order.date,
+          String(order.numberOfPersons),
+        ]
+          .join(" ")
+          .toLowerCase();
 
-    return orders.filter((order) => {
-      const haystack = [
-        order.orderId,
-        order.venue,
-        order.mealType,
-        order.date,
-        String(order.numberOfPersons),
-      ]
-        .join(" ")
-        .toLowerCase();
+        return haystack.includes(normalized);
+      });
+    }
 
-      return haystack.includes(normalized);
+    return [...result].sort((a, b) => {
+      if (a.isPaymentAmount === b.isPaymentAmount) return 0;
+      return a.isPaymentAmount ? 1 : -1;
     });
   }, [orders, query]);
 

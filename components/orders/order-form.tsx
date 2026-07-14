@@ -156,6 +156,7 @@ export function OrderForm({
       venue: String(formData.get("venue") || ""),
       numberOfPersons: Number(formData.get("numberOfPersons")),
       mealType,
+      payment: String(formData.get("payment") || ""),
       rawMaterials: itemsToSubmit,
     };
 
@@ -286,6 +287,23 @@ export function OrderForm({
                 defaultValue={order?.numberOfPersons ?? 1}
                 min={1}
                 max={100000}
+              />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2 sm:max-w-md">
+              <label
+                htmlFor="order-payment"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Payment Amount (Optional)
+              </label>
+              <input
+                id="order-payment"
+                name="payment"
+                type="text"
+                defaultValue={order?.payment ?? ""}
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="Leave empty if not set"
               />
             </div>
 
