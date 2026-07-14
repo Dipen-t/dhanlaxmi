@@ -1,6 +1,12 @@
 import type { OrderRecord } from "@/app/orders/actions";
 
-import { formatOrderDate, MealBadge, PersonsBadge, PaymentBadge } from "./order-badges";
+import {
+  DiscountBadge,
+  formatOrderDate,
+  MealBadge,
+  PaymentBadge,
+  PersonsBadge,
+} from "./order-badges";
 import { OrderActions } from "./order-actions";
 
 type OrderGridProps = {
@@ -32,6 +38,7 @@ export function OrderGrid({ orders, onEdit }: OrderGridProps) {
                 <MealBadge mealType={order.mealType} />
                 <PersonsBadge count={order.numberOfPersons} />
                 <PaymentBadge payment={order.payment} isPaymentAmount={order.isPaymentAmount} />
+                <DiscountBadge discount={order.discount} />
               </div>
               {order.vendors?.length > 0 && (
                 <div className="mt-3 text-sm text-muted text-pretty">

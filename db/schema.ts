@@ -43,8 +43,23 @@ export const orders = pgTable("orders", {
   venue: text("venue").notNull(),
   numberOfPersons: integer("number_of_persons").notNull(),
   mealType: mealTypeEnum("meal_type").notNull(),
+  totalAmount: integer("total_amount"),
   payment: text("payment"),
   isPaymentAmount: boolean("is_payment_amount").notNull().default(false),
+  discount: text("discount"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const orderPayments = pgTable("order_payments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
+  isWaived: boolean("is_waived").notNull().default(false),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -208,6 +223,14 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
 
 export const ordersRelations = relations(orders, ({ many }) => ({
   orderRawMaterials: many(orderRawMaterials),
+  orderPayments: many(orderPayments),
+}));
+
+export const orderPaymentsRelations = relations(orderPayments, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderPayments.orderId],
+    references: [orders.id],
+  }),
 }));
 
 export const orderRawMaterialsRelations = relations(orderRawMaterials, ({ one }) => ({

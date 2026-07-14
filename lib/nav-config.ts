@@ -4,6 +4,7 @@ import {
   Truck,
   UtensilsCrossed,
   ChefHat,
+  Banknote,
   type LucideIcon,
 } from "lucide-react";
 
@@ -44,5 +45,11 @@ export const homeTiles: HomeTile[] = [
     title: "Kitchen Menus",
     description: "Kitchen printouts with selected dishes",
     icon: ChefHat,
+  },
+  {
+    href: "/payments",
+    title: "Payments In",
+    description: "Manage incoming payments and balances",
+    icon: Banknote,
   },
 ];

@@ -44,3 +44,12 @@ export function PaymentBadge({ payment, isPaymentAmount }: { payment?: string | 
     </span>
   );
 }
+
+export function DiscountBadge({ discount }: { discount?: string | null }) {
+  if (!discount) return null;
+  return (
+    <span className="inline-flex items-center rounded-md bg-purple-50 px-2.5 py-1 text-sm font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">
+      Discount: {discount}
+    </span>
+  );
+}

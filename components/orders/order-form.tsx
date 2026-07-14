@@ -157,7 +157,9 @@ export function OrderForm({
       venue: String(formData.get("venue") || ""),
       numberOfPersons: Number(formData.get("numberOfPersons")),
       mealType,
-      payment: String(formData.get("payment") || ""),
+      totalAmount: String(formData.get("totalAmount") || "").trim(),
+      payment: String(formData.get("payment") || "").trim(),
+      discount: String(formData.get("discount") || "").trim(),
       rawMaterials: itemsToSubmit,
     };
 
@@ -293,6 +295,24 @@ export function OrderForm({
 
             <div className="min-w-0 sm:col-span-2 sm:max-w-md">
               <label
+                htmlFor="order-total-amount"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Total Amount
+              </label>
+              <input
+                id="order-total-amount"
+                name="totalAmount"
+                type="number"
+                min="0"
+                defaultValue={order?.totalAmount ?? ""}
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. 50000"
+              />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2 sm:max-w-md">
+              <label
                 htmlFor="order-payment"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
@@ -304,7 +324,24 @@ export function OrderForm({
                 type="text"
                 defaultValue={order?.payment ?? ""}
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                placeholder="Leave empty if not set"
+                placeholder="e.g. 5000 or Paid"
+              />
+            </div>
+
+            <div className="min-w-0 sm:col-span-2 sm:max-w-md">
+              <label
+                htmlFor="order-discount"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Discount (Optional)
+              </label>
+              <input
+                id="order-discount"
+                name="discount"
+                type="text"
+                defaultValue={order?.discount ?? ""}
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. 10% or 500"
               />
             </div>
 
