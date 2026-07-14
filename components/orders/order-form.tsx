@@ -94,6 +94,7 @@ export function OrderForm({
           rawMaterialId: rm.id,
           unitQty: existing?.unitQty ?? "",
           unitName: existing?.unitName ?? "",
+          notes: existing?.notes ?? "",
           vendorId: existing?.vendorId ?? defaultVendorId,
         };
       });

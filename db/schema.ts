@@ -76,6 +76,7 @@ export const orderRawMaterials = pgTable(
     }),
     unitQty: text("unit_qty").notNull(),
     unitName: text("unit_name").notNull(),
+    notes: text("notes"),
   },
   (table) => [primaryKey({ columns: [table.orderId, table.rawMaterialId] })]
 );

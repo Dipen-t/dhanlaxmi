@@ -10,6 +10,7 @@ export type OrderMaterialDraft = {
   rawMaterialId: number;
   unitQty: string;
   unitName: string;
+  notes?: string;
   vendorId: number | null;
 };
 
@@ -216,6 +217,11 @@ export function OrderMaterialsPanel({
                         {item.unitQty} · need unit
                       </span>
                     ) : null}
+                    {item.notes ? (
+                      <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
+                        Note: {item.notes}
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -339,6 +345,23 @@ export function OrderMaterialsPanel({
                     );
                   })}
                 </div>
+              </div>
+              
+              <div className="min-w-0 sm:col-span-3 mt-2">
+                <label
+                  htmlFor={`edit-notes-${editingMaterial.id}`}
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Notes (e.g. high tea)
+                </label>
+                <input
+                  id={`edit-notes-${editingMaterial.id}`}
+                  type="text"
+                  value={editingItem.notes ?? ""}
+                  onChange={(e) => onUpdate(editingMaterial.id, { notes: e.target.value })}
+                  placeholder="Any special instructions for the vendor..."
+                  className="w-full min-h-12 rounded-xl border border-border bg-background px-3 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
               </div>
             </div>
           </div>

@@ -14,6 +14,7 @@ export type OrderRawMaterialRecord = {
   rawMaterialId: number;
   unitQty: string;
   unitName: string;
+  notes?: string | null;
   vendorId?: number | null;
 };
 
@@ -43,7 +44,7 @@ function serializeOrder(order: {
   mealType: MealType;
   payment: string | null;
   isPaymentAmount: boolean;
-  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; vendorId: number | null; vendor?: { name: string } | null }[];
+  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId: number | null; vendor?: { name: string } | null }[];
 }): OrderRecord {
   const vendors = Array.from(new Set((order.orderRawMaterials || [])
     .map(rm => rm.vendor?.name)
@@ -216,6 +217,7 @@ export async function createOrder(data: OrderInput) {
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
+          notes: m.notes || null,
           vendorId: m.vendorId || null,
         }))
       );
@@ -257,6 +259,7 @@ export async function createOrder(data: OrderInput) {
             name: dbMaterial.name,
             qty: m.unitQty,
             unit: m.unitName,
+            notes: m.notes,
           });
         }
       }
@@ -268,7 +271,11 @@ export async function createOrder(data: OrderInput) {
         const formattedDate = `${dd}/${mm}/${yyyy}`;
         let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n\nPlease provide the following raw materials:\n`;
         for (const item of group.items) {
-          message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
+          if (item.notes) {
+            message += `- ${item.name} - ${item.notes}: ${item.qty} ${item.unit}\n`;
+          } else {
+            message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
+          }
         }
         
         // Send messages sequentially to avoid rate-limiting from the WhatsApp API provider
@@ -346,6 +353,7 @@ export async function updateOrder(data: OrderInput) {
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
+          notes: m.notes || null,
           vendorId: m.vendorId || null,
         }))
       );
