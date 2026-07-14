@@ -49,12 +49,21 @@ export function PaymentManager({
   };
 
   const handleWaive = async () => {
-    if (!confirm("Are you sure you want to waive the remaining balance?")) return;
+    const numericAmount = Number(amount);
+    const waiveAmount = numericAmount > 0 ? numericAmount : (order.balance || 0);
+
+    if (waiveAmount <= 0) {
+      setError("No balance to waive or invalid amount entered.");
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to waive ${formatCurrency(waiveAmount)}?`)) return;
     setError("");
     setLoading(true);
 
     const res = await waiveBalance({
       orderId: order.id,
+      amount: waiveAmount,
       date: new Date().toISOString().slice(0, 10),
     });
 

@@ -50,11 +50,11 @@ export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
 
   return allOrders.map((order) => {
     let totalPaid = 0;
-    let isWaived = false;
+    let totalWaived = 0;
 
     const payments: PaymentRecord[] = order.orderPayments.map((p) => {
       if (p.isWaived) {
-        isWaived = true;
+        totalWaived += p.amount;
       } else {
         totalPaid += p.amount;
       }
@@ -73,22 +73,23 @@ export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
     const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount);
 
     if (effectiveTotal !== null) {
-      balance = Math.max(0, effectiveTotal - totalPaid);
+      balance = Math.max(0, effectiveTotal - totalPaid - totalWaived);
     }
 
     let status: "Pending" | "Partial" | "Cleared" | "Waived" = "Pending";
-    if (isWaived) {
-      status = "Waived";
-      balance = 0;
-    } else if (effectiveTotal !== null) {
-      if (balance === 0 && totalPaid > 0) {
-        status = "Cleared";
-      } else if (totalPaid > 0) {
+    if (effectiveTotal !== null) {
+      if (balance === 0) {
+        if (totalWaived > 0 && totalPaid === 0) {
+          status = "Waived";
+        } else {
+          status = "Cleared";
+        }
+      } else if (totalPaid > 0 || totalWaived > 0) {
         status = "Partial";
       } else {
         status = "Pending";
       }
-    } else if (totalPaid > 0) {
+    } else if (totalPaid > 0 || totalWaived > 0) {
       status = "Partial";
     }
 
@@ -132,15 +133,15 @@ export async function addPayment(data: { orderId: number; amount: number; date: 
   }
 }
 
-export async function waiveBalance(data: { orderId: number; date: string; notes?: string }) {
-  if (!data.orderId || !data.date) {
+export async function waiveBalance(data: { orderId: number; amount: number; date: string; notes?: string }) {
+  if (!data.orderId || !data.amount || !data.date) {
     return { error: "Missing required fields." };
   }
 
   try {
     await db.insert(orderPayments).values({
       orderId: data.orderId,
-      amount: 0,
+      amount: data.amount,
       date: new Date(data.date),
       isWaived: true,
       notes: data.notes?.trim() || "Balance Waived",

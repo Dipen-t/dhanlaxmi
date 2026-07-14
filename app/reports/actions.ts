@@ -47,16 +47,16 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
     const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
     
     let clientPaid = 0;
-    let isWaived = false;
+    let totalWaived = 0;
     for (const p of order.orderPayments) {
       if (p.isWaived) {
-        isWaived = true;
+        totalWaived += p.amount;
       } else {
         clientPaid += p.amount;
       }
     }
 
-    const clientBalance = isWaived ? 0 : Math.max(0, effectiveTotal - clientPaid);
+    const clientBalance = Math.max(0, effectiveTotal - clientPaid - totalWaived);
 
     const relatedVendorPayments = allVendorPayments.filter(vp => vp.orderId === order.id);
     const vendorExpenses = relatedVendorPayments.reduce((sum, vp) => sum + vp.amount, 0);
