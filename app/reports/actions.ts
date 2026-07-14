@@ -14,6 +14,7 @@ export type EventProfitability = {
   mealType: MealType;
   revenue: number;
   clientPaid: number;
+  clientWaived: number;
   clientBalance: number;
   vendorExpenses: number;
   netProfit: number;
@@ -61,7 +62,7 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
     const relatedVendorPayments = allVendorPayments.filter(vp => vp.orderId === order.id);
     const vendorExpenses = relatedVendorPayments.reduce((sum, vp) => sum + vp.amount, 0);
 
-    const netProfit = effectiveTotal - vendorExpenses;
+    const netProfit = effectiveTotal - totalWaived - vendorExpenses;
 
     return {
       id: order.id,
@@ -71,6 +72,7 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
       mealType: order.mealType,
       revenue: effectiveTotal,
       clientPaid,
+      clientWaived: totalWaived,
       clientBalance,
       vendorExpenses,
       netProfit,
