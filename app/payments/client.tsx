@@ -11,7 +11,11 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
 
   const filteredOrders = useMemo(() => {
     let result = orders;
-    if (filter !== "All") {
+    if (filter === "Cleared") {
+      result = result.filter(o => o.status === "Cleared" || o.status === "Waived");
+    } else if (filter === "Pending") {
+      result = result.filter(o => o.status === "Pending" || o.status === "Partial");
+    } else if (filter !== "All") {
       result = result.filter(o => o.status === filter);
     }
     
