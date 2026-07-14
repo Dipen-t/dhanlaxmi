@@ -6,6 +6,7 @@ import type { OrderWithVendorPayments, OrderVendorRecord } from "@/app/payments-
 import { addVendorPayment, deleteVendorPayment } from "@/app/payments-out/actions";
 import { formatCurrency } from "@/components/payments/payment-badges";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 export function VendorPaymentManager({ 
   order, 
@@ -66,8 +67,10 @@ export function VendorPaymentManager({
     });
 
     if (res?.error) {
+      toast.error(res.error);
       setError(res.error);
     } else {
+      toast.success("Vendor payment recorded!");
       setAmount("");
       setNotes("");
       // Don't close so they can see it added, or maybe close. Let's just reset form.
@@ -90,7 +93,10 @@ export function VendorPaymentManager({
         const res = await deleteVendorPayment(paymentId);
 
         if (res?.error) {
+          toast.error(res.error);
           setError(res.error);
+        } else {
+          toast.success("Payment deleted successfully.");
         }
         setLoading(false);
       }

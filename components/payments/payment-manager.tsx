@@ -6,6 +6,7 @@ import type { OrderWithBalance } from "@/app/payments/actions";
 import { addPayment, waiveBalance, deletePayment } from "@/app/payments/actions";
 import { StatusBadge, formatCurrency } from "./payment-badges";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { toast } from "sonner";
 
 export function PaymentManager({ 
   order, 
@@ -56,8 +57,10 @@ export function PaymentManager({
     });
 
     if (res?.error) {
+      toast.error(res.error);
       setError(res.error);
     } else {
+      toast.success("Payment recorded successfully!");
       setAmount("");
       setNotes("");
       onClose();
@@ -91,8 +94,10 @@ export function PaymentManager({
         });
 
         if (res?.error) {
+          toast.error(res.error);
           setError(res.error);
         } else {
+          toast.success(`Successfully waived ${formatCurrency(waiveAmount)}!`);
           onClose();
         }
         setLoading(false);
@@ -114,7 +119,10 @@ export function PaymentManager({
         const res = await deletePayment(paymentId);
 
         if (res?.error) {
+          toast.error(res.error);
           setError(res.error);
+        } else {
+          toast.success("Payment deleted successfully.");
         }
         setLoading(false);
       }

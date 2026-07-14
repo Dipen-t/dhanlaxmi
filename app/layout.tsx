@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import { AppShell } from "@/components/app-shell";
 import NextTopLoader from 'nextjs-toploader';
+import { Toaster } from 'sonner';
 
 import "./globals.css";
 
@@ -42,6 +43,7 @@ export default function RootLayout({
       >
         <NextTopLoader color="#ea580c" showSpinner={false} />
         <AppShell>{children}</AppShell>
+        <Toaster position="top-center" richColors />
       </body>
     </html>
   );
