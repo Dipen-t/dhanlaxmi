@@ -6,6 +6,7 @@ import {
   ChefHat,
   Banknote,
   Receipt,
+  BarChart3,
   type LucideIcon,
 } from "lucide-react";
 
@@ -58,5 +59,11 @@ export const homeTiles: HomeTile[] = [
     title: "Payments Out",
     description: "Record and manage payments made to vendors",
     icon: Receipt,
+  },
+  {
+    href: "/reports",
+    title: "Reports",
+    description: "View financial and operational reports",
+    icon: BarChart3,
   },
 ];
