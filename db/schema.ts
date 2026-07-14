@@ -64,6 +64,21 @@ export const orderPayments = pgTable("order_payments", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const vendorPayments = pgTable("vendor_payments", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  vendorId: integer("vendor_id")
+    .notNull()
+    .references(() => vendors.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const rawMaterialVendors = pgTable(
   "raw_material_vendors",
   {
@@ -203,6 +218,7 @@ export const menuCategoriesRelations = relations(menuCategories, ({ one }) => ({
 
 export const vendorsRelations = relations(vendors, ({ many }) => ({
   rawMaterialVendors: many(rawMaterialVendors),
+  vendorPayments: many(vendorPayments),
 }));
 
 export const rawMaterialsRelations = relations(rawMaterials, ({ many }) => ({
@@ -224,12 +240,24 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
 export const ordersRelations = relations(orders, ({ many }) => ({
   orderRawMaterials: many(orderRawMaterials),
   orderPayments: many(orderPayments),
+  vendorPayments: many(vendorPayments),
 }));
 
 export const orderPaymentsRelations = relations(orderPayments, ({ one }) => ({
   order: one(orders, {
     fields: [orderPayments.orderId],
     references: [orders.id],
+  }),
+}));
+
+export const vendorPaymentsRelations = relations(vendorPayments, ({ one }) => ({
+  order: one(orders, {
+    fields: [vendorPayments.orderId],
+    references: [orders.id],
+  }),
+  vendor: one(vendors, {
+    fields: [vendorPayments.vendorId],
+    references: [vendors.id],
   }),
 }));
 

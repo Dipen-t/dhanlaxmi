@@ -5,6 +5,7 @@ import {
   UtensilsCrossed,
   ChefHat,
   Banknote,
+  Receipt,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,5 +52,11 @@ export const homeTiles: HomeTile[] = [
     title: "Payments In",
     description: "Manage incoming payments and balances",
     icon: Banknote,
+  },
+  {
+    href: "/payments-out",
+    title: "Payments Out",
+    description: "Record and manage payments made to vendors",
+    icon: Receipt,
   },
 ];
