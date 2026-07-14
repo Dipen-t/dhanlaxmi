@@ -44,7 +44,6 @@ export const orders = pgTable("orders", {
   numberOfPersons: integer("number_of_persons").notNull(),
   mealType: mealTypeEnum("meal_type").notNull(),
   totalAmount: integer("total_amount"),
-  payment: text("payment"),
   isPaymentAmount: boolean("is_payment_amount").notNull().default(false),
   discount: text("discount"),
   createdAt: timestamp("created_at").defaultNow().notNull(),

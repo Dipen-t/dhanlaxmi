@@ -36,7 +36,7 @@ export function OrderList({ orders, onEdit }: OrderListProps) {
               <div className="flex flex-wrap gap-2">
                 <MealBadge mealType={order.mealType} />
                 <PersonsBadge count={order.numberOfPersons} />
-                <PaymentBadge payment={order.payment} isPaymentAmount={order.isPaymentAmount} />
+                <PaymentBadge totalAmount={order.totalAmount} isPaymentAmount={order.isPaymentAmount} />
                 <DiscountBadge discount={order.discount} />
               </div>
               {order.vendors?.length > 0 && (

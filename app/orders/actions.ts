@@ -26,7 +26,6 @@ export type OrderRecord = {
   numberOfPersons: number;
   mealType: MealType;
   totalAmount: number | null;
-  payment: string | null;
   discount: string | null;
   isPaymentAmount: boolean;
   rawMaterials: OrderRawMaterialRecord[];
@@ -45,7 +44,6 @@ function serializeOrder(order: {
   numberOfPersons: number;
   mealType: MealType;
   totalAmount: number | null;
-  payment: string | null;
   discount: string | null;
   isPaymentAmount: boolean;
   orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId: number | null; vendor?: { name: string } | null }[];
@@ -62,7 +60,6 @@ function serializeOrder(order: {
     numberOfPersons: order.numberOfPersons,
     mealType: order.mealType,
     totalAmount: order.totalAmount,
-    payment: order.payment,
     discount: order.discount,
     isPaymentAmount: order.isPaymentAmount,
     rawMaterials: order.orderRawMaterials?.map(rm => ({
@@ -176,7 +173,6 @@ export type OrderInput = {
   numberOfPersons: number;
   mealType: string;
   totalAmount?: string;
-  payment?: string;
   discount?: string;
   rawMaterials: OrderRawMaterialRecord[];
 };
@@ -188,9 +184,8 @@ export async function createOrder(data: OrderInput) {
   const numberOfPersons = Number(data.numberOfPersons);
   const mealType = data.mealType || "";
   const totalAmount = data.totalAmount ? Number(data.totalAmount) : null;
-  const payment = data.payment?.trim() || null;
   const discount = data.discount?.trim() || null;
-  const isPaymentAmount = payment !== null && payment !== "";
+  const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = data.rawMaterials || [];
 
   const error = validateOrderFields(
@@ -217,7 +212,6 @@ export async function createOrder(data: OrderInput) {
       numberOfPersons,
       mealType: mealType as MealType,
       totalAmount,
-      payment,
       discount,
       isPaymentAmount,
     }).returning({ id: orders.id });
@@ -314,9 +308,8 @@ export async function updateOrder(data: OrderInput) {
   const numberOfPersons = Number(data.numberOfPersons);
   const mealType = data.mealType || "";
   const totalAmount = data.totalAmount ? Number(data.totalAmount) : null;
-  const payment = data.payment?.trim() || null;
   const discount = data.discount?.trim() || null;
-  const isPaymentAmount = payment !== null && payment !== "";
+  const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = data.rawMaterials || [];
 
   if (!id || Number.isNaN(id)) {
@@ -349,7 +342,6 @@ export async function updateOrder(data: OrderInput) {
         numberOfPersons,
         mealType: mealType as MealType,
         totalAmount,
-        payment,
         discount,
         isPaymentAmount,
         updatedAt: new Date(),
