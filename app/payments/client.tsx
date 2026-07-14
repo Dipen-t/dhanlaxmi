@@ -64,7 +64,7 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
                   
                   <div className="flex flex-col items-end shrink-0 gap-1">
                     <p className="font-medium text-foreground">
-                      Total: {order.totalAmount !== null ? formatCurrency(order.totalAmount) : "---"}
+                      Total: {order.effectiveTotal !== null ? formatCurrency(order.effectiveTotal) : "---"}
                     </p>
                     <StatusBadge status={order.status} />
                   </div>

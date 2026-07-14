@@ -25,6 +25,7 @@ export type OrderWithBalance = {
   numberOfPersons: number;
   mealType: MealType;
   totalAmount: number | null;
+  effectiveTotal: number | null;
   discount: string | null;
   payments: PaymentRecord[];
   totalPaid: number;
@@ -34,6 +35,27 @@ export type OrderWithBalance = {
 
 function toDateString(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function calculateEffectiveTotal(total: number | null, discount: string | null): number | null {
+  if (total === null) return null;
+  if (!discount) return total;
+  
+  const d = discount.trim();
+  if (d.endsWith("%")) {
+    const percentage = parseFloat(d.slice(0, -1));
+    if (!isNaN(percentage)) {
+      return total - (total * (percentage / 100));
+    }
+  } else {
+    // try parse as number, removing any non-digit chars if needed (like 'Rs', etc)
+    const numericStr = d.replace(/[^\d.]/g, '');
+    const amount = parseFloat(numericStr);
+    if (!isNaN(amount)) {
+      return total - amount;
+    }
+  }
+  return total;
 }
 
 export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
@@ -68,15 +90,17 @@ export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
     });
 
     let balance: number | null = null;
-    if (order.totalAmount !== null) {
-      balance = Math.max(0, order.totalAmount - totalPaid);
+    const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount);
+
+    if (effectiveTotal !== null) {
+      balance = Math.max(0, effectiveTotal - totalPaid);
     }
 
     let status: "Pending" | "Partial" | "Cleared" | "Waived" = "Pending";
     if (isWaived) {
       status = "Waived";
       balance = 0;
-    } else if (order.totalAmount !== null) {
+    } else if (effectiveTotal !== null) {
       if (balance === 0 && totalPaid > 0) {
         status = "Cleared";
       } else if (totalPaid > 0) {
@@ -96,6 +120,7 @@ export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
       numberOfPersons: order.numberOfPersons,
       mealType: order.mealType,
       totalAmount: order.totalAmount,
+      effectiveTotal,
       discount: order.discount,
       payments,
       totalPaid,
