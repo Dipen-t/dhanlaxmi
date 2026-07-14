@@ -132,3 +132,18 @@ export async function addVendorPayment(data: { orderId: number; vendorId: number
     return { error: error.message || "Failed to record payment." };
   }
 }
+
+export async function deleteVendorPayment(paymentId: number) {
+  if (!paymentId) {
+    return { error: "Missing payment ID." };
+  }
+
+  try {
+    await db.delete(vendorPayments).where(eq(vendorPayments.id, paymentId));
+    revalidatePath("/payments-out");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting vendor payment:", error);
+    return { error: error.message || "Failed to delete payment." };
+  }
+}

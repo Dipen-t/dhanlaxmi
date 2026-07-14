@@ -154,3 +154,18 @@ export async function waiveBalance(data: { orderId: number; amount: number; date
     return { error: error.message || "Failed to waive balance." };
   }
 }
+
+export async function deletePayment(paymentId: number) {
+  if (!paymentId) {
+    return { error: "Missing payment ID." };
+  }
+
+  try {
+    await db.delete(orderPayments).where(eq(orderPayments.id, paymentId));
+    revalidatePath("/payments");
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error deleting payment:", error);
+    return { error: error.message || "Failed to delete payment." };
+  }
+}

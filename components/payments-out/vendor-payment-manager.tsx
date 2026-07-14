@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, ChevronDown } from "lucide-react";
+import { Trash2, X, ChevronDown } from "lucide-react";
 import type { OrderWithVendorPayments, OrderVendorRecord } from "@/app/payments-out/actions";
-import { addVendorPayment } from "@/app/payments-out/actions";
+import { addVendorPayment, deleteVendorPayment } from "@/app/payments-out/actions";
 import { formatCurrency } from "@/components/payments/payment-badges";
 
 export function VendorPaymentManager({ 
@@ -55,6 +55,19 @@ export function VendorPaymentManager({
       setNotes("");
       // Don't close so they can see it added, or maybe close. Let's just reset form.
       // The parent will re-render because we called revalidatePath in the action.
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async (paymentId: number) => {
+    if (!confirm("Are you sure you want to delete this payment?")) return;
+    setError("");
+    setLoading(true);
+
+    const res = await deleteVendorPayment(paymentId);
+
+    if (res?.error) {
+      setError(res.error);
     }
     setLoading(false);
   };
@@ -159,10 +172,20 @@ export function VendorPaymentManager({
             ) : (
               <ul className="space-y-3">
                 {selectedVendor.payments.map((p) => (
-                  <li key={p.id} className="flex flex-col border border-border rounded-lg p-3 bg-surface">
+                  <li key={p.id} className="flex flex-col border border-border rounded-lg p-3 bg-surface group">
                     <div className="flex justify-between items-start">
                       <p className="text-sm font-semibold text-foreground">{formatCurrency(p.amount)}</p>
-                      <p className="text-xs text-muted">{p.date}</p>
+                      <div className="flex items-center gap-3">
+                        <p className="text-xs text-muted">{p.date}</p>
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          disabled={loading}
+                          className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          title="Delete payment"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </div>
                     {p.notes && <p className="text-xs text-muted mt-1 italic">"{p.notes}"</p>}
                   </li>

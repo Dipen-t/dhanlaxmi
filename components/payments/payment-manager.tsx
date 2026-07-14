@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { X, Check } from "lucide-react";
+import { Trash2, X, Check } from "lucide-react";
 import type { OrderWithBalance } from "@/app/payments/actions";
-import { addPayment, waiveBalance } from "@/app/payments/actions";
+import { addPayment, waiveBalance, deletePayment } from "@/app/payments/actions";
 import { StatusBadge, formatCurrency } from "./payment-badges";
 
 export function PaymentManager({ 
@@ -71,6 +71,19 @@ export function PaymentManager({
       setError(res.error);
     } else {
       onClose();
+    }
+    setLoading(false);
+  };
+
+  const handleDelete = async (paymentId: number) => {
+    if (!confirm("Are you sure you want to delete this payment?")) return;
+    setError("");
+    setLoading(true);
+
+    const res = await deletePayment(paymentId);
+
+    if (res?.error) {
+      setError(res.error);
     }
     setLoading(false);
   };
@@ -193,7 +206,7 @@ export function PaymentManager({
             ) : (
               <ul className="space-y-3">
                 {order.payments.map((p) => (
-                  <li key={p.id} className="flex flex-col border border-border rounded-lg p-3 bg-surface">
+                  <li key={p.id} className="flex flex-col border border-border rounded-lg p-3 bg-surface group">
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="text-sm font-medium text-foreground">
@@ -201,9 +214,19 @@ export function PaymentManager({
                         </p>
                         <p className="text-xs text-muted mt-0.5">{p.date}</p>
                       </div>
-                      <p className={`text-sm font-semibold ${p.isWaived ? "text-purple-600" : "text-emerald-600"}`}>
-                        {p.isWaived ? "₹0" : formatCurrency(p.amount)}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <p className={`text-sm font-semibold ${p.isWaived ? "text-purple-600" : "text-emerald-600"}`}>
+                          {p.isWaived ? "₹0" : formatCurrency(p.amount)}
+                        </p>
+                        <button
+                          onClick={() => handleDelete(p.id)}
+                          disabled={loading}
+                          className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          title="Delete payment"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
                     </div>
                     {p.notes && <p className="text-xs text-muted mt-1 italic">"{p.notes}"</p>}
                   </li>
