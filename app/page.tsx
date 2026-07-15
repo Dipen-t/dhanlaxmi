@@ -12,7 +12,7 @@ export default function HomePage() {
           <h2 id="ops-heading" className="mb-4 text-lg font-bold tracking-tight text-foreground md:text-xl">
             Operations
           </h2>
-          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5">
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-5">
             {homeTiles.filter(t => ['/raw-materials', '/vendors'].includes(t.href)).map((tile) => (
               <li key={tile.href}>
                 <NavTile {...tile} />

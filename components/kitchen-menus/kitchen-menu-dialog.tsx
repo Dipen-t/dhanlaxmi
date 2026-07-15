@@ -180,7 +180,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[200] flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <button
         type="button"
         aria-label="Close dialog"
