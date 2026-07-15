@@ -151,7 +151,7 @@ export function PaymentManager({
               <div className="bg-surface rounded-xl p-3 border border-border">
                 <p className="text-sm text-muted mb-1">
                   Total Amount
-                  {order.discount && <span className="ml-1 text-emerald-600 text-xs font-semibold">(-{order.discount})</span>}
+                  {order.discount && <span className="ml-1 text-success text-xs font-semibold">(-{order.discount})</span>}
                 </p>
                 <p className="text-lg font-semibold text-foreground">
                   {order.effectiveTotal !== null ? formatCurrency(order.effectiveTotal) : "Not Set"}
@@ -168,7 +168,7 @@ export function PaymentManager({
               </div>
               <div className="bg-surface rounded-xl p-3 border border-border">
                 <p className="text-sm text-muted mb-1">Total Paid</p>
-                <p className="text-lg font-semibold text-emerald-600">
+                <p className="text-lg font-semibold text-success">
                   {formatCurrency(order.totalPaid)}
                 </p>
               </div>
@@ -181,7 +181,7 @@ export function PaymentManager({
             {order.status !== "Cleared" && order.status !== "Waived" && order.totalAmount !== null && (
               <div className="bg-surface rounded-xl p-4 border border-border">
                 <h3 className="text-sm font-semibold text-foreground mb-3">Add Payment</h3>
-                {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+                {error && <p className="text-sm text-error mb-3">{error}</p>}
                 <form onSubmit={handleAddPayment} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -227,7 +227,7 @@ export function PaymentManager({
                         type="button"
                         onClick={handleWaive}
                         disabled={loading}
-                        className="px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2.5 text-sm font-semibold text-error bg-error-soft hover:bg-error-soft rounded-lg transition-colors disabled:opacity-50"
                       >
                         Waive Balance
                       </button>
@@ -256,13 +256,13 @@ export function PaymentManager({
                         <p className="text-xs text-muted mt-0.5">{p.date}</p>
                       </div>
                       <div className="flex items-center gap-3">
-                        <p className={`text-sm font-semibold ${p.isWaived ? "text-purple-600" : "text-emerald-600"}`}>
+                        <p className={`text-sm font-semibold ${p.isWaived ? "text-info" : "text-success"}`}>
                           {p.isWaived ? "₹0" : formatCurrency(p.amount)}
                         </p>
                         <button
                           onClick={() => handleDelete(p.id)}
                           disabled={loading}
-                          className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                           title="Delete payment"
                         >
                           <Trash2 className="size-4" />

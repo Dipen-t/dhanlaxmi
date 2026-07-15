@@ -10,11 +10,11 @@ export function PageHeader({ title }: PageHeaderProps) {
   return (
     <header className="mb-6 md:mb-8">
       <div className="flex items-center gap-3 md:gap-4">
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground md:size-12">
-          <UtensilsCrossed className="size-5 md:size-6" strokeWidth={2} aria-hidden />
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground md:size-12 shadow-sm shadow-primary/20">
+          <UtensilsCrossed className="size-5 md:size-6" strokeWidth={2.5} aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xl font-semibold tracking-[-0.02em] text-foreground [text-wrap:balance] md:text-2xl">
+          <p className="text-2xl font-bold tracking-[-0.03em] text-foreground [text-wrap:balance] md:text-3xl">
             Dhan Laxmi Catering Service
           </p>
           {title ? (

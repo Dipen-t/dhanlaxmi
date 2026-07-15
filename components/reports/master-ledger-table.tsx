@@ -28,7 +28,7 @@ export function MasterLedgerTable({ ledger }: { ledger: LedgerTransaction[] }) {
         <tbody className="divide-y divide-border">
           {ledger.map((t) => {
             const isOut = t.type === "OUT";
-            const amountColor = isOut ? "text-red-600" : "text-emerald-600";
+            const amountColor = isOut ? "text-error" : "text-success";
             const prefix = isOut ? "-" : "+";
             
             return (
@@ -38,12 +38,12 @@ export function MasterLedgerTable({ ledger }: { ledger: LedgerTransaction[] }) {
                 </td>
                 <td className="px-6 py-4">
                   {isOut ? (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-error-soft px-2 py-1 text-xs font-medium text-error ring-1 ring-inset ring-error/20">
                       <ArrowUpRight className="size-3" />
                       Paid Out
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-success-soft px-2 py-1 text-xs font-medium text-success ring-1 ring-inset ring-success/20">
                       <ArrowDownRight className="size-3" />
                       Received In
                     </span>

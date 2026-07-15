@@ -127,7 +127,7 @@ export function VendorActions({
                     type="button"
                     onClick={handleDelete}
                     disabled={isPending}
-                    className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-red-200 bg-red-600 px-4 text-sm font-medium text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:opacity-50"
+                    className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-error/20 bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50"
                   >
                     {isPending ? "Deleting…" : "Delete"}
                   </button>

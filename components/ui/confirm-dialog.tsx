@@ -1,6 +1,7 @@
 "use client";
 
-import { AlertTriangle, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { AlertTriangle } from "lucide-react";
 
 export type ConfirmDialogProps = {
   isOpen: boolean;
@@ -23,47 +24,72 @@ export function ConfirmDialog({
   onCancel,
   isDestructive = false,
 }: ConfirmDialogProps) {
-  if (!isOpen) return null;
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    if (isOpen && !dialog.open) {
+      dialog.showModal();
+    } else if (!isOpen && dialog.open) {
+      dialog.close();
+    }
+  }, [isOpen]);
+
+  function handleClose() {
+    onCancel();
+  }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="w-full max-w-md rounded-2xl bg-background shadow-2xl border border-border overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-        <div className="p-6">
+    <dialog
+      ref={dialogRef}
+      onClose={handleClose}
+      className="app-dialog"
+    >
+      <form method="dialog" className="flex flex-col">
+        <div className="px-5 pt-5 pb-4">
           <div className="flex gap-4">
-            <div className={`shrink-0 flex items-center justify-center size-10 rounded-full ${isDestructive ? 'bg-red-100 text-red-600' : 'bg-primary/10 text-primary'}`}>
+            <div
+              className={`flex size-10 shrink-0 items-center justify-center rounded-full ${
+                isDestructive
+                  ? "bg-error-soft text-error"
+                  : "bg-primary-soft text-primary"
+              }`}
+            >
               <AlertTriangle className="size-5" />
             </div>
-            <div className="pt-1 text-left">
-              <h3 className="text-lg font-semibold text-foreground mb-2">
+            <div className="pt-0.5 text-left">
+              <h3 className="text-base font-semibold text-foreground">
                 {title}
               </h3>
-              <p className="text-sm text-muted">
+              <p className="mt-1 text-sm text-muted text-pretty">
                 {message}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-surface px-6 py-4 border-t border-border flex justify-end gap-3">
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
           <button
+            type="button"
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg text-sm font-medium text-foreground bg-background border border-border hover:bg-surface hover:text-foreground transition-colors"
+            className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             {cancelText}
           </button>
           <button
-            onClick={() => {
-              onConfirm();
-            }}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors ${
-              isDestructive 
-                ? "bg-red-600 hover:bg-red-700" 
-                : "bg-primary hover:bg-primary/90"
+            type="button"
+            onClick={onConfirm}
+            className={`inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${
+              isDestructive
+                ? "bg-destructive text-destructive-foreground hover:opacity-90"
+                : "bg-primary text-primary-foreground hover:opacity-90"
             }`}
           >
             {confirmText}
           </button>
         </div>
-      </div>
-    </div>
+      </form>
+    </dialog>
   );
 }

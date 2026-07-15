@@ -167,7 +167,7 @@ export function MenuPdfDownload({
         </button>
       )}
       {error ? (
-        <p role="alert" className="mt-1 text-xs text-primary">
+        <p role="alert" className="mt-1 text-xs text-error">
           {error}
         </p>
       ) : null}

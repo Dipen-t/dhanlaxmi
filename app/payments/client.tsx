@@ -63,7 +63,7 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground text-lg">{order.orderId}</p>
                     <p className="text-sm text-muted mt-0.5 truncate">{order.venue} · {order.date}</p>
-                    {order.discount && <p className="text-xs text-purple-600 mt-1">Discount applied: {order.discount}</p>}
+                    {order.discount && <p className="text-xs text-info mt-1">Discount applied: {order.discount}</p>}
                   </div>
                   
                   <div className="flex flex-col items-end shrink-0 gap-1">

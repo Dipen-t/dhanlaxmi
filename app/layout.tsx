@@ -41,7 +41,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className="flex min-h-full flex-col bg-background text-foreground"
       >
-        <NextTopLoader color="#ea580c" showSpinner={false} />
+        <NextTopLoader color="#0f766e" showSpinner={false} />
         <AppShell>{children}</AppShell>
         <Toaster position="top-center" richColors />
       </body>

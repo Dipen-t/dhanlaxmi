@@ -4,8 +4,8 @@ export function StatusBadge({ status }: { status: OrderWithBalance["status"] }) 
   const styles = {
     Pending: "bg-amber-50 text-amber-700 ring-amber-600/20",
     Partial: "bg-blue-50 text-blue-700 ring-blue-600/20",
-    Cleared: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-    Waived: "bg-purple-50 text-purple-700 ring-purple-600/20",
+    Cleared: "bg-success-soft text-success ring-success/20",
+    Waived: "bg-info-soft text-info ring-info/20",
   };
 
   return (

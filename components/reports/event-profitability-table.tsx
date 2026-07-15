@@ -28,7 +28,7 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
         </thead>
         <tbody className="divide-y divide-border">
           {reports.map((r) => {
-            const profitColor = r.netProfit >= 0 ? "text-emerald-600" : "text-red-600";
+            const profitColor = r.netProfit >= 0 ? "text-success" : "text-error";
             return (
               <tr key={r.id} className="hover:bg-surface/30 transition-colors">
                 <td className="px-6 py-4">
@@ -39,13 +39,13 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
                   {formatCurrency(r.revenue)}
                 </td>
                 <td className="px-6 py-4">
-                  <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                  <span className="inline-flex items-center rounded-md bg-success-soft px-2 py-1 text-xs font-medium text-success ring-1 ring-inset ring-success/20">
                     {formatCurrency(r.clientPaid)}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   {r.clientWaived > 0 ? (
-                    <span className="inline-flex items-center rounded-md bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700 ring-1 ring-inset ring-purple-600/20">
+                    <span className="inline-flex items-center rounded-md bg-info-soft px-2 py-1 text-xs font-medium text-info ring-1 ring-inset ring-info/20">
                       {formatCurrency(r.clientWaived)}
                     </span>
                   ) : (
@@ -54,7 +54,7 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
                 </td>
                 <td className="px-6 py-4">
                   {r.clientBalance > 0 ? (
-                    <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/20">
+                    <span className="inline-flex items-center rounded-md bg-error-soft px-2 py-1 text-xs font-medium text-error ring-1 ring-inset ring-error/20">
                       {formatCurrency(r.clientBalance)}
                     </span>
                   ) : (

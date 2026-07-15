@@ -362,7 +362,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
             </div>
 
             {error ? (
-              <p role="alert" className="mt-2 text-xs font-medium text-red-600">
+              <p role="alert" className="mt-2 text-xs font-medium text-error">
                 {error}
               </p>
             ) : null}

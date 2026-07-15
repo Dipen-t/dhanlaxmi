@@ -293,7 +293,7 @@ export function VendorDialog({
             </div>
 
             {error ? (
-              <p role="alert" className="mt-4 text-sm font-medium text-red-600">
+              <p role="alert" className="mt-4 text-sm font-medium text-error">
                 {error}
               </p>
             ) : null}

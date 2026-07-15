@@ -41,7 +41,7 @@ export function OrderActions({
     "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary-soft px-3 text-primary transition-colors hover:border-primary/40 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
   const deleteClass =
-    "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-red-700 transition-colors hover:border-red-300 hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:opacity-50";
+    "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-3 text-error transition-colors hover:border-error/30 hover:bg-error-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50";
 
   return (
     <>
@@ -102,7 +102,7 @@ export function OrderActions({
               type="button"
               onClick={handleDelete}
               disabled={isPending}
-              className="inline-flex min-h-10 items-center rounded-lg border border-red-200 bg-red-600 px-4 text-sm font-medium text-white transition-colors hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/40 disabled:opacity-50"
+              className="inline-flex min-h-10 items-center rounded-lg border border-error/20 bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50"
             >
               {isPending ? "Deleting…" : "Delete"}
             </button>

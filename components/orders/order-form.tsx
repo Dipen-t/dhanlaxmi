@@ -204,7 +204,7 @@ export function OrderForm({
       {error ? (
         <div
           role="alert"
-          className="shrink-0 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          className="shrink-0 rounded-lg border border-error/20 bg-error-soft p-4 text-sm text-error"
         >
           {error}
         </div>

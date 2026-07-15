@@ -12,6 +12,15 @@
   --accent: oklch(0.52 0.08 245);
   --ring: oklch(0.48 0.11 175);
   --backdrop: oklch(0.22 0.02 175 / 0.45);
+  
+  --error: oklch(0.55 0.2 25);
+  --error-soft: oklch(0.96 0.04 25);
+  --warning: oklch(0.75 0.15 85);
+  --warning-soft: oklch(0.96 0.04 85);
+  --success: oklch(0.55 0.15 155);
+  --success-soft: oklch(0.96 0.04 155);
+  --info: oklch(0.55 0.15 245);
+  --info-soft: oklch(0.96 0.04 245);
 }
 
 @theme inline {
@@ -25,6 +34,18 @@
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
   --color-ring: var(--ring);
+  
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-destructive: var(--error);
+  --color-destructive-foreground: oklch(1 0 0);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

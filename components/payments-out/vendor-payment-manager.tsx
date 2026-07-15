@@ -125,7 +125,7 @@ export function VendorPaymentManager({
           
           <div className="flex-1">
             <h3 className="text-sm font-semibold text-foreground mb-3">Record New Payment</h3>
-            {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
+            {error && <p className="text-sm text-error mb-3">{error}</p>}
             <form onSubmit={handleAddPayment} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">Select Vendor</label>
@@ -211,7 +211,7 @@ export function VendorPaymentManager({
                         <button
                           onClick={() => handleDelete(p.id)}
                           disabled={loading}
-                          className="p-1.5 text-muted hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                          className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
                           title="Delete payment"
                         >
                           <Trash2 className="size-4" />
@@ -225,9 +225,9 @@ export function VendorPaymentManager({
             )}
 
             {selectedVendor && selectedVendor.totalPaid > 0 && (
-              <div className="mt-4 p-3 bg-emerald-50 border border-emerald-100 rounded-lg flex justify-between">
-                <span className="text-sm font-medium text-emerald-800">Total Paid:</span>
-                <span className="text-sm font-bold text-emerald-800">{formatCurrency(selectedVendor.totalPaid)}</span>
+              <div className="mt-4 p-3 bg-success-soft border border-success/20 rounded-lg flex justify-between">
+                <span className="text-sm font-medium text-success">Total Paid:</span>
+                <span className="text-sm font-bold text-success">{formatCurrency(selectedVendor.totalPaid)}</span>
               </div>
             )}
           </div>

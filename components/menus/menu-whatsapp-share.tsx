@@ -173,7 +173,7 @@ export function MenuWhatsappShare({
                   </div>
 
                   {error ? (
-                    <p className="text-sm font-medium text-red-600">{error}</p>
+                    <p className="text-sm font-medium text-error">{error}</p>
                   ) : null}
 
                   {success ? (

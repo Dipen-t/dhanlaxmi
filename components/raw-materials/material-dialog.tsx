@@ -102,7 +102,7 @@ export function MaterialDialog({ open, material, onClose }: MaterialDialogProps)
             </p>
           )}
           {error ? (
-            <p role="alert" className="mt-3 text-sm text-primary">
+            <p role="alert" className="mt-3 text-sm text-error">
               {error}
             </p>
           ) : null}
