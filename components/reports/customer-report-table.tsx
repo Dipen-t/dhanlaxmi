@@ -14,7 +14,7 @@ export function CustomerReportTable({ reports }: { reports: CustomerReport[] }) 
 
   return (
     <div className="w-full flex-1 overflow-auto">
-      <table className="w-full text-left text-sm whitespace-nowrap">
+      <table className="w-full text-left text-sm">
         <thead className="bg-surface/50 text-muted uppercase text-xs sticky top-0 border-b border-border">
           <tr>
             <th className="px-6 py-4 font-semibold">Customer Name</th>

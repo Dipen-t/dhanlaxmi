@@ -20,7 +20,7 @@ export function VendorReportTable({ reports }: { reports: VendorOrderReport[] })
 
   return (
     <div className="w-full flex-1 overflow-auto">
-      <table className="w-full text-left text-sm whitespace-nowrap">
+      <table className="w-full text-left text-sm">
         <thead className="text-xs text-muted-foreground uppercase bg-surface border-b border-border sticky top-0 z-10">
           <tr>
             <th className="px-6 py-4 font-medium w-10"></th>
