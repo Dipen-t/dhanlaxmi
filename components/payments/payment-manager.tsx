@@ -257,7 +257,7 @@ export function PaymentManager({
                       </div>
                       <div className="flex items-center gap-3">
                         <p className={`text-sm font-semibold ${p.isWaived ? "text-info" : "text-success"}`}>
-                          {p.isWaived ? "₹0" : formatCurrency(p.amount)}
+                          {formatCurrency(p.amount)}
                         </p>
                         <button
                           onClick={() => handleDelete(p.id)}
