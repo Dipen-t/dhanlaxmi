@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import { pdf } from '@react-pdf/renderer';
 import { ProfitabilityPDF, LedgerPDF, CustomerReportPDF, VendorReportPDF } from '@/components/reports/pdf-reports';
 import type { EventProfitability, LedgerTransaction, CustomerReport, VendorOrderReport } from "@/app/reports/actions";
-import { createElement } from 'react';
+import { createElement, ReactElement } from 'react';
 
 export const exportToExcel = (data: Record<string, unknown>[], filename: string) => {
   const worksheet = XLSX.utils.json_to_sheet(data);
@@ -87,7 +87,8 @@ export const exportVendorReportToExcel = (reports: VendorOrderReport[]) => {
 };
 
 export const exportProfitabilityToPDF = async (reports: EventProfitability[]) => {
-  const blob = await pdf(createElement(ProfitabilityPDF, { reports })).toBlob();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blob = await pdf(createElement(ProfitabilityPDF, { reports }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -99,7 +100,8 @@ export const exportProfitabilityToPDF = async (reports: EventProfitability[]) =>
 };
 
 export const exportLedgerToPDF = async (ledger: LedgerTransaction[]) => {
-  const blob = await pdf(createElement(LedgerPDF, { ledger })).toBlob();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blob = await pdf(createElement(LedgerPDF, { ledger }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -111,7 +113,8 @@ export const exportLedgerToPDF = async (ledger: LedgerTransaction[]) => {
 };
 
 export const exportCustomerReportToPDF = async (reports: CustomerReport[]) => {
-  const blob = await pdf(createElement(CustomerReportPDF, { reports })).toBlob();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blob = await pdf(createElement(CustomerReportPDF, { reports }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -123,7 +126,8 @@ export const exportCustomerReportToPDF = async (reports: CustomerReport[]) => {
 };
 
 export const exportVendorReportToPDF = async (reports: VendorOrderReport[]) => {
-  const blob = await pdf(createElement(VendorReportPDF, { reports })).toBlob();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const blob = await pdf(createElement(VendorReportPDF, { reports }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

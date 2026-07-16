@@ -1,19 +1,14 @@
 import { config } from "dotenv";
 config({ path: ".env" });
 import { db } from "./db";
-import { orders } from "./db/schema";
+import { sql } from "drizzle-orm";
 
 async function test() {
   try {
-    console.log("Attempting insert...");
-    const [newOrder] = await db.insert(orders).values({
-      orderId: "ORD-TEST",
-      date: new Date(),
-      venue: "test",
-      numberOfPersons: 100,
-      mealType: "dinner",
-    }).returning({ id: orders.id });
-    console.log("Inserted:", newOrder);
+    console.log("Running DDL...");
+    await db.execute(sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_name text;`);
+    await db.execute(sql`ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_phone text;`);
+    console.log("DDL executed.");
   } catch (err: unknown) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const e = err as any;
