@@ -2,6 +2,10 @@ import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import type { EventProfitability, LedgerTransaction, CustomerReport, VendorOrderReport } from "@/app/reports/actions";
 import { formatCurrency } from "@/components/payments/payment-badges";
 
+const pdfFormatCurrency = (amount: number | null | undefined) => {
+  return formatCurrency(amount).replace(/₹/g, 'Rs. ');
+};
+
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 10, fontFamily: 'Helvetica' },
   title: { fontSize: 18, marginBottom: 20, fontWeight: 'bold' },
@@ -40,12 +44,12 @@ export const ProfitabilityPDF = ({ reports }: { reports: EventProfitability[] })
               <Text style={styles.tableCell}>{r.orderId}</Text>
               <Text style={{...styles.tableCell, fontSize: 8, color: '#666'}}>{r.date}</Text>
             </View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{formatCurrency(r.revenue)}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{formatCurrency(r.clientPaid)}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.clientWaived > 0 ? formatCurrency(r.clientWaived) : '-'}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.clientBalance > 0 ? formatCurrency(r.clientBalance) : '-'}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.vendorExpenses > 0 ? formatCurrency(r.vendorExpenses) : '-'}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{formatCurrency(r.netProfit)}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.revenue)}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.clientPaid)}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.clientWaived > 0 ? pdfFormatCurrency(r.clientWaived) : '-'}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.clientBalance > 0 ? pdfFormatCurrency(r.clientBalance) : '-'}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.vendorExpenses > 0 ? pdfFormatCurrency(r.vendorExpenses) : '-'}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.netProfit)}</Text></View>
           </View>
         ))}
       </View>
@@ -71,7 +75,7 @@ export const LedgerPDF = ({ ledger }: { ledger: LedgerTransaction[] }) => (
             <View style={{...styles.tableCol, ...styles.ledgerColType}}><Text style={styles.tableCell}>{t.type}</Text></View>
             <View style={{...styles.tableCol, ...styles.ledgerColRef}}><Text style={styles.tableCell}>{t.reference}</Text></View>
             <View style={{...styles.tableCol, ...styles.ledgerColNotes}}><Text style={styles.tableCell}>{t.notes || '-'}</Text></View>
-            <View style={{...styles.tableCol, ...styles.ledgerColAmount}}><Text style={styles.tableCell}>{t.type === 'OUT' ? '-' : '+'}{formatCurrency(t.amount)}</Text></View>
+            <View style={{...styles.tableCol, ...styles.ledgerColAmount}}><Text style={styles.tableCell}>{t.type === 'OUT' ? '-' : '+'}{pdfFormatCurrency(t.amount)}</Text></View>
           </View>
         ))}
       </View>
@@ -98,10 +102,10 @@ export const CustomerReportPDF = ({ reports }: { reports: CustomerReport[] }) =>
             <View style={styles.tableCol}><Text style={styles.tableCell}>{r.customerName}</Text></View>
             <View style={styles.tableCol}><Text style={styles.tableCell}>{r.customerPhone || '-'}</Text></View>
             <View style={styles.tableCol}><Text style={styles.tableCell}>{r.totalOrders}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{formatCurrency(r.totalRevenue)}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{formatCurrency(r.totalPaid)}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.totalWaived > 0 ? formatCurrency(r.totalWaived) : '-'}</Text></View>
-            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.balanceDue > 0 ? formatCurrency(r.balanceDue) : '-'}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.totalRevenue)}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.totalPaid)}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.totalWaived > 0 ? pdfFormatCurrency(r.totalWaived) : '-'}</Text></View>
+            <View style={styles.tableCol}><Text style={styles.tableCell}>{r.balanceDue > 0 ? pdfFormatCurrency(r.balanceDue) : '-'}</Text></View>
           </View>
         ))}
       </View>
@@ -152,7 +156,7 @@ export const VendorReportPDF = ({ reports }: { reports: VendorOrderReport[] }) =
                   )) : <Text style={styles.tableCell}>-</Text>}
                 </View>
                 <View style={{...styles.tableCol, width: '20%', textAlign: 'right'}}>
-                  <Text style={styles.tableCell}>{formatCurrency(v.totalPaid)}</Text>
+                  <Text style={styles.tableCell}>{pdfFormatCurrency(v.totalPaid)}</Text>
                 </View>
               </View>
             ))
