@@ -13,7 +13,7 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="w-full flex-1 overflow-auto">
       <table className="w-full text-left text-sm whitespace-nowrap">
         <thead className="bg-surface/50 text-muted uppercase text-xs sticky top-0 border-b border-border">
           <tr>
