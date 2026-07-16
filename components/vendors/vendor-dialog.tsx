@@ -37,12 +37,14 @@ export function VendorDialog({
   const isEditing = vendor !== null;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!open) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormKey((key) => key + 1);
     setError(null);
     setDeliveryLocation(vendor?.deliveryLocation ?? "venue");

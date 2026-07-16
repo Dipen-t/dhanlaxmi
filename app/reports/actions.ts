@@ -20,6 +20,17 @@ export type EventProfitability = {
   netProfit: number;
 };
 
+export type CustomerReport = {
+  id: string; // unique identifier (phone, name, or "unknown")
+  customerName: string;
+  customerPhone: string;
+  totalOrders: number;
+  totalRevenue: number;
+  totalPaid: number;
+  totalWaived: number;
+  balanceDue: number;
+};
+
 export type LedgerTransaction = {
   id: string; // Unique string for React key
   date: string;
@@ -127,5 +138,177 @@ export async function getMasterLedger(): Promise<LedgerTransaction[]> {
       return new Date(b.date).getTime() - new Date(a.date).getTime();
     }
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+}
+
+export async function getCustomerReport(): Promise<CustomerReport[]> {
+  const allOrders = await db.query.orders.findMany({
+    with: {
+      orderPayments: true,
+    },
+  });
+
+  const customerMap = new Map<string, CustomerReport>();
+
+  for (const order of allOrders) {
+    const customerPhone = order.customerPhone || "";
+    const customerName = order.customerName || "";
+    
+    // Determine a unique key for the customer
+    let key = "unknown";
+    if (customerPhone) {
+      key = customerPhone;
+    } else if (customerName) {
+      key = customerName;
+    }
+
+    if (!customerMap.has(key)) {
+      customerMap.set(key, {
+        id: key,
+        customerName: customerName || (customerPhone ? "Unknown Customer" : "Unknown Customer"),
+        customerPhone: customerPhone,
+        totalOrders: 0,
+        totalRevenue: 0,
+        totalPaid: 0,
+        totalWaived: 0,
+        balanceDue: 0,
+      });
+    }
+
+    const report = customerMap.get(key)!;
+    report.totalOrders += 1;
+
+    const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
+    report.totalRevenue += effectiveTotal;
+
+    let clientPaid = 0;
+    let totalWaived = 0;
+    for (const p of order.orderPayments) {
+      if (p.isWaived) {
+        totalWaived += p.amount;
+      } else {
+        clientPaid += p.amount;
+      }
+    }
+
+    report.totalPaid += clientPaid;
+    report.totalWaived += totalWaived;
+  }
+
+  const result = Array.from(customerMap.values()).map(report => {
+    report.balanceDue = Math.max(0, report.totalRevenue - report.totalPaid - report.totalWaived);
+    return report;
+  });
+
+  // Sort by highest revenue descending
+  result.sort((a, b) => b.totalRevenue - a.totalRevenue);
+
+  return result;
+}
+
+export type VendorOrderReport = {
+  orderId: string;
+  orderDbId: number;
+  date: string;
+  venue: string;
+  totalVendorPayments: number;
+  vendors: {
+    vendorId: number;
+    vendorName: string;
+    vendorPhone: string;
+    deliveries: {
+      rawMaterialName: string;
+      unitQty: string;
+      unitName: string;
+      notes: string | null;
+    }[];
+    payments: {
+      amount: number;
+      date: string;
+      notes: string | null;
+    }[];
+    totalPaid: number;
+  }[];
+};
+
+export async function getVendorOrderReport(): Promise<VendorOrderReport[]> {
+  const allOrders = await db.query.orders.findMany({
+    orderBy: desc(orders.date),
+    with: {
+      orderRawMaterials: {
+        with: {
+          rawMaterial: true,
+          vendor: true,
+        },
+      },
+      vendorPayments: {
+        with: {
+          vendor: true,
+        },
+      },
+    },
+  });
+
+  return allOrders.map(order => {
+    // Group by vendorId
+    const vendorMap = new Map<number, VendorOrderReport["vendors"][0]>();
+
+    for (const payment of order.vendorPayments) {
+      if (!payment.vendor) continue;
+      
+      if (!vendorMap.has(payment.vendorId)) {
+        vendorMap.set(payment.vendorId, {
+          vendorId: payment.vendorId,
+          vendorName: payment.vendor.name,
+          vendorPhone: payment.vendor.phone,
+          deliveries: [],
+          payments: [],
+          totalPaid: 0,
+        });
+      }
+
+      const v = vendorMap.get(payment.vendorId)!;
+      v.payments.push({
+        amount: payment.amount,
+        date: toDateString(payment.date),
+        notes: payment.notes,
+      });
+      v.totalPaid += payment.amount;
+    }
+
+    for (const item of order.orderRawMaterials) {
+      if (!item.vendor) continue;
+
+      if (!vendorMap.has(item.vendorId!)) {
+        vendorMap.set(item.vendorId!, {
+          vendorId: item.vendorId!,
+          vendorName: item.vendor.name,
+          vendorPhone: item.vendor.phone,
+          deliveries: [],
+          payments: [],
+          totalPaid: 0,
+        });
+      }
+
+      const v = vendorMap.get(item.vendorId!)!;
+      v.deliveries.push({
+        rawMaterialName: item.rawMaterial?.name || "Unknown",
+        unitQty: item.unitQty,
+        unitName: item.unitName,
+        notes: item.notes,
+      });
+    }
+
+    const vendorsArray = Array.from(vendorMap.values());
+    const totalVendorPayments = vendorsArray.reduce((sum, v) => sum + v.totalPaid, 0);
+
+    return {
+      orderId: order.orderId,
+      orderDbId: order.id,
+      date: toDateString(order.date),
+      venue: order.venue,
+      totalVendorPayments,
+      vendors: vendorsArray,
+    };
   });
 }

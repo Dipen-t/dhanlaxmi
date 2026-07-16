@@ -46,6 +46,8 @@ export const orders = pgTable("orders", {
   totalAmount: integer("total_amount"),
   isPaymentAmount: boolean("is_payment_amount").notNull().default(false),
   discount: text("discount"),
+  customerName: text("customer_name"),
+  customerPhone: text("customer_phone"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

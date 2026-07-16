@@ -159,6 +159,8 @@ export function OrderForm({
       mealType,
       totalAmount: String(formData.get("totalAmount") || "").trim(),
       discount: String(formData.get("discount") || "").trim(),
+      customerName: String(formData.get("customerName") || "").trim(),
+      customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
     };
 
@@ -254,6 +256,44 @@ export function OrderForm({
                 type="date"
                 defaultValue={order?.date ?? ""}
                 className="w-full min-w-0 max-w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label
+                htmlFor="customer-name"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Customer Name (Optional)
+              </label>
+              <input
+                id="customer-name"
+                name="customerName"
+                type="text"
+                maxLength={200}
+                defaultValue={order?.customerName ?? ""}
+                autoComplete="name"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. John Doe"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label
+                htmlFor="customer-phone"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Customer Phone (Optional)
+              </label>
+              <input
+                id="customer-phone"
+                name="customerPhone"
+                type="tel"
+                maxLength={20}
+                defaultValue={order?.customerPhone ?? ""}
+                autoComplete="tel"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. 9876543210"
               />
             </div>
 

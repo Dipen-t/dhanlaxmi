@@ -28,6 +28,8 @@ export type OrderWithBalance = {
   totalAmount: number | null;
   effectiveTotal: number | null;
   discount: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
   payments: PaymentRecord[];
   totalPaid: number;
   balance: number | null;
@@ -103,6 +105,8 @@ export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
       totalAmount: order.totalAmount,
       effectiveTotal,
       discount: order.discount,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
       payments,
       totalPaid,
       balance,

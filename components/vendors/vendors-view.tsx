@@ -28,6 +28,7 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
   useEffect(() => {
     const stored = localStorage.getItem("vendors-view");
     if (stored === "grid" || stored === "list") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setView(stored);
     }
   }, []);

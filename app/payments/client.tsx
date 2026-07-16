@@ -61,8 +61,15 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
                   className="w-full text-left p-4 hover:bg-surface transition-colors focus:outline-none focus:bg-surface flex items-center justify-between gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-lg">{order.orderId}</p>
-                    <p className="text-sm text-muted mt-0.5 truncate">{order.venue} · {order.date}</p>
+                    <p className="font-semibold text-foreground text-lg">
+                      {order.customerName || "Unknown Customer"}
+                    </p>
+                    <p className="text-sm text-muted mt-0.5 truncate">
+                      {order.orderId} {order.customerPhone ? `· ${order.customerPhone}` : ""}
+                    </p>
+                    <p className="text-sm text-muted mt-0.5 truncate">
+                      {order.venue} · {order.date}
+                    </p>
                     {order.discount && <p className="text-xs text-info mt-1">Discount applied: {order.discount}</p>}
                   </div>
                   

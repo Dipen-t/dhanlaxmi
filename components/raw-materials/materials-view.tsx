@@ -25,6 +25,7 @@ export function MaterialsView({ materials }: MaterialsViewProps) {
   useEffect(() => {
     const stored = localStorage.getItem("materials-view");
     if (stored === "grid" || stored === "list") {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setView(stored);
     }
   }, []);

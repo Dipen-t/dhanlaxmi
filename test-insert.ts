@@ -14,10 +14,12 @@ async function test() {
       mealType: "dinner",
     }).returning({ id: orders.id });
     console.log("Inserted:", newOrder);
-  } catch (e: any) {
-    console.log("Error type:", e.constructor.name);
-    console.log("Error message:", e.message);
-    console.log("Error code:", e.code);
+  } catch (err: unknown) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const e = err as any;
+    console.log("Error type:", e?.constructor?.name);
+    console.log("Error message:", e?.message);
+    console.log("Error code:", e?.code);
     console.log("Full error:", e);
   }
 }

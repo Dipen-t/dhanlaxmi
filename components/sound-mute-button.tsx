@@ -17,6 +17,7 @@ export function SoundMuteButton() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMuted(hydrateClickSoundMute());
     setReady(true);
 

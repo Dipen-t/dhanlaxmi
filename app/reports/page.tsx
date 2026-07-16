@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { getEventProfitabilityReport, getMasterLedger } from "./actions";
+import { getEventProfitabilityReport, getMasterLedger, getCustomerReport, getVendorOrderReport } from "./actions";
 import { ReportsClient } from "./client";
 
 export const metadata = {
@@ -7,9 +7,11 @@ export const metadata = {
 };
 
 export default async function ReportsPage() {
-  const [profitabilityReports, ledger] = await Promise.all([
+  const [profitabilityReports, ledger, customerReports, vendorReports] = await Promise.all([
     getEventProfitabilityReport(),
     getMasterLedger(),
+    getCustomerReport(),
+    getVendorOrderReport(),
   ]);
 
   return (
@@ -26,7 +28,7 @@ export default async function ReportsPage() {
       </div>
 
       <Suspense fallback={<div className="p-12 text-center text-muted">Loading reports...</div>}>
-        <ReportsClient profitabilityReports={profitabilityReports} ledger={ledger} />
+        <ReportsClient profitabilityReports={profitabilityReports} ledger={ledger} customerReports={customerReports} vendorReports={vendorReports} />
       </Suspense>
     </div>
   );
