@@ -63,7 +63,6 @@ export function PaymentManager({
       toast.success("Payment recorded successfully!");
       setAmount("");
       setNotes("");
-      onClose();
     }
     setLoading(false);
   };
@@ -97,7 +96,6 @@ export function PaymentManager({
           setError(res.error);
         } else {
           toast.success(`Successfully waived ${formatCurrency(waiveAmount)}!`);
-          onClose();
         }
         setLoading(false);
       }
