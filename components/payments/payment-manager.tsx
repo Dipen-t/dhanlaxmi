@@ -69,8 +69,7 @@ export function PaymentManager({
   };
 
   const handleWaive = async () => {
-    const numericAmount = Number(amount);
-    const waiveAmount = numericAmount > 0 ? numericAmount : (order.balance || 0);
+    const waiveAmount = order.balance || 0;
 
     if (waiveAmount <= 0) {
       setError("No balance to waive or invalid amount entered.");
@@ -227,10 +226,9 @@ export function PaymentManager({
                         type="button"
                         onClick={handleWaive}
                         disabled={loading}
-                        className="px-4 py-2.5 text-sm font-semibold text-error bg-error-soft hover:bg-error-soft/80 rounded-lg transition-colors disabled:opacity-50"
-                        title="Waive the entered amount (defaults to remaining balance)"
+                        className="px-4 py-2.5 text-sm font-semibold text-error bg-error-soft hover:bg-error-soft rounded-lg transition-colors disabled:opacity-50"
                       >
-                        Waive Amount
+                        Waive Balance
                       </button>
                     )}
                   </div>
