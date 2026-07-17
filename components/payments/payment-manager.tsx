@@ -227,9 +227,10 @@ export function PaymentManager({
                         type="button"
                         onClick={handleWaive}
                         disabled={loading}
-                        className="px-4 py-2.5 text-sm font-semibold text-error bg-error-soft hover:bg-error-soft rounded-lg transition-colors disabled:opacity-50"
+                        className="px-4 py-2.5 text-sm font-semibold text-error bg-error-soft hover:bg-error-soft/80 rounded-lg transition-colors disabled:opacity-50"
+                        title="Waive the entered amount (defaults to remaining balance)"
                       >
-                        Waive Balance
+                        Waive Amount
                       </button>
                     )}
                   </div>
@@ -259,14 +260,24 @@ export function PaymentManager({
                         <p className={`text-sm font-semibold ${p.isWaived ? "text-info" : "text-success"}`}>
                           {formatCurrency(p.amount)}
                         </p>
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          disabled={loading}
-                          className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                          title="Delete payment"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
+                        {p.isWaived ? (
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            disabled={loading}
+                            className="text-xs font-semibold text-error bg-error-soft hover:bg-error-soft/80 px-2 py-1 rounded-md transition-colors disabled:opacity-50"
+                          >
+                            Undo
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            disabled={loading}
+                            className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                            title="Delete payment"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     {p.notes && <p className="text-xs text-muted mt-1 italic">"{p.notes}"</p>}
