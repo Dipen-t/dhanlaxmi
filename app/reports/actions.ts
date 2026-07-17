@@ -47,7 +47,7 @@ function toDateString(date: Date) {
 
 export async function getEventProfitabilityReport(): Promise<EventProfitability[]> {
   const allOrders = await db.query.orders.findMany({
-    orderBy: desc(orders.date),
+    orderBy: desc(orders.createdAt),
     with: {
       orderPayments: true,
     },
@@ -233,7 +233,7 @@ export type VendorOrderReport = {
 
 export async function getVendorOrderReport(): Promise<VendorOrderReport[]> {
   const allOrders = await db.query.orders.findMany({
-    orderBy: desc(orders.date),
+    orderBy: desc(orders.createdAt),
     with: {
       orderRawMaterials: {
         with: {

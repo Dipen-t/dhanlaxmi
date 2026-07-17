@@ -33,7 +33,7 @@ export function PersonsStepper({
   min = 1,
   max = 100000,
 }: PersonsStepperProps) {
-  const [value, setValue] = useState(() =>
+  const [value, setValue] = useState<number | string>(() =>
     Math.max(min, Math.min(max, defaultValue || min)),
   );
   const holdRef = useRef<HoldState | null>(null);
@@ -44,7 +44,7 @@ export function PersonsStepper({
   }
 
   function applyStep(delta: number) {
-    setValue((prev) => clamp(prev + delta));
+    setValue((prev) => clamp((prev === "" ? min : Number(prev)) + delta));
   }
 
   function clearHold() {
@@ -104,7 +104,7 @@ export function PersonsStepper({
       <button
         type="button"
         aria-label="Decrease number of persons"
-        disabled={value <= min}
+        disabled={value !== "" && Number(value) <= min}
         className={buttonClass}
         {...bindHold(-1)}
       >
@@ -120,8 +120,19 @@ export function PersonsStepper({
         max={max}
         value={value}
         onChange={(event) => {
-          const next = Number(event.target.value);
-          setValue(clamp(next));
+          const raw = event.target.value;
+          if (raw === "") {
+            setValue("");
+          } else {
+            setValue(Number(raw));
+          }
+        }}
+        onBlur={() => {
+          if (value === "") {
+            setValue(min);
+          } else {
+            setValue(clamp(Number(value)));
+          }
         }}
         className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-center text-base font-semibold tabular-nums text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
       />
@@ -129,7 +140,7 @@ export function PersonsStepper({
       <button
         type="button"
         aria-label="Increase number of persons"
-        disabled={value >= max}
+        disabled={value !== "" && Number(value) >= max}
         className={buttonClass}
         {...bindHold(1)}
       >

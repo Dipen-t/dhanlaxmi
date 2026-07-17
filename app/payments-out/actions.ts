@@ -38,7 +38,7 @@ function toDateString(date: Date) {
 
 export async function getOrdersWithVendorPayments(): Promise<OrderWithVendorPayments[]> {
   const allOrders = await db.query.orders.findMany({
-    orderBy: desc(orders.date),
+    orderBy: desc(orders.createdAt),
     with: {
       orderRawMaterials: {
         with: {

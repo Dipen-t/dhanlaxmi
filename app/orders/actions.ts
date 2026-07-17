@@ -78,7 +78,7 @@ function serializeOrder(order: {
 
 export async function getOrders(): Promise<OrderRecord[]> {
   const rows = await db.query.orders.findMany({
-    orderBy: desc(orders.date),
+    orderBy: desc(orders.createdAt),
     with: {
       orderRawMaterials: {
         with: {

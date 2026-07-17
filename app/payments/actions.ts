@@ -42,7 +42,7 @@ function toDateString(date: Date) {
 
 export async function getOrdersWithBalances(): Promise<OrderWithBalance[]> {
   const allOrders = await db.query.orders.findMany({
-    orderBy: desc(orders.date),
+    orderBy: desc(orders.createdAt),
     with: {
       orderPayments: {
         orderBy: desc(orderPayments.date),
