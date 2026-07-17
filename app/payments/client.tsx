@@ -15,6 +15,8 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
       result = result.filter(o => o.status === "Cleared" || o.status === "Waived");
     } else if (filter === "Pending") {
       result = result.filter(o => o.status === "Pending" || o.status === "Partial");
+    } else if (filter === "Waived") {
+      result = result.filter(o => o.payments.some(p => p.isWaived));
     } else if (filter !== "All") {
       result = result.filter(o => o.status === filter);
     }
