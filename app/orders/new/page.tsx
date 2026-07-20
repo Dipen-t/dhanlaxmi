@@ -5,6 +5,8 @@ import { getSuggestedOrderId } from "@/app/orders/actions";
 import { getMaterials } from "@/app/raw-materials/actions";
 import { OrderForm } from "@/components/orders/order-form";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "New Order",
 };

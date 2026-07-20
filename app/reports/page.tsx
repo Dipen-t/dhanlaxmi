@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import { getEventProfitabilityReport, getMasterLedger, getCustomerReport, getVendorOrderReport } from "./actions";
 import { ReportsClient } from "./client";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Reports | Dhanlaxmi Catering",
 };
