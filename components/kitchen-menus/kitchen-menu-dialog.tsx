@@ -238,19 +238,19 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   name="date"
                   type="date"
                   defaultValue={menu?.date ? new Date(menu.date).toISOString().split('T')[0] : ""}
-                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  className="col-span-2 sm:col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
                 />
                 <input
                   name="numberOfPersons"
                   type="number"
                   placeholder="Persons"
                   defaultValue={menu?.numberOfPersons ?? ""}
-                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  className="sm:col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
                 />
                 <select
                   name="mealType"
                   defaultValue={menu?.mealType ?? ""}
-                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  className="sm:col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
                 >
                   <option value="">Meal</option>
                   <option value="Lunch">Lunch</option>
