@@ -23,11 +23,11 @@ export function VendorReportTable({ reports }: { reports: VendorOrderReport[] })
       <table className="w-full text-left text-sm">
         <thead className="text-xs text-muted-foreground uppercase bg-surface border-b border-border sticky top-0 z-10">
           <tr>
-            <th className="px-6 py-4 font-medium w-10"></th>
-            <th className="px-6 py-4 font-medium">Order ID / Date</th>
-            <th className="px-6 py-4 font-medium">Venue</th>
-            <th className="px-6 py-4 font-medium">Vendors Involved</th>
-            <th className="px-6 py-4 font-medium text-right">Total Payments</th>
+            <th className="px-6 py-4 font-medium w-10 whitespace-nowrap"></th>
+            <th className="px-6 py-4 font-medium whitespace-nowrap">Order ID / Date</th>
+            <th className="px-6 py-4 font-medium whitespace-nowrap">Venue</th>
+            <th className="px-6 py-4 font-medium whitespace-nowrap">Vendors Involved</th>
+            <th className="px-6 py-4 font-medium text-right whitespace-nowrap">Total Payments</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -40,16 +40,16 @@ export function VendorReportTable({ reports }: { reports: VendorOrderReport[] })
                   className={`hover:bg-surface/50 transition-colors cursor-pointer ${isExpanded ? 'bg-surface/30' : ''}`}
                   onClick={() => toggleOrder(report.orderDbId)}
                 >
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     {isExpanded ? <ChevronDown className="size-4 text-muted-foreground" /> : <ChevronRight className="size-4 text-muted-foreground" />}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-medium text-foreground">{report.orderId}</div>
                     <div className="text-xs text-muted-foreground">{report.date}</div>
                   </td>
-                  <td className="px-6 py-4">{report.venue}</td>
-                  <td className="px-6 py-4">{report.vendors.length} vendors</td>
-                  <td className="px-6 py-4 font-medium text-primary text-right">
+                  <td className="px-6 py-4 whitespace-nowrap">{report.venue}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">{report.vendors.length} vendors</td>
+                  <td className="px-6 py-4 font-medium text-primary text-right whitespace-nowrap">
                     {formatCurrency(report.totalVendorPayments)}
                   </td>
                 </tr>

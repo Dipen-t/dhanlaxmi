@@ -18,11 +18,11 @@ export function MasterLedgerTable({ ledger }: { ledger: LedgerTransaction[] }) {
       <table className="w-full text-left text-sm">
         <thead className="bg-surface/50 text-muted uppercase text-xs sticky top-0 border-b border-border">
           <tr>
-            <th className="px-6 py-4 font-semibold">Date</th>
-            <th className="px-6 py-4 font-semibold">Type</th>
-            <th className="px-6 py-4 font-semibold">Reference</th>
-            <th className="px-6 py-4 font-semibold">Notes</th>
-            <th className="px-6 py-4 font-semibold text-right">Amount</th>
+            <th className="px-6 py-4 font-semibold whitespace-nowrap">Date</th>
+            <th className="px-6 py-4 font-semibold whitespace-nowrap">Type</th>
+            <th className="px-6 py-4 font-semibold whitespace-nowrap">Reference</th>
+            <th className="px-6 py-4 font-semibold whitespace-nowrap">Notes</th>
+            <th className="px-6 py-4 font-semibold text-right whitespace-nowrap">Amount</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -33,10 +33,10 @@ export function MasterLedgerTable({ ledger }: { ledger: LedgerTransaction[] }) {
             
             return (
               <tr key={t.id} className="hover:bg-surface/30 transition-colors">
-                <td className="px-6 py-4 text-foreground">
+                <td className="px-6 py-4 text-foreground whitespace-nowrap">
                   {t.date}
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 whitespace-nowrap">
                   {isOut ? (
                     <span className="inline-flex items-center gap-1 rounded-md bg-error-soft px-2 py-1 text-xs font-medium text-error ring-1 ring-inset ring-error/20">
                       <ArrowUpRight className="size-3" />
@@ -49,13 +49,13 @@ export function MasterLedgerTable({ ledger }: { ledger: LedgerTransaction[] }) {
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 font-medium text-foreground">
+                <td className="px-6 py-4 font-medium text-foreground whitespace-nowrap">
                   {t.reference}
                 </td>
                 <td className="px-6 py-4 text-muted max-w-xs truncate">
                   {t.notes || "—"}
                 </td>
-                <td className={`px-6 py-4 text-right font-bold ${amountColor}`}>
+                <td className={`px-6 py-4 text-right font-bold whitespace-nowrap ${amountColor}`}>
                   {prefix} {formatCurrency(t.amount)}
                 </td>
               </tr>
