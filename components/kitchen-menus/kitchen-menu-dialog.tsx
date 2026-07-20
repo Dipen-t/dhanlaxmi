@@ -214,7 +214,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
             {isEditing ? <input type="hidden" name="id" value={menu.id} /> : null}
 
             <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
                 <input
                   id="menu-name"
                   name="name"
@@ -224,7 +224,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   defaultValue={menu?.name ?? ""}
                   autoComplete="off"
                   enterKeyHint="done"
-                  className="col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30 sm:col-span-5"
+                  className="col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30 sm:col-span-6"
                   placeholder="Menu name"
                 />
                 <input
@@ -238,7 +238,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   name="date"
                   type="date"
                   defaultValue={menu?.date ? new Date(menu.date).toISOString().split('T')[0] : ""}
-                  className="col-span-2 sm:col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  className="col-span-2 sm:col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
                 />
                 <input
                   name="numberOfPersons"
