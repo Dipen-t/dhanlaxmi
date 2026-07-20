@@ -139,11 +139,11 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(100dvh,44rem)] w-full max-w-[42rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
+        className="relative z-10 flex max-h-[min(100dvh,72rem)] w-full max-w-[72rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           maxHeight:
-            "min(100dvh - env(safe-area-inset-top, 0px), 44rem)",
+            "min(100dvh - env(safe-area-inset-top, 0px), 72rem)",
         }}
       >
         <form
@@ -151,26 +151,17 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
           onSubmit={handleSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 pb-4 [-webkit-overflow-scrolling:touch] sm:px-6">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-2 [-webkit-overflow-scrolling:touch] sm:px-4">
             <h2
               id={titleId}
-              className="text-lg font-semibold tracking-[-0.02em] text-foreground"
+              className="text-lg font-semibold text-foreground"
             >
               {isEditing ? "Edit menu" : "Create menu"}
             </h2>
-            <p className="mt-1 text-sm text-muted text-pretty">
-              Name the menu, then pick which dish categories to include.
-            </p>
             {isEditing ? <input type="hidden" name="id" value={menu.id} /> : null}
 
-            <div className="mt-5 space-y-5">
-              <div>
-                <label
-                  htmlFor="menu-name"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Menu name
-                </label>
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-1 gap-2">
                 <input
                   id="menu-name"
                   name="name"
@@ -180,105 +171,94 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
                   defaultValue={menu?.name ?? ""}
                   autoComplete="off"
                   enterKeyHint="done"
-                  className="mt-1.5 min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. Wedding Lunch Menu"
+                  className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  placeholder="Menu name"
                 />
               </div>
 
               <fieldset>
-                <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div>
-                    <legend className="block text-sm font-medium text-foreground">
-                      Categories
-                    </legend>
-                    <p className="mt-1 text-sm text-muted text-pretty">
-                      {selectedCategoryIds.length} of {catalog.length} selected
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-muted">
+                    {selectedCategoryIds.length} of {catalog.length} selected
+                  </span>
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={selectAll}
-                      className="inline-flex min-h-10 touch-manipulation items-center rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface"
+                      className="text-xs font-medium text-primary hover:text-primary/80"
                     >
-                      Select all
+                      Select All
                     </button>
                     <button
                       type="button"
                       onClick={clearAll}
-                      className="inline-flex min-h-10 touch-manipulation items-center rounded-lg border border-border px-3 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
+                      className="text-xs font-medium text-muted hover:text-foreground"
                     >
-                      Clear
+                      Clear All
                     </button>
                   </div>
                 </div>
 
-                <div className="mt-3 max-h-[min(22rem,42dvh)] space-y-2 overflow-y-auto overscroll-contain rounded-xl border border-border p-2 [-webkit-overflow-scrolling:touch]">
+                <div className="mt-1.5 max-h-[min(45rem,75dvh)] space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1 [-webkit-overflow-scrolling:touch]">
                   {catalog.length === 0 ? (
                     <p className="px-3 py-6 text-center text-sm text-muted">
                       No categories in the catalog yet.
                     </p>
                   ) : (
-                    catalog.map((category) => {
-                      const checked = selectedCategoryIds.includes(category.id);
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-0 border border-border rounded overflow-hidden">
+                      {catalog.map((category) => {
+                        const checked = selectedCategoryIds.includes(category.id);
 
-                      return (
-                        <label
-                          key={category.id}
-                          className={`flex min-h-14 cursor-pointer touch-manipulation items-center gap-3 rounded-xl border px-3 py-3 transition-colors ${
-                            checked
-                              ? "border-primary/40 bg-primary-soft/40"
-                              : "border-transparent hover:bg-surface"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleCategory(category.id)}
-                            className="size-5 shrink-0 rounded border-border text-primary accent-primary focus:ring-ring"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className="block text-base font-semibold text-foreground">
-                              {category.name}
-                            </span>
-                            <span className="mt-0.5 block text-sm text-muted">
-                              {category.selectionRule} · {category.dishes.length}{" "}
-                              dishes
-                            </span>
-                          </span>
-                        </label>
-                      );
-                    })
+                        return (
+                          <div
+                            key={category.id}
+                            className={`flex flex-col gap-1.5 px-3 py-2 text-sm border-b sm:border-r border-border/40 hover:bg-surface/50 ${
+                              checked ? "bg-primary-soft/20 font-medium" : "text-foreground"
+                            }`}
+                          >
+                            <label className="flex cursor-pointer items-center gap-2 w-full min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleCategory(category.id)}
+                                className="size-3.5 rounded-sm border-border text-primary accent-primary shrink-0"
+                              />
+                              <div className="flex flex-col min-w-0 flex-1">
+                                <span className="truncate leading-tight text-sm font-semibold">{category.name}</span>
+                                <span className="truncate text-xs text-muted font-normal mt-0.5">
+                                  {category.selectionRule} · {category.dishes.length} dishes
+                                </span>
+                              </div>
+                            </label>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
               </fieldset>
             </div>
-
             {error ? (
-              <p role="alert" className="mt-4 text-sm font-medium text-error">
+              <p role="alert" className="mt-2 text-xs font-medium text-error">
                 {error}
               </p>
             ) : null}
           </div>
 
-          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-5 py-4 sm:px-6">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-3 py-2 sm:px-4">
             <button
               type="button"
               onClick={handleClose}
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-9 touch-manipulation items-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-surface"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              className="inline-flex min-h-9 touch-manipulation items-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
-              {isPending
-                ? "Saving…"
-                : isEditing
-                  ? "Save changes"
-                  : "Create menu"}
+              {isPending ? "Saving…" : isEditing ? "Save" : "Create"}
             </button>
           </div>
         </form>
