@@ -34,7 +34,7 @@ export function PaymentBadge({ totalAmount, isPaymentAmount }: { totalAmount?: n
   if (isPaymentAmount && totalAmount) {
     return (
       <span className="inline-flex items-center rounded-md bg-success-soft px-2 py-1 text-xs font-medium text-success ring-1 ring-inset ring-success/20">
-        Total: {totalAmount}
+        Total: {totalAmount.toLocaleString("en-IN")}
       </span>
     );
   }
