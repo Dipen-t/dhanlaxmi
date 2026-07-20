@@ -132,10 +132,9 @@ export function VendorDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(100dvh,44rem)] w-full max-w-[42rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl"
+        className="relative z-10 flex max-h-[min(100dvh,44rem)] md:max-h-[min(100dvh,48rem)] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
-          maxHeight: "min(100dvh - env(safe-area-inset-top, 0px), 44rem)",
         }}
       >
         <form
@@ -143,155 +142,176 @@ export function VendorDialog({
           onSubmit={handleSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pt-5 pb-4 [-webkit-overflow-scrolling:touch] sm:px-6">
-            <h2
-              id={titleId}
-              className="text-lg font-semibold tracking-[-0.02em] text-foreground"
-            >
-              {isEditing ? "Edit vendor" : "Add vendor"}
-            </h2>
-            <p className="mt-1 text-sm text-muted text-pretty">
-              Set contact details, delivery location, and assigned materials.
-            </p>
-            {isEditing ? (
-              <input type="hidden" name="id" value={vendor.id} />
-            ) : null}
-            <input
-              type="hidden"
-              name="deliveryLocation"
-              value={deliveryLocation}
-            />
+          <div className="flex-1 overflow-y-auto px-5 pt-5 pb-4 sm:px-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-12 md:gap-8 min-h-full">
+              
+              {/* Left Column - Details */}
+              <div className="md:col-span-5 flex flex-col space-y-5">
+                <div>
+                  <h2
+                    id={titleId}
+                    className="text-lg font-semibold tracking-[-0.02em] text-foreground"
+                  >
+                    {isEditing ? "Edit vendor" : "Add vendor"}
+                  </h2>
+                  <p className="mt-1 text-sm text-muted text-pretty">
+                    Set contact details and delivery location.
+                  </p>
+                </div>
 
-            <div className="mt-5 space-y-5">
-              <div>
-                <label
-                  htmlFor="vendor-name"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Vendor name
-                </label>
+                {isEditing ? (
+                  <input type="hidden" name="id" value={vendor.id} />
+                ) : null}
                 <input
-                  id="vendor-name"
-                  name="name"
-                  type="text"
-                  required
-                  maxLength={120}
-                  defaultValue={vendor?.name ?? ""}
-                  autoComplete="organization"
-                  enterKeyHint="next"
-                  className="mt-1.5 min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. Fresh Farms Supply"
+                  type="hidden"
+                  name="deliveryLocation"
+                  value={deliveryLocation}
                 />
-              </div>
 
-              <div>
-                <label
-                  htmlFor="vendor-phone"
-                  className="block text-sm font-medium text-foreground"
-                >
-                  Phone number
-                </label>
-                <input
-                  id="vendor-phone"
-                  name="phone"
-                  type="tel"
-                  required
-                  maxLength={20}
-                  defaultValue={vendor?.phone ?? ""}
-                  autoComplete="tel"
-                  enterKeyHint="done"
-                  className="mt-1.5 min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. +91 98765 43210"
-                />
-              </div>
-
-              <fieldset>
-                <legend className="block text-sm font-medium text-foreground">
-                  Deliver to
-                </legend>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(
-                    [
-                      { value: "venue", label: "Venue" },
-                      { value: "godown", label: "Godown" },
-                    ] as const
-                  ).map((option) => (
+                <div className="space-y-5">
+                  <div>
                     <label
-                      key={option.value}
-                      className={`inline-flex min-h-11 touch-manipulation cursor-pointer items-center rounded-lg border px-4 text-sm font-medium transition-colors ${
-                        deliveryLocation === option.value
-                          ? "border-primary bg-primary-soft text-primary"
-                          : "border-border text-muted hover:text-foreground"
-                      }`}
+                      htmlFor="vendor-name"
+                      className="block text-sm font-medium text-foreground mb-1.5"
                     >
-                      <input
-                        type="radio"
-                        name="deliveryLocationChoice"
-                        value={option.value}
-                        checked={deliveryLocation === option.value}
-                        onChange={() => setDeliveryLocation(option.value)}
-                        className="sr-only"
-                      />
-                      {option.label}
+                      Vendor name
                     </label>
-                  ))}
-                </div>
-              </fieldset>
+                    <input
+                      id="vendor-name"
+                      name="name"
+                      type="text"
+                      required
+                      maxLength={120}
+                      defaultValue={vendor?.name ?? ""}
+                      autoComplete="organization"
+                      enterKeyHint="next"
+                      className="min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                      placeholder="e.g. Fresh Farms Supply"
+                    />
+                  </div>
 
-              <fieldset>
-                <legend className="block text-sm font-medium text-foreground">
-                  Raw materials
-                </legend>
-                <div className="mt-2 max-h-[min(22rem,42dvh)] min-h-[calc(5*2.5rem+4*0.625rem+1.5rem)] space-y-0 overflow-y-auto overscroll-contain rounded-xl border border-border p-3 [-webkit-overflow-scrolling:touch]">
-                  {selectableMaterials.length === 0 ? (
-                    <p className="px-2 py-3 text-sm text-muted">
-                      No materials available to assign.
-                    </p>
-                  ) : (
-                    <ul className="grid grid-cols-2 gap-2.5">
-                      {selectableMaterials.map((material) => {
-                        const checked = selectedMaterialIds.includes(
-                          material.id,
-                        );
-                        const isAssignedToOther = vendor
-                          ? material.rawMaterialVendors.some(
-                              (rmv) => rmv.vendor.id !== vendor.id,
-                            )
-                          : material.rawMaterialVendors.length > 0;
+                  <div>
+                    <label
+                      htmlFor="vendor-phone"
+                      className="block text-sm font-medium text-foreground mb-1.5"
+                    >
+                      Phone number
+                    </label>
+                    <input
+                      id="vendor-phone"
+                      name="phone"
+                      type="tel"
+                      required
+                      maxLength={20}
+                      defaultValue={vendor?.phone ?? ""}
+                      autoComplete="tel"
+                      enterKeyHint="done"
+                      className="min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                      placeholder="e.g. +91 98765 43210"
+                    />
+                  </div>
 
-                        return (
-                          <li key={material.id}>
-                            <label
-                              title={
-                                isAssignedToOther
-                                  ? `${material.name} (Assigned to other vendors)`
-                                  : material.name
-                              }
-                              className={`flex min-h-11 w-full touch-manipulation cursor-pointer items-center justify-center rounded-full px-3 py-2 text-center text-sm font-medium transition-colors focus-within:ring-2 focus-within:ring-ring ${
-                                checked
-                                  ? "bg-primary text-primary-foreground"
-                                  : isAssignedToOther
-                                    ? "bg-primary-soft text-primary ring-1 ring-primary/30 hover:bg-primary/20"
-                                    : "bg-surface text-muted hover:text-foreground"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleMaterial(material.id)}
-                                className="sr-only"
-                              />
-                              <span className="line-clamp-1">
-                                {material.name}
-                              </span>
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
+                  <fieldset>
+                    <legend className="block text-sm font-medium text-foreground mb-1.5">
+                      Deliver to
+                    </legend>
+                    <div className="flex flex-wrap gap-2">
+                      {(
+                        [
+                          { value: "venue", label: "Venue" },
+                          { value: "godown", label: "Godown" },
+                        ] as const
+                      ).map((option) => (
+                        <label
+                          key={option.value}
+                          className={`inline-flex min-h-11 touch-manipulation cursor-pointer items-center rounded-lg border px-5 text-sm font-medium transition-colors flex-1 justify-center ${
+                            deliveryLocation === option.value
+                              ? "border-primary bg-primary-soft text-primary"
+                              : "border-border text-muted hover:text-foreground hover:bg-surface/50"
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="deliveryLocationChoice"
+                            value={option.value}
+                            checked={deliveryLocation === option.value}
+                            onChange={() => setDeliveryLocation(option.value)}
+                            className="sr-only"
+                          />
+                          {option.label}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
                 </div>
-              </fieldset>
+              </div>
+
+              {/* Right Column - Materials */}
+              <div className="md:col-span-7 flex flex-col h-full">
+                <fieldset className="flex flex-col h-full">
+                  <div className="flex items-center justify-between mb-2">
+                    <legend className="text-sm font-medium text-foreground">
+                      Raw materials
+                    </legend>
+                    <span className="text-xs font-medium text-muted bg-surface px-2 py-0.5 rounded-md">
+                      {selectedMaterialIds.length} selected
+                    </span>
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto overscroll-contain rounded-xl border border-border p-3 md:p-4 bg-surface/30 md:min-h-[400px]">
+                    {selectableMaterials.length === 0 ? (
+                      <div className="flex h-full items-center justify-center p-6 text-center">
+                        <p className="text-sm text-muted">
+                          No materials available to assign.
+                        </p>
+                      </div>
+                    ) : (
+                      <ul className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 md:gap-3">
+                        {selectableMaterials.map((material) => {
+                          const checked = selectedMaterialIds.includes(
+                            material.id,
+                          );
+                          const isAssignedToOther = vendor
+                            ? material.rawMaterialVendors.some(
+                                (rmv) => rmv.vendor.id !== vendor.id,
+                              )
+                            : material.rawMaterialVendors.length > 0;
+
+                          return (
+                            <li key={material.id}>
+                              <label
+                                title={
+                                  isAssignedToOther
+                                    ? `${material.name} (Assigned to other vendors)`
+                                    : material.name
+                                }
+                                className={`flex min-h-12 w-full touch-manipulation cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-center text-sm font-medium transition-all active:scale-[0.98] focus-within:ring-2 focus-within:ring-ring ${
+                                  checked
+                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                    : isAssignedToOther
+                                      ? "bg-primary-soft text-primary border border-primary/20 hover:bg-primary/20"
+                                      : "bg-background border border-border text-muted hover:border-primary/40 hover:text-foreground"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => toggleMaterial(material.id)}
+                                  className="sr-only"
+                                />
+                                <span className="line-clamp-2 leading-tight">
+                                  {material.name}
+                                </span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                </fieldset>
+              </div>
+
             </div>
 
             {error ? (
