@@ -63,7 +63,7 @@ export const ProfitabilityPDF = ({ reports }: { reports: EventProfitability[] })
 export const LedgerPDF = ({ ledger }: { ledger: LedgerTransaction[] }) => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <Text style={styles.title}>Master Ledger Report</Text>
+      <Text style={styles.title}>Transactions Report</Text>
       <View style={styles.table}>
         <View style={styles.tableRow}>
           <View style={{...styles.tableColHeader, ...styles.ledgerColDate}}><Text style={styles.tableCellHeader}>Date</Text></View>

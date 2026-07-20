@@ -88,7 +88,7 @@ export function ReportsClient({
           }`}
         >
           <ReceiptText className="size-4" />
-          Master Ledger
+          Transactions
         </button>
         <button
           onClick={() => setActiveTab("customers")}

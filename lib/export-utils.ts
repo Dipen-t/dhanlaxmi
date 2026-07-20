@@ -37,7 +37,7 @@ export const exportLedgerToExcel = (ledger: LedgerTransaction[]) => {
     "Notes": l.notes || "",
     "Amount": l.type === 'OUT' ? -l.amount : l.amount,
   }));
-  exportToExcel(data, "Master_Ledger_Report");
+  exportToExcel(data, "Transactions_Report");
 };
 
 export const exportCustomerReportToExcel = (reports: CustomerReport[]) => {
@@ -107,7 +107,7 @@ export const exportLedgerToPDF = async (ledger: LedgerTransaction[]) => {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "Master_Ledger_Report.pdf";
+  a.download = "Transactions_Report.pdf";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
