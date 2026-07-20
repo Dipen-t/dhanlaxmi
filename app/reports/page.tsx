@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 import { getEventProfitabilityReport, getMasterLedger, getCustomerReport, getVendorOrderReport } from "./actions";
 import { ReportsClient } from "./client";
-import { getPdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 
 export const dynamic = "force-dynamic";
 
@@ -10,12 +9,11 @@ export const metadata = {
 };
 
 export default async function ReportsPage() {
-  const [profitabilityReports, ledger, customerReports, vendorReports, logoAssets] = await Promise.all([
+  const [profitabilityReports, ledger, customerReports, vendorReports] = await Promise.all([
     getEventProfitabilityReport(),
     getMasterLedger(),
     getCustomerReport(),
     getVendorOrderReport(),
-    getPdfLogoAssets(),
   ]);
 
   return (
@@ -32,13 +30,7 @@ export default async function ReportsPage() {
       </div>
 
       <Suspense fallback={<div className="p-12 text-center text-muted">Loading reports...</div>}>
-        <ReportsClient 
-          profitabilityReports={profitabilityReports} 
-          ledger={ledger} 
-          customerReports={customerReports} 
-          vendorReports={vendorReports} 
-          logoAssets={logoAssets}
-        />
+        <ReportsClient profitabilityReports={profitabilityReports} ledger={ledger} customerReports={customerReports} vendorReports={vendorReports} />
       </Suspense>
     </div>
   );

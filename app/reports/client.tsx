@@ -23,13 +23,11 @@ export function ReportsClient({
   ledger,
   customerReports,
   vendorReports,
-  logoAssets,
 }: {
   profitabilityReports: EventProfitability[];
   ledger: LedgerTransaction[];
   customerReports: CustomerReport[];
   vendorReports: VendorOrderReport[];
-  logoAssets: import("@/lib/menus/prepare-pdf-logo").PdfLogoAssets;
 }) {
   const [activeTab, setActiveTab] = useState<"profitability" | "ledger" | "customers" | "vendors">("profitability");
 
@@ -103,13 +101,13 @@ export function ReportsClient({
           <button
             onClick={async () => {
               if (activeTab === "profitability") {
-                await exportProfitabilityToPDF(profitabilityReports, logoAssets);
+                await exportProfitabilityToPDF(profitabilityReports);
               } else if (activeTab === "ledger") {
-                await exportLedgerToPDF(ledger, logoAssets);
+                await exportLedgerToPDF(ledger);
               } else if (activeTab === "customers") {
-                await exportCustomerReportToPDF(customerReports, logoAssets);
+                await exportCustomerReportToPDF(customerReports);
               } else if (activeTab === "vendors") {
-                await exportVendorReportToPDF(vendorReports, logoAssets);
+                await exportVendorReportToPDF(vendorReports);
               }
             }}
             className="flex items-center gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm font-medium border border-border hover:border-primary/50 transition-colors"

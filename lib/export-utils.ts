@@ -88,9 +88,9 @@ export const exportVendorReportToExcel = (reports: VendorOrderReport[]) => {
   exportToExcel(data, "Vendor_Report");
 };
 
-export const exportProfitabilityToPDF = async (reports: EventProfitability[], logoAssets: import("@/lib/menus/prepare-pdf-logo").PdfLogoAssets) => {
+export const exportProfitabilityToPDF = async (reports: EventProfitability[]) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const blob = await pdf(createElement(ProfitabilityPDF, { reports, logoAssets }) as ReactElement<any>).toBlob();
+  const blob = await pdf(createElement(ProfitabilityPDF, { reports }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -101,9 +101,9 @@ export const exportProfitabilityToPDF = async (reports: EventProfitability[], lo
   URL.revokeObjectURL(url);
 };
 
-export const exportLedgerToPDF = async (ledger: LedgerTransaction[], logoAssets: import("@/lib/menus/prepare-pdf-logo").PdfLogoAssets) => {
+export const exportLedgerToPDF = async (ledger: LedgerTransaction[]) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const blob = await pdf(createElement(LedgerPDF, { ledger, logoAssets }) as ReactElement<any>).toBlob();
+  const blob = await pdf(createElement(LedgerPDF, { ledger }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -114,9 +114,9 @@ export const exportLedgerToPDF = async (ledger: LedgerTransaction[], logoAssets:
   URL.revokeObjectURL(url);
 };
 
-export const exportCustomerReportToPDF = async (reports: CustomerReport[], logoAssets: import("@/lib/menus/prepare-pdf-logo").PdfLogoAssets) => {
+export const exportCustomerReportToPDF = async (reports: CustomerReport[]) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const blob = await pdf(createElement(CustomerReportPDF, { reports, logoAssets }) as ReactElement<any>).toBlob();
+  const blob = await pdf(createElement(CustomerReportPDF, { reports }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -127,9 +127,9 @@ export const exportCustomerReportToPDF = async (reports: CustomerReport[], logoA
   URL.revokeObjectURL(url);
 };
 
-export const exportVendorReportToPDF = async (reports: VendorOrderReport[], logoAssets: import("@/lib/menus/prepare-pdf-logo").PdfLogoAssets) => {
+export const exportVendorReportToPDF = async (reports: VendorOrderReport[]) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const blob = await pdf(createElement(VendorReportPDF, { reports, logoAssets }) as ReactElement<any>).toBlob();
+  const blob = await pdf(createElement(VendorReportPDF, { reports }) as ReactElement<any>).toBlob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
