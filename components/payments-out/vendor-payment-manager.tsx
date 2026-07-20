@@ -51,7 +51,7 @@ export function VendorPaymentManager({
       return;
     }
 
-    const numericAmount = Number(amount);
+    const numericAmount = Number(amount.replace(/\D/g, ""));
     if (!numericAmount || numericAmount <= 0) {
       setError("Please enter a valid amount.");
       setLoading(false);
@@ -150,9 +150,13 @@ export function VendorPaymentManager({
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">Amount</label>
                   <input 
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/\D/g, "");
+                      setAmount(raw ? Number(raw).toLocaleString("en-IN") : "");
+                    }}
                     placeholder="0"
                     className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                   />

@@ -376,10 +376,16 @@ export function OrderForm({
                   <input
                     id="order-discount"
                     name="discount"
-                    type="number"
-                    min="0"
-                    step="any"
-                    defaultValue={order?.discount ? parseFloat(order.discount.replace(/[^\d.]/g, '')) : ""}
+                    type="text"
+                    inputMode="numeric"
+                    defaultValue={order?.discount ? (order.discount.includes("%") ? order.discount.replace(/\D/g, "") : Number(order.discount.replace(/\D/g, "")).toLocaleString("en-IN")) : ""}
+                    onChange={(e) => {
+                      const typeSelect = e.target.closest('.flex')?.querySelector('select[name="discountType"]') as HTMLSelectElement;
+                      if (typeSelect?.value === "rupees") {
+                        const raw = e.target.value.replace(/\D/g, "");
+                        e.target.value = raw ? Number(raw).toLocaleString("en-IN") : "";
+                      }
+                    }}
                     className="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-base text-foreground outline-none placeholder:text-muted"
                     placeholder="Amount"
                   />
