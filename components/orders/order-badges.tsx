@@ -7,11 +7,11 @@ const mealLabels: Record<MealType, string> = {
 };
 
 export function formatOrderDate(date: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(new Date(`${date}T00:00:00`));
+  const d = new Date(`${date}T00:00:00`);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 export function MealBadge({ mealType }: { mealType: MealType }) {
