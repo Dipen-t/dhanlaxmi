@@ -21,7 +21,7 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
       result = result.filter(o => o.status === filter);
     }
     
-    // Sort logic: Unsettled (Pending, Partial) first, then by date descending
+    // Sort logic: Unsettled (Pending, Partial) first, then by customer name
     return result.sort((a, b) => {
       const aNeedsPayment = a.status === "Pending" || a.status === "Partial";
       const bNeedsPayment = b.status === "Pending" || b.status === "Partial";
@@ -29,7 +29,9 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
       if (aNeedsPayment && !bNeedsPayment) return -1;
       if (!aNeedsPayment && bNeedsPayment) return 1;
       
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
+      const nameA = a.customerName || "Unknown Customer";
+      const nameB = b.customerName || "Unknown Customer";
+      return nameA.localeCompare(nameB);
     });
   }, [orders, filter]);
 

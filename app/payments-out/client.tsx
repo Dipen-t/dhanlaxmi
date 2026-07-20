@@ -8,8 +8,14 @@ import { formatCurrency } from "@/components/payments/payment-badges";
 export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[] }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithVendorPayments | null>(null);
 
-  // Filter out orders that don't have any vendors
-  const ordersWithVendors = orders.filter(o => o.vendors.length > 0);
+  // Filter out orders that don't have any vendors and sort by customer name
+  const ordersWithVendors = orders
+    .filter(o => o.vendors.length > 0)
+    .sort((a, b) => {
+      const nameA = a.customerName || "Unknown Customer";
+      const nameB = b.customerName || "Unknown Customer";
+      return nameA.localeCompare(nameB);
+    });
 
   return (
     <>
@@ -25,8 +31,15 @@ export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[
                   className="w-full text-left p-4 hover:bg-surface transition-colors focus:outline-none focus:bg-surface flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-foreground text-lg">{order.orderId}</p>
-                    <p className="text-sm text-muted mt-0.5 truncate">{order.venue} · {order.date}</p>
+                    <p className="font-semibold text-foreground text-lg">
+                      {order.customerName || "Unknown Customer"}
+                    </p>
+                    <p className="text-sm text-muted mt-0.5 truncate">
+                      {order.orderId} {order.customerPhone ? `· ${order.customerPhone}` : ""}
+                    </p>
+                    <p className="text-sm text-muted mt-0.5 truncate">
+                      {order.venue} · {order.date}
+                    </p>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {order.vendors.map(v => (
                         <span key={v.vendorId} className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">

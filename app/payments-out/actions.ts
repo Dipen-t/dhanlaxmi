@@ -26,6 +26,8 @@ export type OrderVendorRecord = {
 export type OrderWithVendorPayments = {
   id: number;
   orderId: string;
+  customerName: string | null;
+  customerPhone: string | null;
   date: string;
   venue: string;
   vendors: OrderVendorRecord[];
@@ -106,6 +108,8 @@ export async function getOrdersWithVendorPayments(): Promise<OrderWithVendorPaym
     return {
       id: order.id,
       orderId: order.orderId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
       date: toDateString(order.date),
       venue: order.venue,
       vendors: vendorRecords.sort((a, b) => a.vendorName.localeCompare(b.vendorName)),
