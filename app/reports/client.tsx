@@ -33,6 +33,7 @@ export function ReportsClient({
   const [query, setQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [sortOrder, setSortOrder] = useState<"default" | "date-desc" | "date-asc">("default");
 
   const isDateInRange = (dateStr: string) => {
     if (!fromDate && !toDate) return true;
@@ -53,8 +54,19 @@ export function ReportsClient({
         [r.orderId, r.customerName, r.venue, r.date].join(" ").toLowerCase().includes(normalized)
       );
     }
+    
+    if (sortOrder === "date-desc" || sortOrder === "date-asc") {
+      result.sort((a, b) => {
+        const [dA, mA, yA] = a.date.split("/");
+        const [dB, mB, yB] = b.date.split("/");
+        const dateA = new Date(`${yA}-${mA}-${dA}`).getTime();
+        const dateB = new Date(`${yB}-${mB}-${dB}`).getTime();
+        return sortOrder === "date-desc" ? dateB - dateA : dateA - dateB;
+      });
+    }
+    
     return result;
-  }, [profitabilityReports, query, fromDate, toDate]);
+  }, [profitabilityReports, query, fromDate, toDate, sortOrder]);
 
   const filteredLedger = useMemo(() => {
     let result = ledger.filter(t => isDateInRange(t.date));
@@ -64,8 +76,19 @@ export function ReportsClient({
         [t.reference, t.notes, t.date, t.type].join(" ").toLowerCase().includes(normalized)
       );
     }
+    
+    if (sortOrder === "date-desc" || sortOrder === "date-asc") {
+      result.sort((a, b) => {
+        const [dA, mA, yA] = a.date.split("/");
+        const [dB, mB, yB] = b.date.split("/");
+        const dateA = new Date(`${yA}-${mA}-${dA}`).getTime();
+        const dateB = new Date(`${yB}-${mB}-${dB}`).getTime();
+        return sortOrder === "date-desc" ? dateB - dateA : dateA - dateB;
+      });
+    }
+    
     return result;
-  }, [ledger, query, fromDate, toDate]);
+  }, [ledger, query, fromDate, toDate, sortOrder]);
 
   const filteredCustomers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -76,13 +99,27 @@ export function ReportsClient({
   }, [customerReports, query]);
 
   const filteredVendors = useMemo(() => {
+    let result = [...vendorReports];
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return vendorReports;
-    return vendorReports.filter(v => {
-      const vendorNames = v.vendors.map(vendor => vendor.vendorName).join(" ");
-      return [v.orderId, v.venue, v.date, vendorNames].join(" ").toLowerCase().includes(normalized);
-    });
-  }, [vendorReports, query]);
+    if (normalized) {
+      result = result.filter(v => {
+        const vendorNames = v.vendors.map(vendor => vendor.vendorName).join(" ");
+        return [v.orderId, v.venue, v.date, vendorNames].join(" ").toLowerCase().includes(normalized);
+      });
+    }
+    
+    if (sortOrder === "date-desc" || sortOrder === "date-asc") {
+      result.sort((a, b) => {
+        const [dA, mA, yA] = a.date.split("/");
+        const [dB, mB, yB] = b.date.split("/");
+        const dateA = new Date(`${yA}-${mA}-${dA}`).getTime();
+        const dateB = new Date(`${yB}-${mB}-${dB}`).getTime();
+        return sortOrder === "date-desc" ? dateB - dateA : dateA - dateB;
+      });
+    }
+    
+    return result;
+  }, [vendorReports, query, sortOrder]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-8rem)]">
@@ -198,6 +235,20 @@ export function ReportsClient({
             </button>
           )}
         </label>
+        
+        {(activeTab === "profitability" || activeTab === "ledger" || activeTab === "vendors") && (
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value as any)}
+              className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+            >
+              <option value="default">Sort: Default</option>
+              <option value="date-desc">Date: Newest</option>
+              <option value="date-asc">Date: Oldest</option>
+            </select>
+          </div>
+        )}
         
         {(activeTab === "profitability" || activeTab === "ledger") && (
           <div className="flex items-center gap-2">

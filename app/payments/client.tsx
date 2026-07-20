@@ -12,6 +12,7 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
   const [query, setQuery] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [sortOrder, setSortOrder] = useState<"default" | "date-desc" | "date-asc">("default");
 
   const isDateInRange = (dateStr: string) => {
     if (!fromDate && !toDate) return true;
@@ -46,8 +47,17 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
       );
     }
     
-    // Sort logic: Unsettled (Pending, Partial) first, then by customer name
+    // Sort logic
     return result.sort((a, b) => {
+      if (sortOrder === "date-desc" || sortOrder === "date-asc") {
+        const [dA, mA, yA] = a.date.split("/");
+        const [dB, mB, yB] = b.date.split("/");
+        const dateA = new Date(`${yA}-${mA}-${dA}`).getTime();
+        const dateB = new Date(`${yB}-${mB}-${dB}`).getTime();
+        return sortOrder === "date-desc" ? dateB - dateA : dateA - dateB;
+      }
+      
+      // Default: Unsettled (Pending, Partial) first, then by customer name
       const aNeedsPayment = a.status === "Pending" || a.status === "Partial";
       const bNeedsPayment = b.status === "Pending" || b.status === "Partial";
       
@@ -58,7 +68,7 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
       const nameB = b.customerName || "Unknown Customer";
       return nameA.localeCompare(nameB);
     });
-  }, [orders, filter]);
+  }, [orders, filter, query, fromDate, toDate, sortOrder]);
 
   return (
     <>
@@ -106,7 +116,17 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
           )}
         </label>
         
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as any)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+          >
+            <option value="default">Sort: Status</option>
+            <option value="date-desc">Date: Newest</option>
+            <option value="date-asc">Date: Oldest</option>
+          </select>
+
           <input
             type="date"
             value={fromDate}

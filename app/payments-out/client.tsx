@@ -12,6 +12,7 @@ export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [vendorFilter, setVendorFilter] = useState("All");
+  const [sortOrder, setSortOrder] = useState<"default" | "date-desc" | "date-asc">("default");
 
   const isDateInRange = (dateStr: string) => {
     if (!fromDate && !toDate) return true;
@@ -56,11 +57,19 @@ export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[
     }
 
     return result.sort((a, b) => {
+      if (sortOrder === "date-desc" || sortOrder === "date-asc") {
+        const [dA, mA, yA] = a.date.split("/");
+        const [dB, mB, yB] = b.date.split("/");
+        const dateA = new Date(`${yA}-${mA}-${dA}`).getTime();
+        const dateB = new Date(`${yB}-${mB}-${dB}`).getTime();
+        return sortOrder === "date-desc" ? dateB - dateA : dateA - dateB;
+      }
+
       const nameA = a.customerName || "Unknown Customer";
       const nameB = b.customerName || "Unknown Customer";
       return nameA.localeCompare(nameB);
     });
-  }, [orders, query]);
+  }, [orders, query, fromDate, toDate, vendorFilter, sortOrder]);
 
   return (
     <>
@@ -93,6 +102,16 @@ export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[
         </label>
         
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as any)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+          >
+            <option value="default">Sort: Customer</option>
+            <option value="date-desc">Date: Newest</option>
+            <option value="date-asc">Date: Oldest</option>
+          </select>
+          
           <select
             value={vendorFilter}
             onChange={(e) => setVendorFilter(e.target.value)}
