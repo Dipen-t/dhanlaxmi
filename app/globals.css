@@ -105,3 +105,9 @@ dialog.app-dialog-wide .app-dialog-body {
     34rem
   );
 }
+
+/* Hide native search cancel button since we provide custom X icons */
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
