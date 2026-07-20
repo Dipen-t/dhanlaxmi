@@ -232,7 +232,7 @@ export function VendorPaymentManager({
                             <button
                               onClick={() => handleDelete(p.id)}
                               disabled={loading}
-                              className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                              className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors disabled:opacity-50"
                               title="Delete payment"
                             >
                               <Trash2 className="size-4" />
