@@ -1,24 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { OrderWithVendorPayments } from "./actions";
 import { VendorPaymentManager } from "@/components/payments-out/vendor-payment-manager";
 import { formatCurrency } from "@/components/payments/payment-badges";
+import { Search, X } from "lucide-react";
 
 export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[] }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithVendorPayments | null>(null);
+  const [query, setQuery] = useState("");
 
-  // Filter out orders that don't have any vendors and sort by customer name
-  const ordersWithVendors = orders
-    .filter(o => o.vendors.length > 0)
-    .sort((a, b) => {
+  const ordersWithVendors = useMemo(() => {
+    let result = orders.filter(o => o.vendors.length > 0);
+
+    const normalized = query.trim().toLowerCase();
+    if (normalized) {
+      result = result.filter(o => {
+        const vendorNames = o.vendors.map(v => v.vendorName).join(" ");
+        return [o.orderId, o.customerName, o.venue, o.date, vendorNames, o.customerPhone]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalized);
+      });
+    }
+
+    return result.sort((a, b) => {
       const nameA = a.customerName || "Unknown Customer";
       const nameB = b.customerName || "Unknown Customer";
       return nameA.localeCompare(nameB);
     });
+  }, [orders, query]);
 
   return (
     <>
+      <div className="mb-4">
+        <label className="relative block w-full max-w-md">
+          <span className="sr-only">Search vendor payments</span>
+          <Search
+            className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
+            strokeWidth={1.75}
+            aria-hidden
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by ID, customer, vendor, date..."
+            autoComplete="off"
+            className="min-h-11 w-full rounded-lg border border-border bg-background py-2.5 pr-10 pl-10 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+          />
+          {query.trim().length > 0 && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Clear search"
+              className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="size-4" strokeWidth={1.75} aria-hidden />
+            </button>
+          )}
+        </label>
+      </div>
+
       <div className="flex-1 overflow-y-auto rounded-xl border border-border bg-background">
         <ul className="divide-y divide-border">
           {ordersWithVendors.length === 0 ? (
