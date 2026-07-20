@@ -52,9 +52,10 @@ export function OrderMaterialsPanel({
   sortedMaterials,
   selectedMaterials,
   onUpdate,
-  onCommitOrder, // Kept for prop compatibility, but we avoid calling it to prevent rows jumping while inline editing
+  onCommitOrder,
 }: OrderMaterialsPanelProps) {
   const [query, setQuery] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const selectedById = useMemo(() => {
     const map = new Map<number, OrderMaterialDraft>();
@@ -78,6 +79,36 @@ export function OrderMaterialsPanel({
       return `${material.name} ${vendorNames}`.toLowerCase().includes(normalized);
     });
   }, [sortedMaterials, selectedById, query]);
+
+  const editingMaterial = useMemo(
+    () =>
+      editingId === null
+        ? null
+        : (materials.find((material) => material.id === editingId) ?? null),
+    [editingId, materials],
+  );
+
+  const editingItem =
+    editingId === null ? null : (selectedById.get(editingId) ?? null);
+
+  function openEditor(materialId: number) {
+    if (editingId !== null && editingId !== materialId) {
+      onCommitOrder();
+    }
+    setEditingId(materialId);
+  }
+
+  function closeEditor() {
+    setEditingId(null);
+    onCommitOrder();
+  }
+
+  function clearEditingMaterial() {
+    if (editingId === null) return;
+    onUpdate(editingId, { unitQty: "", unitName: "" });
+    setEditingId(null);
+    onCommitOrder();
+  }
 
   if (materials.length === 0) {
     return (
@@ -127,90 +158,214 @@ export function OrderMaterialsPanel({
             </p>
           </div>
         ) : (
-          <div className="h-full overflow-y-auto overscroll-contain p-2 sm:p-2.5">
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-2 sm:grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]">
+          <div
+            className={`h-full overflow-y-auto overscroll-contain p-2 sm:p-2.5 ${
+              editingMaterial ? "pt-52 sm:pt-44" : ""
+            }`}
+          >
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5">
               {visibleMaterials.map((material) => {
                 const item = selectedById.get(material.id);
                 if (!item) return null;
 
                 const complete = isComplete(item);
-                const hasVendorDropdown = material.rawMaterialVendors.length > 1;
+                const partial = hasQty(item) && !complete;
+                const active = editingId === material.id;
+                const vendorName = item.vendorId 
+                  ? material.rawMaterialVendors.find(v => v.vendor.id === item.vendorId)?.vendor.name 
+                  : null;
 
                 return (
-                  <div
+                  <button
                     key={material.id}
-                    className={`flex flex-col overflow-hidden rounded-xl border transition-colors ${
-                      complete
-                        ? "border-primary/50 bg-primary-soft/30 shadow-sm"
-                        : "border-border bg-background hover:border-primary/30"
+                    type="button"
+                    id={`order-material-${material.id}`}
+                    onClick={() => openEditor(material.id)}
+                    aria-pressed={active}
+                    className={`flex min-h-12 touch-manipulation flex-col items-start justify-center rounded-xl border px-2.5 py-2 text-left transition-colors duration-150 ease-out motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : complete
+                          ? "border-primary/40 bg-primary-soft/50 text-foreground"
+                          : partial
+                            ? "border-border bg-surface text-foreground"
+                            : "border-border bg-background text-foreground hover:border-primary/35 hover:bg-primary-soft/30"
                     }`}
                   >
-                    {/* Header */}
-                    <div className={`flex items-center justify-between px-2.5 py-1.5 border-b border-border ${complete ? "bg-primary-soft/50" : "bg-surface/50"}`}>
-                      <span className="truncate text-sm font-semibold tracking-tight text-foreground" title={material.name}>
-                        {material.name}
-                      </span>
-                    </div>
-
-                    {/* Inputs */}
-                    <div className="flex items-center">
-                      <input
-                        type="number"
-                        min="0"
-                        placeholder="Qty"
-                        value={item.unitQty}
-                        onChange={(e) => onUpdate(material.id, { unitQty: e.target.value })}
-                        className="w-16 min-h-[44px] bg-transparent px-2.5 text-base tabular-nums outline-none focus:bg-background"
-                        aria-label={`Quantity for ${material.name}`}
-                      />
-                      <div className="w-px h-[44px] bg-border shrink-0" />
-                      <select
-                        value={item.unitName}
-                        onChange={(e) => onUpdate(material.id, { unitName: e.target.value })}
-                        className="flex-1 min-h-[44px] bg-transparent px-2 text-sm outline-none focus:bg-background truncate"
-                        aria-label={`Unit for ${material.name}`}
+                    <span
+                      className={`w-full truncate text-base font-semibold tracking-[-0.01em] ${
+                        active ? "text-primary-foreground" : "text-foreground"
+                      }`}
+                      title={material.name}
+                    >
+                      {material.name}
+                    </span>
+                    {complete ? (
+                      <span
+                        className={`mt-0.5 w-full truncate text-sm font-semibold tabular-nums ${
+                          active ? "text-primary-foreground/90" : "text-primary"
+                        }`}
                       >
-                        <option value="" disabled>Unit</option>
-                        {PREDEFINED_UNITS.map((unit) => (
-                          <option key={unit} value={unit}>
-                            {unit}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Vendor */}
-                    <div className="border-t border-border">
-                      {material.rawMaterialVendors.length === 0 ? (
-                        <div className="min-h-[40px] px-2.5 flex items-center text-xs text-muted">
-                          No vendor
-                        </div>
-                      ) : !hasVendorDropdown ? (
-                        <div className="min-h-[40px] px-2.5 flex items-center text-xs font-medium text-primary truncate" title={material.rawMaterialVendors[0].vendor.name}>
-                          {material.rawMaterialVendors[0].vendor.name}
-                        </div>
-                      ) : (
-                        <select
-                          value={item.vendorId ?? ""}
-                          onChange={(e) => onUpdate(material.id, { vendorId: Number(e.target.value) })}
-                          className="w-full min-h-[40px] bg-transparent px-2 text-xs outline-none focus:bg-background"
-                          aria-label={`Vendor for ${material.name}`}
-                        >
-                          <option value="" disabled>Vendor</option>
-                          {material.rawMaterialVendors.map((rmv) => (
-                            <option key={rmv.vendor.id} value={rmv.vendor.id}>
-                              {rmv.vendor.name}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  </div>
+                        {item.unitQty} {item.unitName}{vendorName ? ` ${vendorName}` : ""}
+                      </span>
+                    ) : partial ? (
+                      <span
+                        className={`mt-0.5 text-sm font-medium ${
+                          active ? "text-primary-foreground/80" : "text-muted"
+                        }`}
+                      >
+                        {item.unitQty} · need unit
+                      </span>
+                    ) : null}
+                    {item.notes ? (
+                      <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
+                        Note: {item.notes}
+                      </span>
+                    ) : null}
+                  </button>
                 );
               })}
             </div>
           </div>
         )}
+
+        {editingMaterial && editingItem ? (
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Edit ${editingMaterial.name}`}
+            className="absolute inset-x-2 top-2 z-20 rounded-2xl border border-border bg-background p-3.5 shadow-lg sm:inset-x-3 sm:top-3 sm:p-4"
+          >
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-lg font-semibold tracking-[-0.02em] text-foreground">
+                  {editingMaterial.name}
+                </p>
+                <p className="mt-0.5 text-sm text-muted">
+                  Set quantity and unit, then tap Done.
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {(hasQty(editingItem) ||
+                  editingItem.unitName.trim() !== "") && (
+                  <button
+                    type="button"
+                    onClick={clearEditingMaterial}
+                    className="inline-flex min-h-12 touch-manipulation items-center rounded-xl border border-border bg-background px-3.5 text-sm font-medium text-muted transition-colors hover:bg-surface hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={closeEditor}
+                  className="inline-flex min-h-12 touch-manipulation items-center gap-2 rounded-xl bg-primary px-5 text-base font-semibold text-primary-foreground transition-colors hover:opacity-90"
+                >
+                  <Check className="size-5" strokeWidth={2.25} aria-hidden />
+                  Done
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,11rem)_minmax(12rem,14rem)_minmax(0,1fr)] sm:items-end">
+              <div className="min-w-0">
+                <label
+                  htmlFor={`edit-vendor-${editingMaterial.id}`}
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Vendor
+                </label>
+                {editingMaterial.rawMaterialVendors.length === 0 ? (
+                  <p className="flex min-h-12 items-center rounded-xl border border-border bg-surface px-3 text-base text-muted">
+                    No vendor
+                  </p>
+                ) : editingMaterial.rawMaterialVendors.length === 1 ? (
+                  <p className="flex min-h-12 items-center truncate rounded-xl border border-border bg-background px-3 text-base font-medium text-primary">
+                    {editingMaterial.rawMaterialVendors[0].vendor.name}
+                  </p>
+                ) : (
+                  <select
+                    id={`edit-vendor-${editingMaterial.id}`}
+                    value={editingItem.vendorId ?? ""}
+                    onChange={(event) =>
+                      onUpdate(editingMaterial.id, {
+                        vendorId: Number(event.target.value),
+                      })
+                    }
+                    className="min-h-12 w-full rounded-xl border border-border bg-background px-3 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                  >
+                    {editingMaterial.rawMaterialVendors.map((rmv) => (
+                      <option key={rmv.vendor.id} value={rmv.vendor.id}>
+                        {rmv.vendor.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className="min-w-0">
+                <label
+                  htmlFor={`edit-qty-${editingMaterial.id}`}
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Quantity
+                </label>
+                <QtyStepper
+                  key={editingMaterial.id}
+                  id={`edit-qty-${editingMaterial.id}`}
+                  value={editingItem.unitQty}
+                  autoFocus
+                  aria-label={`Quantity for ${editingMaterial.name}`}
+                  onChange={(unitQty) =>
+                    onUpdate(editingMaterial.id, { unitQty })
+                  }
+                />
+              </div>
+
+              <div className="min-w-0">
+                <p className="mb-1.5 text-sm font-medium text-foreground">Unit</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PREDEFINED_UNITS.map((unit) => {
+                    const selected = editingItem.unitName === unit;
+                    return (
+                      <button
+                        key={unit}
+                        type="button"
+                        onClick={() =>
+                          onUpdate(editingMaterial.id, { unitName: unit })
+                        }
+                        className={`inline-flex min-h-12 touch-manipulation items-center rounded-xl border px-3.5 text-base font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          selected
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-background text-foreground hover:bg-surface"
+                        }`}
+                      >
+                        {unit}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              <div className="min-w-0 sm:col-span-3 mt-2">
+                <label
+                  htmlFor={`edit-notes-${editingMaterial.id}`}
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Notes (e.g. high tea)
+                </label>
+                <input
+                  id={`edit-notes-${editingMaterial.id}`}
+                  type="text"
+                  value={editingItem.notes ?? ""}
+                  onChange={(e) => onUpdate(editingMaterial.id, { notes: e.target.value })}
+                  placeholder="Any special instructions for the vendor..."
+                  className="w-full min-h-12 rounded-xl border border-border bg-background px-3 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

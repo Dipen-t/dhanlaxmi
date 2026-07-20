@@ -8,7 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 
 import {
   createOrder,
@@ -198,45 +198,28 @@ export function OrderForm({
 
   const materialsMode = activeTab === "materials";
 
-  useEffect(() => {
-    const mql = window.matchMedia("(min-width: 1024px)");
-    
-    function updateScrollLock() {
-      if (materialsMode && !mql.matches) {
-        document.body.style.overflow = "hidden";
-      } else {
-        document.body.style.overflow = "";
-      }
-    }
-
-    updateScrollLock();
-    mql.addEventListener("change", updateScrollLock);
-    
-    return () => {
-      mql.removeEventListener("change", updateScrollLock);
-      document.body.style.overflow = "";
-    };
-  }, [materialsMode]);
-
   return (
     <form
       onSubmit={handleSubmit}
       className={
         materialsMode
-          ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-19 sm:px-6 lg:static lg:inset-auto lg:z-auto lg:grid lg:grid-cols-[minmax(320px,400px)_1fr] lg:gap-6 lg:overflow-visible lg:bg-transparent lg:px-0 lg:pt-0 lg:pb-28"
-          : "flex flex-col gap-5 pb-28 lg:grid lg:grid-cols-[minmax(320px,400px)_1fr] lg:gap-6"
+          ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-19 sm:px-6"
+          : "flex flex-col gap-5 pb-28"
       }
     >
       {error ? (
         <div
           role="alert"
-          className="shrink-0 rounded-lg border border-error/20 bg-error-soft p-4 text-sm text-error lg:col-span-2"
+          className="shrink-0 rounded-lg border border-error/20 bg-error-soft p-4 text-sm text-error"
         >
           {error}
         </div>
       ) : null}
 
-      <div className={`${activeTab === "details" ? "block" : "hidden"} lg:block lg:shrink-0`}>
+      <div
+        hidden={activeTab !== "details"}
+        className={activeTab === "details" ? "block" : "hidden"}
+      >
         <div className="rounded-xl border border-border bg-background p-5 sm:p-6">
           <h2 className="mb-5 text-lg font-semibold text-foreground">
             Order details
@@ -441,10 +424,11 @@ export function OrderForm({
       </div>
 
       <div
+        hidden={activeTab !== "materials"}
         className={
           materialsMode
-            ? "flex min-h-0 flex-1 flex-col lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)]"
-            : "hidden lg:sticky lg:top-4 lg:flex lg:h-[calc(100vh-2rem)] lg:min-h-0 lg:flex-col"
+            ? "flex min-h-0 flex-1 flex-col"
+            : "hidden"
         }
       >
         <OrderMaterialsPanel
@@ -466,38 +450,37 @@ export function OrderForm({
             Cancel
           </button>
 
-          {activeTab === "details" && (
+          {activeTab === "details" ? (
             <button
               type="button"
               onClick={() => switchTab("materials")}
-              className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none lg:hidden"
+              className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
             >
               Continue to materials
               <Package className="size-4" strokeWidth={1.75} aria-hidden />
             </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => switchTab("details")}
+                className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Back to details
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
+              >
+                {isPending
+                  ? "Saving…"
+                  : isEditing
+                    ? "Save changes"
+                    : "Create order"}
+              </button>
+            </>
           )}
-
-          {activeTab === "materials" && (
-            <button
-              type="button"
-              onClick={() => switchTab("details")}
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
-            >
-              Back to details
-            </button>
-          )}
-
-          <button
-            type="submit"
-            disabled={isPending}
-            className={`inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none ${activeTab === "details" ? "hidden lg:inline-flex" : ""}`}
-          >
-            {isPending
-              ? "Saving…"
-              : isEditing
-                ? "Save changes"
-                : "Create order"}
-          </button>
         </div>
       </div>
     </form>
