@@ -150,6 +150,10 @@ export function OrderForm({
     }
 
     const formData = new FormData(event.currentTarget);
+    const rawDiscount = String(formData.get("discount") || "").trim();
+    const discountType = String(formData.get("discountType") || "rupees");
+    const finalDiscount = rawDiscount ? (discountType === "percentage" ? `${rawDiscount}%` : rawDiscount) : "";
+
     const data = {
       id: order?.id,
       orderId: String(formData.get("orderId") || ""),
@@ -158,7 +162,7 @@ export function OrderForm({
       numberOfPersons: Number(formData.get("numberOfPersons")),
       mealType,
       totalAmount: String(formData.get("totalAmount") || "").trim(),
-      discount: String(formData.get("discount") || "").trim(),
+      discount: finalDiscount,
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
@@ -375,14 +379,27 @@ export function OrderForm({
                 >
                   Discount (Optional)
                 </label>
-                <input
-                  id="order-discount"
-                  name="discount"
-                  type="text"
-                  defaultValue={order?.discount ?? ""}
-                  className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. 10% or 500"
-                />
+                <div className="flex w-full items-center rounded-lg border border-border bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-ring/30 overflow-hidden transition-colors">
+                  <input
+                    id="order-discount"
+                    name="discount"
+                    type="number"
+                    min="0"
+                    step="any"
+                    defaultValue={order?.discount ? parseFloat(order.discount.replace(/[^\d.]/g, '')) : ""}
+                    className="flex-1 min-w-0 bg-transparent px-3 py-2.5 text-base text-foreground outline-none placeholder:text-muted"
+                    placeholder="Amount"
+                  />
+                  <div className="w-px h-6 bg-border shrink-0" />
+                  <select 
+                    name="discountType" 
+                    defaultValue={order?.discount?.trim().endsWith("%") ? "percentage" : "rupees"}
+                    className="h-full bg-transparent pl-3 pr-2 py-2.5 text-base font-medium text-foreground outline-none border-none focus:ring-0 cursor-pointer"
+                  >
+                    <option value="rupees">₹ (Rupees)</option>
+                    <option value="percentage">% (Percent)</option>
+                  </select>
+                </div>
               </div>
             </div>
 
