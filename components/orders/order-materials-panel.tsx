@@ -160,10 +160,10 @@ export function OrderMaterialsPanel({
         ) : (
           <div
             className={`h-full overflow-y-auto overscroll-contain p-2 sm:p-2.5 ${
-              editingMaterial ? "pt-52 sm:pt-44" : ""
+              editingMaterial ? "pt-60 sm:pt-48 lg:pt-48" : ""
             }`}
           >
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5 lg:grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] lg:gap-2">
               {visibleMaterials.map((material) => {
                 const item = selectedById.get(material.id);
                 if (!item) return null;
@@ -234,7 +234,7 @@ export function OrderMaterialsPanel({
             role="dialog"
             aria-modal="true"
             aria-label={`Edit ${editingMaterial.name}`}
-            className="absolute inset-x-2 top-2 z-20 rounded-2xl border border-border bg-background p-3.5 shadow-lg sm:inset-x-3 sm:top-3 sm:p-4"
+            className="absolute inset-x-2 top-2 z-20 rounded-2xl border border-border bg-background p-3.5 shadow-lg sm:inset-x-3 sm:top-3 sm:p-4 lg:inset-x-auto lg:left-1/2 lg:-translate-x-1/2 lg:w-[calc(100%-2rem)] lg:max-w-2xl lg:shadow-2xl"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
