@@ -287,13 +287,18 @@ export async function createOrder(data: OrderInput) {
         // Format date as dd/mm/yyyy for the WhatsApp message
         const [yyyy, mm, dd] = date.split("-");
         const formattedDate = `${dd}/${mm}/${yyyy}`;
-        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n\nPlease provide the following raw materials:\n`;
+        
+        let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n`;
+        
+        const itemsWithNotes = group.items.filter(i => i.notes && i.notes.trim().length > 0);
+        if (itemsWithNotes.length > 0) {
+          message += `Hi tea details: ${itemsWithNotes.map(i => `${i.name} (${i.notes})`).join(", ")}\n`;
+        }
+        
+        message += `\nPlease provide the following raw materials:\n`;
+        
         for (const item of group.items) {
-          if (item.notes) {
-            message += `- ${item.name} - ${item.notes}: ${item.qty} ${item.unit}\n`;
-          } else {
-            message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
-          }
+          message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
         }
         
         // Send messages sequentially to avoid rate-limiting from the WhatsApp API provider
