@@ -1,4 +1,5 @@
-import "dotenv/config";
+import { loadEnvConfig } from "@next/env";
+loadEnvConfig(process.cwd());
 import { seedKitchenDishes } from "@/db/seed-kitchen-dishes";
 
 async function main() {
