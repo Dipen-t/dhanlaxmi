@@ -13,6 +13,8 @@ export const exportToExcel = (data: Record<string, unknown>[], filename: string)
 
 export const exportProfitabilityToExcel = (reports: EventProfitability[]) => {
   const data = reports.map(r => ({
+    "Customer Name": r.customerName || "Unknown Customer",
+    "Customer Phone": r.customerPhone || "-",
     "Order ID": r.orderId,
     "Date": r.date,
     "Venue": r.venue,

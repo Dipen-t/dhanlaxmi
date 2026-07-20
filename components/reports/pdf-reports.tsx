@@ -30,7 +30,7 @@ export const ProfitabilityPDF = ({ reports }: { reports: EventProfitability[] })
       <Text style={styles.title}>Event Profitability Report</Text>
       <View style={styles.table}>
         <View style={styles.tableRow}>
-          <View style={styles.tableColHeader}><Text style={styles.tableCellHeader}>Event / Date</Text></View>
+          <View style={styles.tableColHeader}><Text style={styles.tableCellHeader}>Customer</Text></View>
           <View style={styles.tableColHeader}><Text style={styles.tableCellHeader}>Revenue</Text></View>
           <View style={styles.tableColHeader}><Text style={styles.tableCellHeader}>Client Paid</Text></View>
           <View style={styles.tableColHeader}><Text style={styles.tableCellHeader}>Waived</Text></View>
@@ -41,8 +41,11 @@ export const ProfitabilityPDF = ({ reports }: { reports: EventProfitability[] })
         {reports.map((r, i) => (
           <View style={styles.tableRow} key={i}>
             <View style={styles.tableCol}>
-              <Text style={styles.tableCell}>{r.orderId}</Text>
-              <Text style={{...styles.tableCell, fontSize: 8, color: '#666'}}>{r.date}</Text>
+              <Text style={{...styles.tableCell, fontWeight: 'bold'}}>{r.customerName || 'Unknown Customer'}</Text>
+              <Text style={{...styles.tableCell, fontSize: 8, color: '#666'}}>
+                {r.customerPhone ? `${r.customerPhone} • ` : ''}{r.orderId}
+              </Text>
+              <Text style={{...styles.tableCell, fontSize: 8, color: '#666'}}>{r.venue} • {r.date}</Text>
             </View>
             <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.revenue)}</Text></View>
             <View style={styles.tableCol}><Text style={styles.tableCell}>{pdfFormatCurrency(r.clientPaid)}</Text></View>

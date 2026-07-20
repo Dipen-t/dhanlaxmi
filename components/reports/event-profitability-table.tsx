@@ -17,7 +17,7 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
       <table className="w-full text-left text-sm">
         <thead className="bg-surface/50 text-muted uppercase text-xs sticky top-0 border-b border-border">
           <tr>
-            <th className="px-6 py-4 font-semibold">Event</th>
+            <th className="px-6 py-4 font-semibold">Customer</th>
             <th className="px-6 py-4 font-semibold">Revenue</th>
             <th className="px-6 py-4 font-semibold">Client Paid</th>
             <th className="px-6 py-4 font-semibold">Waived</th>
@@ -32,8 +32,16 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
             return (
               <tr key={r.id} className="hover:bg-surface/30 transition-colors">
                 <td className="px-6 py-4">
-                  <div className="font-semibold text-foreground">{r.orderId}</div>
-                  <div className="text-xs text-muted mt-0.5">{r.venue} • {r.date}</div>
+                  <div className="font-semibold text-foreground">
+                    {r.customerName || "Unknown Customer"}
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">
+                    {r.customerPhone ? `${r.customerPhone} • ` : ""}
+                    {r.orderId}
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">
+                    {r.venue} • {r.date}
+                  </div>
                 </td>
                 <td className="px-6 py-4 font-medium text-foreground">
                   {formatCurrency(r.revenue)}

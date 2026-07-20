@@ -9,6 +9,8 @@ import type { MealType } from "@/app/orders/actions";
 export type EventProfitability = {
   id: number;
   orderId: string;
+  customerName: string | null;
+  customerPhone: string | null;
   date: string;
   venue: string;
   mealType: MealType;
@@ -78,6 +80,8 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
     return {
       id: order.id,
       orderId: order.orderId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
       date: toDateString(order.date),
       venue: order.venue,
       mealType: order.mealType,
