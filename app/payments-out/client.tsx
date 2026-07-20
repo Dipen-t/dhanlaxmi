@@ -9,9 +9,40 @@ import { Search, X } from "lucide-react";
 export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[] }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithVendorPayments | null>(null);
   const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [vendorFilter, setVendorFilter] = useState("All");
+
+  const isDateInRange = (dateStr: string) => {
+    if (!fromDate && !toDate) return true;
+    if (!dateStr) return true;
+    const [d, m, y] = dateStr.split("/");
+    if (!d || !m || !y) return true;
+    const recordDate = `${y}-${m}-${d}`;
+    if (fromDate && recordDate < fromDate) return false;
+    if (toDate && recordDate > toDate) return false;
+    return true;
+  };
+  
+  // Get unique vendors for the filter dropdown
+  const allVendors = useMemo(() => {
+    const vendorsMap = new Map<number, string>();
+    orders.forEach(o => {
+      o.vendors.forEach(v => {
+        vendorsMap.set(v.vendorId, v.vendorName);
+      });
+    });
+    return Array.from(vendorsMap.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [orders]);
 
   const ordersWithVendors = useMemo(() => {
-    let result = orders.filter(o => o.vendors.length > 0);
+    let result = orders.filter(o => o.vendors.length > 0 && isDateInRange(o.date));
+    
+    if (vendorFilter !== "All") {
+      result = result.filter(o => o.vendors.some(v => v.vendorId === Number(vendorFilter)));
+    }
 
     const normalized = query.trim().toLowerCase();
     if (normalized) {
@@ -33,8 +64,8 @@ export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[
 
   return (
     <>
-      <div className="mb-4">
-        <label className="relative block w-full max-w-md">
+      <div className="mb-4 flex flex-col sm:flex-row gap-4">
+        <label className="relative block flex-1 max-w-md">
           <span className="sr-only">Search vendor payments</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
@@ -60,6 +91,35 @@ export function PaymentsOutClient({ orders }: { orders: OrderWithVendorPayments[
             </button>
           )}
         </label>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={vendorFilter}
+            onChange={(e) => setVendorFilter(e.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+          >
+            <option value="All">All Vendors</option>
+            {allVendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+          
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+            title="From Date"
+          />
+          <span className="text-muted">to</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+            title="To Date"
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto rounded-xl border border-border bg-background">

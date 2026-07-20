@@ -31,22 +31,41 @@ export function ReportsClient({
 }) {
   const [activeTab, setActiveTab] = useState<"profitability" | "ledger" | "customers" | "vendors">("profitability");
   const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const isDateInRange = (dateStr: string) => {
+    if (!fromDate && !toDate) return true;
+    if (!dateStr) return true;
+    const [d, m, y] = dateStr.split("/");
+    if (!d || !m || !y) return true;
+    const recordDate = `${y}-${m}-${d}`;
+    if (fromDate && recordDate < fromDate) return false;
+    if (toDate && recordDate > toDate) return false;
+    return true;
+  };
 
   const filteredProfitability = useMemo(() => {
+    let result = profitabilityReports.filter(r => isDateInRange(r.date));
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return profitabilityReports;
-    return profitabilityReports.filter(r => 
-      [r.orderId, r.customerName, r.venue, r.date].join(" ").toLowerCase().includes(normalized)
-    );
-  }, [profitabilityReports, query]);
+    if (normalized) {
+      result = result.filter(r => 
+        [r.orderId, r.customerName, r.venue, r.date].join(" ").toLowerCase().includes(normalized)
+      );
+    }
+    return result;
+  }, [profitabilityReports, query, fromDate, toDate]);
 
   const filteredLedger = useMemo(() => {
+    let result = ledger.filter(t => isDateInRange(t.date));
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return ledger;
-    return ledger.filter(t => 
-      [t.orderId, t.customerName, t.date, t.type].join(" ").toLowerCase().includes(normalized)
-    );
-  }, [ledger, query]);
+    if (normalized) {
+      result = result.filter(t => 
+        [t.orderId, t.customerName, t.date, t.type].join(" ").toLowerCase().includes(normalized)
+      );
+    }
+    return result;
+  }, [ledger, query, fromDate, toDate]);
 
   const filteredCustomers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -151,8 +170,8 @@ export function ReportsClient({
         </div>
       </div>
 
-      <div className="mb-4">
-        <label className="relative block w-full max-w-md">
+      <div className="mb-4 flex flex-col sm:flex-row gap-4">
+        <label className="relative block flex-1 max-w-md">
           <span className="sr-only">Search reports</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
@@ -178,6 +197,26 @@ export function ReportsClient({
             </button>
           )}
         </label>
+        
+        {(activeTab === "profitability" || activeTab === "ledger") && (
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+              title="From Date"
+            />
+            <span className="text-muted">to</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+              title="To Date"
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 bg-background border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">

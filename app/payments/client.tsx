@@ -10,9 +10,22 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithBalance | null>(null);
   const [filter, setFilter] = useState<"All" | "Pending" | "Partial" | "Cleared" | "Waived">("All");
   const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const isDateInRange = (dateStr: string) => {
+    if (!fromDate && !toDate) return true;
+    if (!dateStr) return true;
+    const [d, m, y] = dateStr.split("/");
+    if (!d || !m || !y) return true;
+    const recordDate = `${y}-${m}-${d}`;
+    if (fromDate && recordDate < fromDate) return false;
+    if (toDate && recordDate > toDate) return false;
+    return true;
+  };
 
   const filteredOrders = useMemo(() => {
-    let result = orders;
+    let result = orders.filter(o => isDateInRange(o.date));
     if (filter === "Cleared") {
       result = result.filter(o => o.status === "Cleared" || o.status === "Waived");
     } else if (filter === "Pending") {
@@ -65,8 +78,8 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
         ))}
       </div>
 
-      <div className="mb-4">
-        <label className="relative block w-full max-w-md">
+      <div className="mb-4 flex flex-col sm:flex-row gap-4">
+        <label className="relative block flex-1 max-w-md">
           <span className="sr-only">Search payments</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
@@ -92,6 +105,24 @@ export function PaymentsClient({ orders }: { orders: OrderWithBalance[] }) {
             </button>
           )}
         </label>
+        
+        <div className="flex items-center gap-2">
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+            title="From Date"
+          />
+          <span className="text-muted">to</span>
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+            title="To Date"
+          />
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto rounded-xl border border-border bg-background">
