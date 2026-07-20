@@ -78,6 +78,12 @@ export function OrderForm({
 
   const [mealType, setMealType] = useState<MealType>(order?.mealType ?? "lunch");
   const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
+  const [totalAmountDisplay, setTotalAmountDisplay] = useState(() => {
+    if (order?.totalAmount) {
+      return Number(order.totalAmount).toLocaleString("en-IN");
+    }
+    return "";
+  });
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
@@ -346,13 +352,17 @@ export function OrderForm({
                 </label>
                 <input
                   id="order-total-amount"
-                  name="totalAmount"
-                  type="number"
-                  min="0"
-                  defaultValue={order?.totalAmount ?? ""}
+                  type="text"
+                  inputMode="numeric"
+                  value={totalAmountDisplay}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\D/g, "");
+                    setTotalAmountDisplay(raw ? Number(raw).toLocaleString("en-IN") : "");
+                  }}
                   className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. 50000"
+                  placeholder="e.g. 50,000"
                 />
+                <input type="hidden" name="totalAmount" value={totalAmountDisplay.replace(/\D/g, "")} />
               </div>
 
               <div>
