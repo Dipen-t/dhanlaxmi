@@ -274,12 +274,13 @@ export function OrderForm({
                 htmlFor="customer-name"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Customer Name (Optional)
+                Customer Name
               </label>
               <input
                 id="customer-name"
                 name="customerName"
                 type="text"
+                required
                 maxLength={200}
                 defaultValue={order?.customerName ?? ""}
                 autoComplete="name"

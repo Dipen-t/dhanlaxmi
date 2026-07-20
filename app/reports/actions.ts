@@ -79,7 +79,7 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
     const relatedVendorPayments = allVendorPayments.filter(vp => vp.orderId === order.id);
     const vendorExpenses = relatedVendorPayments.reduce((sum, vp) => sum + vp.amount, 0);
 
-    const netProfit = actualRevenue - totalWaived - vendorExpenses;
+    const netProfit = clientPaid - vendorExpenses;
 
     return {
       id: order.id,
