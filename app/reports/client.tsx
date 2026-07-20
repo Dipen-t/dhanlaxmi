@@ -61,7 +61,7 @@ export function ReportsClient({
     const normalized = query.trim().toLowerCase();
     if (normalized) {
       result = result.filter(t => 
-        [t.orderId, t.customerName, t.date, t.type].join(" ").toLowerCase().includes(normalized)
+        [t.reference, t.notes, t.date, t.type].join(" ").toLowerCase().includes(normalized)
       );
     }
     return result;
@@ -78,9 +78,10 @@ export function ReportsClient({
   const filteredVendors = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return vendorReports;
-    return vendorReports.filter(v => 
-      [v.vendorName].join(" ").toLowerCase().includes(normalized)
-    );
+    return vendorReports.filter(v => {
+      const vendorNames = v.vendors.map(vendor => vendor.vendorName).join(" ");
+      return [v.orderId, v.venue, v.date, vendorNames].join(" ").toLowerCase().includes(normalized);
+    });
   }, [vendorReports, query]);
 
   return (
