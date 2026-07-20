@@ -191,45 +191,64 @@ export function VendorPaymentManager({
 
           <div className="flex-1 border-t border-border pt-6 md:border-t-0 md:border-l md:pt-0 md:pl-6">
             <h3 className="text-sm font-semibold text-foreground mb-3">
-              {selectedVendor ? `History: ${selectedVendor.vendorName}` : "Vendor Payment History"}
+              {selectedVendor ? `History: ${selectedVendor.vendorName}` : "All Vendor Payments History"}
             </h3>
             
-            {!selectedVendor ? (
-              <p className="text-sm text-muted italic">Select a vendor to view their payment history for this order.</p>
-            ) : selectedVendor.payments.length === 0 ? (
-              <div className="bg-surface rounded-xl p-4 text-center border border-border">
-                <p className="text-sm text-muted italic">No payments recorded yet.</p>
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {selectedVendor.payments.map((p) => (
-                  <li key={p.id} className="flex flex-col border border-border rounded-lg p-3 bg-surface group">
-                    <div className="flex justify-between items-start">
-                      <p className="text-sm font-semibold text-foreground">{formatCurrency(p.amount)}</p>
-                      <div className="flex items-center gap-3">
-                        <p className="text-xs text-muted">{p.date}</p>
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          disabled={loading}
-                          className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                          title="Delete payment"
-                        >
-                          <Trash2 className="size-4" />
-                        </button>
-                      </div>
-                    </div>
-                    {p.notes && <p className="text-xs text-muted mt-1 italic">"{p.notes}"</p>}
-                  </li>
-                ))}
-              </ul>
-            )}
+            {(() => {
+              const paymentsToDisplay = selectedVendor 
+                ? selectedVendor.payments 
+                : order.vendors.flatMap(v => v.payments.map(p => ({ ...p, vendorName: v.vendorName }))).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                
+              const totalToDisplay = selectedVendor
+                ? selectedVendor.totalPaid
+                : order.totalPaidOut;
 
-            {selectedVendor && selectedVendor.totalPaid > 0 && (
-              <div className="mt-4 p-3 bg-success-soft border border-success/20 rounded-lg flex justify-between">
-                <span className="text-sm font-medium text-success">Total Paid:</span>
-                <span className="text-sm font-bold text-success">{formatCurrency(selectedVendor.totalPaid)}</span>
-              </div>
-            )}
+              if (paymentsToDisplay.length === 0) {
+                return (
+                  <div className="bg-surface rounded-xl p-4 text-center border border-border">
+                    <p className="text-sm text-muted italic">No payments recorded yet.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <ul className="space-y-3">
+                    {paymentsToDisplay.map((p) => (
+                      <li key={p.id} className="flex flex-col border border-border rounded-lg p-3 bg-surface group">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="text-sm font-semibold text-foreground">{formatCurrency(p.amount)}</p>
+                            {!selectedVendor && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{(p as any).vendorName}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <p className="text-xs text-muted">{p.date}</p>
+                            <button
+                              onClick={() => handleDelete(p.id)}
+                              disabled={loading}
+                              className="p-1.5 text-muted hover:text-error hover:bg-error-soft rounded-md transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+                              title="Delete payment"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          </div>
+                        </div>
+                        {p.notes && <p className="text-xs text-muted mt-1 italic">"{p.notes}"</p>}
+                      </li>
+                    ))}
+                  </ul>
+
+                  {totalToDisplay > 0 && (
+                    <div className="mt-4 p-3 bg-success-soft border border-success/20 rounded-lg flex justify-between">
+                      <span className="text-sm font-medium text-success">Total Paid:</span>
+                      <span className="text-sm font-bold text-success">{formatCurrency(totalToDisplay)}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
         </div>
