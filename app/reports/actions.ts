@@ -71,11 +71,12 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
     }
 
     const clientBalance = Math.max(0, effectiveTotal - clientPaid - totalWaived);
+    const actualRevenue = Math.max(effectiveTotal, clientPaid + totalWaived);
 
     const relatedVendorPayments = allVendorPayments.filter(vp => vp.orderId === order.id);
     const vendorExpenses = relatedVendorPayments.reduce((sum, vp) => sum + vp.amount, 0);
 
-    const netProfit = effectiveTotal - totalWaived - vendorExpenses;
+    const netProfit = actualRevenue - totalWaived - vendorExpenses;
 
     return {
       id: order.id,
@@ -85,7 +86,7 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
       date: toDateString(order.date),
       venue: order.venue,
       mealType: order.mealType,
-      revenue: effectiveTotal,
+      revenue: actualRevenue,
       clientPaid,
       clientWaived: totalWaived,
       clientBalance,
@@ -183,7 +184,6 @@ export async function getCustomerReport(): Promise<CustomerReport[]> {
     report.totalOrders += 1;
 
     const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
-    report.totalRevenue += effectiveTotal;
 
     let clientPaid = 0;
     let totalWaived = 0;
@@ -195,6 +195,8 @@ export async function getCustomerReport(): Promise<CustomerReport[]> {
       }
     }
 
+    const actualRevenue = Math.max(effectiveTotal, clientPaid + totalWaived);
+    report.totalRevenue += actualRevenue;
     report.totalPaid += clientPaid;
     report.totalWaived += totalWaived;
   }
