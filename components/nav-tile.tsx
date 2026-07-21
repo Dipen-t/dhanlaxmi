@@ -40,7 +40,6 @@ export function NavTile({ href, title, description, icon: Icon, variant = "featu
           <p className="font-semibold text-foreground text-sm sm:text-base truncate">{title}</p>
           <p className="text-xs text-muted truncate">{description}</p>
         </div>
-        <ChevronRight className="size-4 text-muted group-hover:text-foreground transition-colors" />
         <NavTilePending />
       </Link>
     );
@@ -88,12 +87,9 @@ export function NavTile({ href, title, description, icon: Icon, variant = "featu
         </div>
       </div>
 
-      {/* Right Arrow */}
-      <div className="relative z-10 flex size-8 sm:size-10 shrink-0 items-center justify-center rounded-full bg-surface text-muted transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
-        <ChevronRight className="size-4 sm:size-5" strokeWidth={2.5} />
+      <div className="relative z-10 flex shrink-0 items-center justify-center">
+        <NavTilePending />
       </div>
-
-      <NavTilePending />
     </Link>
   );
 }

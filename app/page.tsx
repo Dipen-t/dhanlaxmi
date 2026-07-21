@@ -8,12 +8,12 @@ export default function HomePage() {
   return (
     <div className="relative flex min-h-dvh w-full flex-col px-5 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12 bg-[#F8FAF9] overflow-hidden">
       {/* Background Bottom Right */}
-      <div className="fixed bottom-0 right-0 z-0 pointer-events-none w-[500px] h-[500px] md:w-[800px] md:h-[800px] opacity-80">
+      <div className="fixed bottom-0 right-0 z-0 pointer-events-none w-[300px] h-[300px] md:w-[450px] md:h-[450px] opacity-20 translate-x-4 translate-y-4">
         <Image 
           src="/bottom-right.jpeg"
           alt=""
           fill
-          className="object-contain object-bottom-right mix-blend-multiply" 
+          className="object-contain mix-blend-multiply" 
           style={{ objectPosition: 'bottom right' }}
         />
       </div>
@@ -22,16 +22,16 @@ export default function HomePage() {
         <PageHeader />
 
         {/* Hero Section */}
-        <div className="flex flex-col md:flex-row items-center justify-between mt-2 md:mt-4 mb-12 md:mb-16">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-6 md:mb-8">
           <div className="flex-1 max-w-2xl">
-            <h1 className="text-4xl md:text-[3.25rem] leading-tight font-serif font-bold text-slate-800 mb-3 md:mb-4">
+            <h1 className="text-4xl md:text-5xl leading-tight font-serif font-bold text-slate-800 mb-2 md:mb-3">
               Welcome back!
             </h1>
             <p className="text-base md:text-lg text-muted">
               Manage your operations, events, and finances seamlessly.
             </p>
           </div>
-          <div className="mt-8 md:mt-0 md:ml-12 w-full md:w-[400px] lg:w-[480px] shrink-0">
+          <div className="mt-6 md:mt-0 md:ml-8 w-full md:w-[280px] lg:w-[340px] shrink-0">
             <div className="relative aspect-[16/9] w-full">
               <Image 
                 src="/Hero-image.jpeg" 
