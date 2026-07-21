@@ -1,31 +1,68 @@
 import Link from "next/link";
-
+import Image from "next/image";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { NavTilePending } from "@/components/nav-tile-pending";
 import type { HomeTile } from "@/lib/nav-config";
 
 type NavTileProps = HomeTile;
 
 export function NavTile({ href, title, description, icon: Icon }: NavTileProps) {
+  const isClientMenu = href === "/menus";
+  const isMenuCard = href === "/menus" || href === "/kitchen-menus";
+  const buttonText = ["/raw-materials", "/vendors"].includes(href) ? "Manage" : "View";
+
+  const themeClasses = isClientMenu 
+    ? {
+        iconBg: "bg-[#FDF6E3] text-[#B8860B]",
+        pillBg: "bg-[#FDF6E3] text-[#B8860B]",
+      }
+    : {
+        iconBg: "bg-[#edf6f0] text-primary",
+        pillBg: "bg-[#edf6f0] text-primary",
+      };
+
   return (
     <Link
       href={href}
       prefetch
-      className="group flex min-h-16 touch-manipulation items-center gap-4 rounded-xl border-2 border-border bg-background px-4 py-4 transition-[color,background-color,border-color,transform,box-shadow] duration-200 ease-out hover:border-primary hover:bg-primary-soft/30 hover:shadow-sm hover:-translate-y-0.5 active:scale-[0.99] active:bg-primary-soft/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:px-5 sm:py-5 md:min-h-[5.5rem] md:gap-5 md:px-6 md:py-6"
+      className="group relative flex min-h-[7rem] items-center gap-4 sm:gap-6 rounded-[1.25rem] bg-white p-4 sm:p-5 shadow-sm transition-all duration-300 hover:shadow-md border border-transparent hover:border-border overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
     >
+      {/* Background Media */}
+      {isMenuCard && (
+        <Image 
+          src="/cyber-waves.png" 
+          alt="" 
+          fill 
+          className="object-cover object-bottom opacity-10 z-0 pointer-events-none" 
+        />
+      )}
+
+      {/* Icon Block */}
       <div
         aria-hidden
-        className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary transition-all duration-200 ease-out group-hover:bg-primary group-hover:text-primary-foreground group-hover:scale-105 group-active:bg-primary group-active:text-primary-foreground md:size-14 md:rounded-xl"
+        className={`relative z-10 flex size-16 sm:size-20 shrink-0 items-center justify-center rounded-2xl ${themeClasses.iconBg} transition-transform duration-300 group-hover:scale-105`}
       >
-        <Icon className="size-6 md:size-7" strokeWidth={2} />
+        <Icon className="size-8 sm:size-10" strokeWidth={1.5} />
       </div>
 
-      <div className="min-w-0 flex-1">
-        <p className="text-base font-semibold text-foreground text-balance md:text-xl">
+      {/* Content */}
+      <div className="relative z-10 flex-1 min-w-0 flex flex-col justify-center">
+        <h3 className="font-serif text-[1.1rem] sm:text-lg font-bold text-foreground mb-1 truncate">
           {title}
-        </p>
-        <p className="mt-0.5 text-sm text-muted md:mt-1 md:text-base">
+        </h3>
+        <p className="text-[11px] sm:text-xs text-muted mb-3 sm:mb-4 truncate">
           {description}
         </p>
+        <div className="flex items-center">
+          <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 sm:px-4 sm:py-1.5 text-[10px] sm:text-xs font-semibold ${themeClasses.pillBg}`}>
+            {buttonText} <ArrowRight className="size-3 sm:size-3.5" />
+          </span>
+        </div>
+      </div>
+
+      {/* Right Arrow */}
+      <div className="relative z-10 flex size-8 sm:size-10 shrink-0 items-center justify-center rounded-full bg-surface text-muted transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
+        <ChevronRight className="size-4 sm:size-5" strokeWidth={2.5} />
       </div>
 
       <NavTilePending />
