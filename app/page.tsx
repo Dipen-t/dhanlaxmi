@@ -4,7 +4,7 @@ import { homeTiles } from "@/lib/nav-config";
 
 export default function HomePage() {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-5xl flex-col px-5 py-8 sm:px-8 sm:py-10 md:justify-center md:px-10 md:py-12 lg:max-w-6xl">
+    <div className="flex min-h-dvh w-full flex-col px-5 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
       <PageHeader />
 
       <div className="mt-8 md:mt-12 space-y-10 md:space-y-12">
