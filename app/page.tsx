@@ -8,15 +8,17 @@ export default function HomePage() {
   return (
     <div className="relative flex min-h-dvh w-full flex-col px-5 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12 bg-[#F8FAF9] overflow-hidden">
       {/* Background Bottom Right */}
-      <Image 
-        src="/bottom-right.jpeg"
-        alt=""
-        fill
-        className="object-cover opacity-100 pointer-events-none z-0" 
-        style={{ objectPosition: 'bottom right' }}
-      />
+      <div className="fixed bottom-0 right-0 z-0 pointer-events-none w-[500px] h-[500px] md:w-[800px] md:h-[800px] opacity-80">
+        <Image 
+          src="/bottom-right.jpeg"
+          alt=""
+          fill
+          className="object-contain object-bottom-right mix-blend-multiply" 
+          style={{ objectPosition: 'bottom right' }}
+        />
+      </div>
       
-      <div className="relative z-10 w-full max-w-7xl mx-auto flex flex-col h-full flex-1">
+      <div className="relative z-10 w-full flex flex-col h-full flex-1">
         <PageHeader />
 
         {/* Hero Section */}

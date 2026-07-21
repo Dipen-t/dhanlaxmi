@@ -29,12 +29,15 @@ export function NavTile({ href, title, description, icon: Icon }: NavTileProps) 
     >
       {/* Background Media */}
       {isMenuCard && (
-        <Image 
-          src="/cyber-waves.png" 
-          alt="" 
-          fill 
-          className="object-cover object-bottom opacity-10 z-0 pointer-events-none" 
-        />
+        <div className="absolute bottom-0 right-0 w-40 h-40 sm:w-48 sm:h-48 z-0 pointer-events-none opacity-40 mix-blend-multiply transition-transform duration-300 group-hover:scale-105">
+          <Image 
+            src="/bottom-right.jpeg" 
+            alt="" 
+            fill 
+            className="object-cover" 
+            style={{ objectPosition: 'bottom right' }}
+          />
+        </div>
       )}
 
       {/* Icon Block */}
