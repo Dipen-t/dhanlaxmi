@@ -7,7 +7,7 @@ export default function HomePage() {
     <div className="flex min-h-dvh w-full flex-col px-5 py-8 sm:px-8 sm:py-10 md:px-10 md:py-12">
       <PageHeader />
 
-      <div className="mt-8 md:mt-12 space-y-10 md:space-y-12">
+      <div className=" space-y-10 md:space-y-12">
         <section aria-labelledby="ops-heading">
           <h2 id="ops-heading" className="mb-4 text-lg font-bold tracking-tight text-foreground md:text-xl">
             Operations

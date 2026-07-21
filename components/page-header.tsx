@@ -8,7 +8,7 @@ type PageHeaderProps = {
 
 export function PageHeader({ title }: PageHeaderProps) {
   return (
-    <header className="relative flex w-full items-center justify-center mb-8 md:mb-12">
+    <header className="relative flex w-full items-center justify-center">
       <div className="flex flex-col items-center gap-2 md:gap-3">
         <Image 
           src={logo} 
