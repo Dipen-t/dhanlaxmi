@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Banknote } from "lucide-react";
 import { useEffect, useId, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
@@ -9,12 +9,14 @@ import { deleteVendor, type VendorWithMaterials } from "@/app/vendors/actions";
 type VendorActionsProps = {
   vendor: VendorWithMaterials;
   onEdit: (vendor: VendorWithMaterials) => void;
+  onFinance?: (vendor: VendorWithMaterials) => void;
   layout?: "inline" | "stacked";
 };
 
 export function VendorActions({
   vendor,
   onEdit,
+  onFinance,
   layout = "inline",
 }: VendorActionsProps) {
   const titleId = useId();
@@ -84,6 +86,16 @@ export function VendorActions({
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
         </button>
+        {onFinance && (
+          <button
+            type="button"
+            onClick={() => onFinance(vendor)}
+            aria-label={`Finance for ${vendor.name}`}
+            className={buttonClass}
+          >
+            <Banknote className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
+          </button>
+        )}
       </div>
 
       {mounted && deleteOpen

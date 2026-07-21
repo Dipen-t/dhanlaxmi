@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Banknote } from "lucide-react";
 import { useRef, useTransition } from "react";
 
 import { deleteOrder, type OrderRecord } from "@/app/orders/actions";
@@ -8,12 +8,14 @@ import { deleteOrder, type OrderRecord } from "@/app/orders/actions";
 type OrderActionsProps = {
   order: OrderRecord;
   onEdit: (order: OrderRecord) => void;
+  onFinance?: (order: OrderRecord) => void;
   layout?: "inline" | "stacked";
 };
 
 export function OrderActions({
   order,
   onEdit,
+  onFinance,
   layout = "inline",
 }: OrderActionsProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -40,6 +42,9 @@ export function OrderActions({
   const editClass =
     "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary-soft px-3 text-primary transition-colors hover:border-primary/40 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
+  const financeClass =
+    "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-background px-3 text-foreground transition-colors hover:border-primary/40 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+
   const deleteClass =
     "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-3 text-error transition-colors hover:border-error/30 hover:bg-error-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50";
 
@@ -63,6 +68,19 @@ export function OrderActions({
             <span className="text-sm font-medium">Edit</span>
           ) : null}
         </button>
+        {onFinance && (
+          <button
+            type="button"
+            onClick={() => onFinance(order)}
+            aria-label={`Finance for ${order.orderId}`}
+            className={`${financeClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
+          >
+            <Banknote className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
+            {layout === "stacked" ? (
+              <span className="text-sm font-medium">Finance</span>
+            ) : null}
+          </button>
+        )}
         <button
           type="button"
           onClick={openDeleteDialog}

@@ -66,6 +66,10 @@ export function OrdersView({ orders }: OrdersViewProps) {
     router.push(`/orders/${order.id}/edit`);
   }
 
+  function openFinance(order: OrderRecord) {
+    router.push(`/orders/${order.id}/finance`);
+  }
+
   const hasQuery = query.trim().length > 0;
 
   return (
@@ -172,9 +176,9 @@ export function OrdersView({ orders }: OrdersViewProps) {
           </button>
         </div>
       ) : view === "grid" ? (
-        <OrderGrid orders={filteredOrders} onEdit={openEdit} />
+        <OrderGrid orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
       ) : (
-        <OrderList orders={filteredOrders} onEdit={openEdit} />
+        <OrderList orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
       )}
 
       <FloatingAddButton onClick={openCreate} label="Add order" />

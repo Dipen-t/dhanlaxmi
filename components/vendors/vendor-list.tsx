@@ -15,9 +15,10 @@ import { MaterialTagsGrid } from "./material-tags-grid";
 type VendorListProps = {
   vendors: VendorWithMaterials[];
   onEdit: (vendor: VendorWithMaterials) => void;
+  onFinance: (vendor: VendorWithMaterials) => void;
 };
 
-export function VendorList({ vendors, onEdit }: VendorListProps) {
+export function VendorList({ vendors, onEdit, onFinance }: VendorListProps) {
   const groups = useMemo(() => {
     const map = new Map<string, VendorWithMaterials[]>();
 
@@ -88,7 +89,7 @@ export function VendorList({ vendors, onEdit }: VendorListProps) {
                     </div>
 
                     <div className="flex shrink-0 items-start pt-2 pr-1">
-                      <VendorActions vendor={vendor} onEdit={onEdit} />
+                      <VendorActions vendor={vendor} onEdit={onEdit} onFinance={onFinance} />
                     </div>
                   </div>
                 </li>

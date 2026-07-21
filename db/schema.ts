@@ -67,9 +67,6 @@ export const orderPayments = pgTable("order_payments", {
 
 export const vendorPayments = pgTable("vendor_payments", {
   id: serial("id").primaryKey(),
-  orderId: integer("order_id")
-    .notNull()
-    .references(() => orders.id, { onDelete: "cascade" }),
   vendorId: integer("vendor_id")
     .notNull()
     .references(() => vendors.id, { onDelete: "cascade" }),
@@ -78,6 +75,17 @@ export const vendorPayments = pgTable("vendor_payments", {
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const orderPaymentExpenses = pgTable("order_payment_expenses", {
+  id: serial("id").primaryKey(),
+  orderPaymentId: integer("order_payment_id")
+    .notNull()
+    .references(() => orderPayments.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  description: text("description").notNull(),
+  date: timestamp("date", { mode: "date" }).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const rawMaterialVendors = pgTable(
@@ -241,21 +249,24 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
 export const ordersRelations = relations(orders, ({ many }) => ({
   orderRawMaterials: many(orderRawMaterials),
   orderPayments: many(orderPayments),
-  vendorPayments: many(vendorPayments),
 }));
 
-export const orderPaymentsRelations = relations(orderPayments, ({ one }) => ({
+export const orderPaymentsRelations = relations(orderPayments, ({ one, many }) => ({
   order: one(orders, {
     fields: [orderPayments.orderId],
     references: [orders.id],
   }),
+  expenses: many(orderPaymentExpenses),
+}));
+
+export const orderPaymentExpensesRelations = relations(orderPaymentExpenses, ({ one }) => ({
+  orderPayment: one(orderPayments, {
+    fields: [orderPaymentExpenses.orderPaymentId],
+    references: [orderPayments.id],
+  }),
 }));
 
 export const vendorPaymentsRelations = relations(vendorPayments, ({ one }) => ({
-  order: one(orders, {
-    fields: [vendorPayments.orderId],
-    references: [orders.id],
-  }),
   vendor: one(vendors, {
     fields: [vendorPayments.vendorId],
     references: [vendors.id],

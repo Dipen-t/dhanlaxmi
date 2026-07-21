@@ -1,6 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 import type { EventProfitability, LedgerTransaction, CustomerReport, VendorOrderReport } from "@/app/reports/actions";
-import { formatCurrency } from "@/components/payments/payment-badges";
+import { formatCurrency } from "@/lib/utils";
 
 const pdfFormatCurrency = (amount: number | null | undefined) => {
   return formatCurrency(amount).replace(/₹/g, 'Rs. ');

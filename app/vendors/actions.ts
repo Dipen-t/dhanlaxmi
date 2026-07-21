@@ -47,6 +47,29 @@ export async function getVendorsPageData(): Promise<VendorsPageData> {
   };
 }
 
+export async function getVendor(id: string): Promise<VendorWithMaterials | null> {
+  const numericId = Number(id);
+  if (!Number.isFinite(numericId) || numericId <= 0) {
+    return null;
+  }
+  const vendor = await db.query.vendors.findFirst({
+    where: eq(vendors.id, numericId),
+    with: { rawMaterialVendors: { with: { rawMaterial: true } } },
+  });
+
+  if (!vendor) return null;
+
+  return {
+    id: vendor.id,
+    name: vendor.name,
+    phone: vendor.phone,
+    deliveryLocation: vendor.deliveryLocation,
+    rawMaterials: vendor.rawMaterialVendors
+      .map((rmv) => ({ id: rmv.rawMaterial.id, name: rmv.rawMaterial.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
 function normalizeText(value: string) {
   return value.trim();
 }

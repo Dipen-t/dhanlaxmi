@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { formatCurrency } from "@/components/payments/payment-badges";
+import { formatCurrency } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Package, ReceiptText } from "lucide-react";
 import type { VendorOrderReport } from "@/app/reports/actions";
 

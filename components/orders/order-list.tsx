@@ -12,9 +12,10 @@ import { OrderActions } from "./order-actions";
 type OrderListProps = {
   orders: OrderRecord[];
   onEdit: (order: OrderRecord) => void;
+  onFinance: (order: OrderRecord) => void;
 };
 
-export function OrderList({ orders, onEdit }: OrderListProps) {
+export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
       {orders.map((order) => (
@@ -47,7 +48,7 @@ export function OrderList({ orders, onEdit }: OrderListProps) {
             </button>
 
             <div className="flex shrink-0 items-center pr-1">
-              <OrderActions order={order} onEdit={onEdit} />
+              <OrderActions order={order} onEdit={onEdit} onFinance={onFinance} />
             </div>
           </div>
         </li>

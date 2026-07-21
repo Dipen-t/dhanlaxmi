@@ -49,18 +49,6 @@ export const homeTiles: HomeTile[] = [
     icon: ChefHat,
   },
   {
-    href: "/payments",
-    title: "Payments In",
-    description: "Manage incoming payments and balances",
-    icon: Banknote,
-  },
-  {
-    href: "/payments-out",
-    title: "Payments Out",
-    description: "Record and manage payments made to vendors",
-    icon: Receipt,
-  },
-  {
     href: "/reports",
     title: "Reports",
     description: "View financial and operational reports",

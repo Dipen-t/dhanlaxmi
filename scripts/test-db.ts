@@ -5,7 +5,6 @@ async function run() {
   const allOrders = await db.query.orders.findMany({
     with: {
       orderPayments: true,
-      vendorPayments: true,
     }
   });
   console.log(JSON.stringify(allOrders, null, 2));

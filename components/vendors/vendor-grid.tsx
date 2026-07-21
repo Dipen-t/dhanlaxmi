@@ -10,9 +10,10 @@ import { MaterialTagsGrid } from "./material-tags-grid";
 type VendorGridProps = {
   vendors: VendorWithMaterials[];
   onEdit: (vendor: VendorWithMaterials) => void;
+  onFinance: (vendor: VendorWithMaterials) => void;
 };
 
-export function VendorGrid({ vendors, onEdit }: VendorGridProps) {
+export function VendorGrid({ vendors, onEdit, onFinance }: VendorGridProps) {
   return (
     <ul className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-3">
       {vendors.map((vendor) => (
@@ -32,7 +33,7 @@ export function VendorGrid({ vendors, onEdit }: VendorGridProps) {
             <MaterialTagsGrid materials={vendor.rawMaterials} />
           </div>
           <div className="mt-4 border-t border-border pt-3">
-            <VendorActions vendor={vendor} onEdit={onEdit} layout="stacked" />
+            <VendorActions vendor={vendor} onEdit={onEdit} onFinance={onFinance} layout="stacked" />
           </div>
         </li>
       ))}

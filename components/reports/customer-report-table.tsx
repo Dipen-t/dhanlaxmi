@@ -1,7 +1,7 @@
 "use client";
 
 import type { CustomerReport } from "@/app/reports/actions";
-import { formatCurrency } from "@/components/payments/payment-badges";
+import { formatCurrency } from "@/lib/utils";
 
 export function CustomerReportTable({ reports }: { reports: CustomerReport[] }) {
   if (reports.length === 0) {

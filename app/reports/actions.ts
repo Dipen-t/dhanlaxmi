@@ -54,30 +54,33 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
   const allOrders = await db.query.orders.findMany({
     orderBy: desc(orders.createdAt),
     with: {
-      orderPayments: true,
+      orderPayments: {
+        with: {
+          expenses: true,
+        },
+      },
     },
   });
-
-  const allVendorPayments = await db.query.vendorPayments.findMany();
 
   return allOrders.map(order => {
     const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
     
     let clientPaid = 0;
     let totalWaived = 0;
+    let vendorExpenses = 0;
     for (const p of order.orderPayments) {
       if (p.isWaived) {
         totalWaived += p.amount;
       } else {
         clientPaid += p.amount;
       }
+      for (const e of p.expenses) {
+        vendorExpenses += e.amount;
+      }
     }
 
     const clientBalance = Math.max(0, effectiveTotal - clientPaid - totalWaived);
     const actualRevenue = Math.max(effectiveTotal, clientPaid + totalWaived);
-
-    const relatedVendorPayments = allVendorPayments.filter(vp => vp.orderId === order.id);
-    const vendorExpenses = relatedVendorPayments.reduce((sum, vp) => sum + vp.amount, 0);
 
     const netProfit = clientPaid - vendorExpenses;
 
@@ -108,9 +111,18 @@ export async function getMasterLedger(): Promise<LedgerTransaction[]> {
 
   const vp = await db.query.vendorPayments.findMany({
     with: {
-      order: true,
       vendor: true,
     }
+  });
+
+  const ope = await db.query.orderPaymentExpenses.findMany({
+    with: {
+      orderPayment: {
+        with: {
+          order: true,
+        },
+      },
+    },
   });
 
   const transactions: LedgerTransaction[] = [];
@@ -130,13 +142,25 @@ export async function getMasterLedger(): Promise<LedgerTransaction[]> {
 
   for (const p of vp) {
     transactions.push({
-      id: `out-${p.id}`,
+      id: `out-vp-${p.id}`,
       date: toDateString(p.date),
       type: "OUT",
       amount: p.amount,
-      reference: `Vendor ${p.vendor?.name || `#${p.vendorId}`} (Order ${p.order?.orderId || `#${p.orderId}`})`,
+      reference: `Vendor ${p.vendor?.name || `#${p.vendorId}`}`,
       notes: p.notes || "Vendor Payment",
       createdAt: p.createdAt.toISOString(),
+    });
+  }
+
+  for (const e of ope) {
+    transactions.push({
+      id: `out-exp-${e.id}`,
+      date: toDateString(e.date),
+      type: "OUT",
+      amount: e.amount,
+      reference: `Order ${e.orderPayment?.order?.orderId || "Expense"}`,
+      notes: e.description || "Order Expense",
+      createdAt: e.createdAt.toISOString(),
     });
   }
 
@@ -250,40 +274,12 @@ export async function getVendorOrderReport(): Promise<VendorOrderReport[]> {
           vendor: true,
         },
       },
-      vendorPayments: {
-        with: {
-          vendor: true,
-        },
-      },
     },
   });
 
   return allOrders.map(order => {
     // Group by vendorId
     const vendorMap = new Map<number, VendorOrderReport["vendors"][0]>();
-
-    for (const payment of order.vendorPayments) {
-      if (!payment.vendor) continue;
-      
-      if (!vendorMap.has(payment.vendorId)) {
-        vendorMap.set(payment.vendorId, {
-          vendorId: payment.vendorId,
-          vendorName: payment.vendor.name,
-          vendorPhone: payment.vendor.phone,
-          deliveries: [],
-          payments: [],
-          totalPaid: 0,
-        });
-      }
-
-      const v = vendorMap.get(payment.vendorId)!;
-      v.payments.push({
-        amount: payment.amount,
-        date: toDateString(payment.date),
-        notes: payment.notes,
-      });
-      v.totalPaid += payment.amount;
-    }
 
     for (const item of order.orderRawMaterials) {
       if (!item.vendor) continue;

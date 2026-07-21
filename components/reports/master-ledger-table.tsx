@@ -1,7 +1,7 @@
 "use client";
 
 import type { LedgerTransaction } from "@/app/reports/actions";
-import { formatCurrency } from "@/components/payments/payment-badges";
+import { formatCurrency } from "@/lib/utils";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 
 export function MasterLedgerTable({ ledger }: { ledger: LedgerTransaction[] }) {

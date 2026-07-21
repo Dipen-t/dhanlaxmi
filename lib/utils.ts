@@ -29,3 +29,12 @@ export function calculateEffectiveTotal(total: number | null, discount: string |
   }
   return total;
 }
+
+export function formatCurrency(amount: number | null | undefined) {
+  if (amount == null) return "₹0";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}

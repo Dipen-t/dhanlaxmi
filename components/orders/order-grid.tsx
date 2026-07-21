@@ -12,9 +12,10 @@ import { OrderActions } from "./order-actions";
 type OrderGridProps = {
   orders: OrderRecord[];
   onEdit: (order: OrderRecord) => void;
+  onFinance: (order: OrderRecord) => void;
 };
 
-export function OrderGrid({ orders, onEdit }: OrderGridProps) {
+export function OrderGrid({ orders, onEdit, onFinance }: OrderGridProps) {
   return (
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
       {orders.map((order) => (
@@ -48,7 +49,7 @@ export function OrderGrid({ orders, onEdit }: OrderGridProps) {
             </button>
 
             <div className="mt-4 border-t border-border pt-3">
-              <OrderActions order={order} onEdit={onEdit} layout="stacked" />
+              <OrderActions order={order} onEdit={onEdit} onFinance={onFinance} layout="stacked" />
             </div>
           </article>
         </li>

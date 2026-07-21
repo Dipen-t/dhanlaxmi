@@ -1,7 +1,7 @@
 "use client";
 
 import type { EventProfitability } from "@/app/reports/actions";
-import { formatCurrency } from "@/components/payments/payment-badges";
+import { formatCurrency } from "@/lib/utils";
 
 export function EventProfitabilityTable({ reports }: { reports: EventProfitability[] }) {
   if (reports.length === 0) {

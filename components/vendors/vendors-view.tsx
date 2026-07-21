@@ -2,6 +2,7 @@
 
 import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import type { VendorWithMaterials } from "@/app/vendors/actions";
@@ -18,6 +19,7 @@ type VendorsViewProps = {
 };
 
 export function VendorsView({ vendors, materials }: VendorsViewProps) {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<VendorWithMaterials | null>(
@@ -69,6 +71,10 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
   function closeDialog() {
     setDialogOpen(false);
     setEditingVendor(null);
+  }
+
+  function openFinance(vendor: VendorWithMaterials) {
+    router.push(`/vendors/${vendor.id}/finance`);
   }
 
   const hasQuery = query.trim().length > 0;
@@ -178,9 +184,9 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
           </button>
         </div>
       ) : view === "grid" ? (
-        <VendorGrid vendors={filteredVendors} onEdit={openEdit} />
+        <VendorGrid vendors={filteredVendors} onEdit={openEdit} onFinance={openFinance} />
       ) : (
-        <VendorList vendors={filteredVendors} onEdit={openEdit} />
+        <VendorList vendors={filteredVendors} onEdit={openEdit} onFinance={openFinance} />
       )}
 
       <VendorDialog
