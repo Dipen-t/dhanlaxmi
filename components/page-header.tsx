@@ -8,24 +8,21 @@ type PageHeaderProps = {
 
 export function PageHeader({ title }: PageHeaderProps) {
   return (
-    <header className="mb-6 md:mb-8">
-      <div className="flex items-center justify-between gap-3 md:gap-4">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Image 
-            src={logo} 
-            alt="Dhan Laxmi Catering Service" 
-            className="h-16 w-auto object-contain md:h-20 shrink-0" 
-            priority
-          />
-          {title ? (
-            <>
-              <div className="h-6 w-px bg-border hidden sm:block shrink-0"></div>
-              <h1 className="text-base font-semibold text-muted truncate">
-                {title}
-              </h1>
-            </>
-          ) : null}
-        </div>
+    <header className="relative flex w-full items-center justify-center mb-8 md:mb-12">
+      <div className="flex flex-col items-center gap-2 md:gap-3">
+        <Image 
+          src={logo} 
+          alt="Dhan Laxmi Catering Service" 
+          className="h-24 w-auto object-contain md:h-32 shrink-0" 
+          priority
+        />
+        {title ? (
+          <h1 className="text-lg font-semibold text-muted uppercase tracking-widest">
+            {title}
+          </h1>
+        ) : null}
+      </div>
+      <div className="absolute right-0 top-0">
         <SoundMuteButton />
       </div>
     </header>
