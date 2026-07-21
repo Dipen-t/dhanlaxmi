@@ -14,7 +14,7 @@ export function PageHeader({ title }: PageHeaderProps) {
           <Image 
             src={logo} 
             alt="Dhan Laxmi Catering Service" 
-            className="h-10 w-auto object-contain md:h-12 shrink-0" 
+            className="h-16 w-auto object-contain md:h-20 shrink-0" 
             priority
           />
           {title ? (
