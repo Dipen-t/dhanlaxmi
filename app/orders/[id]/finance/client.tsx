@@ -8,7 +8,6 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'n
 import type { OrderRecord } from "@/app/orders/actions";
 import type { OrderPaymentRecord } from "./actions";
 import { createOrderPayment, createOrderPaymentExpense } from "./actions";
-import { FloatingAddButton } from "@/components/floating-add-button";
 import { toast } from "sonner";
 
 type OrderFinanceClientProps = {
@@ -100,49 +99,62 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
   const balanceDue = Math.max(0, totalOrderAmount - totalReceived - totalWaived);
 
   return (
-    <>
-      <div className="mb-6 rounded-xl border border-border bg-surface p-4">
-        <h2 className="text-lg font-semibold text-foreground">{order.orderId} Finances</h2>
-        <p className="text-sm text-muted">Manage payments, waive amounts, and expenses for this order.</p>
-        
-        <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="rounded-lg bg-background p-4 border border-border shadow-sm">
-            <p className="text-sm font-medium text-muted">Total Amount</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">₹{totalOrderAmount}</p>
+    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 lg:gap-8 items-start">
+      {/* Left Panel: Command Center */}
+      <div className="lg:sticky lg:top-8 flex flex-col gap-6">
+        <div className="rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-foreground mb-1">{order.orderId}</h2>
+          <p className="text-sm text-muted mb-8">Manage finances and ledger</p>
+          
+          <div className="mb-8 rounded-xl bg-background py-8 px-4 border border-border shadow-sm text-center">
+            <p className="text-sm font-semibold text-muted uppercase tracking-widest mb-3">Balance Due</p>
+            <p className="text-5xl font-extrabold text-foreground tracking-tight">₹{balanceDue}</p>
           </div>
-          <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100 shadow-sm">
-            <p className="text-sm font-medium text-emerald-700">Received</p>
-            <p className="mt-1 text-2xl font-bold text-emerald-700">₹{totalReceived}</p>
+          
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <div className="rounded-lg bg-background p-4 border border-border">
+              <p className="text-xs font-medium text-muted mb-1.5 uppercase tracking-wider">Total</p>
+              <p className="text-xl font-bold text-foreground">₹{totalOrderAmount}</p>
+            </div>
+            <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
+              <p className="text-xs font-medium text-emerald-700 mb-1.5 uppercase tracking-wider">Received</p>
+              <p className="text-xl font-bold text-emerald-700">₹{totalReceived}</p>
+            </div>
+            {totalWaived > 0 && (
+              <div className="col-span-2 rounded-lg bg-amber-50 p-4 border border-amber-100">
+                <p className="text-xs font-medium text-amber-700 mb-1.5 uppercase tracking-wider">Waived</p>
+                <p className="text-xl font-bold text-amber-700">₹{totalWaived}</p>
+              </div>
+            )}
           </div>
-          <div className="rounded-lg bg-amber-50 p-4 border border-amber-100 shadow-sm">
-            <p className="text-sm font-medium text-amber-700">Waived</p>
-            <p className="mt-1 text-2xl font-bold text-amber-700">₹{totalWaived}</p>
-          </div>
-          <div className="rounded-lg bg-background p-4 border border-border shadow-sm">
-            <p className="text-sm font-medium text-muted">Balance Due</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">₹{balanceDue}</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-foreground">Payment History</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={openPaymentDialog} 
+              className="inline-flex w-full min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus className="size-5" />
+              Record Payment
+            </button>
             <button 
               onClick={openWaiveDialog} 
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+              className="inline-flex w-full min-h-12 items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-base font-semibold text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <HandCoins className="size-4" />
+              <HandCoins className="size-5 text-muted" />
               Waive Amount
             </button>
           </div>
         </div>
+      </div>
 
+      {/* Right Panel: Ledger */}
+      <div className="flex flex-col gap-4">
+        <h3 className="text-lg font-bold text-foreground px-1 lg:mt-2">Payment Ledger</h3>
+        
         {payments.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center">
-            <p className="text-base font-medium text-foreground">No payments yet</p>
-            <p className="mt-1 text-sm text-muted">Add a payment received for this order.</p>
+          <div className="rounded-xl border border-dashed border-border bg-surface/30 px-6 py-16 text-center">
+            <p className="text-base font-medium text-foreground">No transactions yet</p>
+            <p className="mt-1 text-sm text-muted max-w-sm mx-auto">Record a payment or waive a portion of the balance to see it here.</p>
           </div>
         ) : (
           <div className="rounded-xl border border-border bg-background divide-y divide-border shadow-sm">
@@ -153,13 +165,11 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
         )}
       </div>
 
-      <FloatingAddButton onClick={openPaymentDialog} label="Add Payment" />
-
       {/* Add Payment Dialog */}
       <dialog ref={paymentDialogRef} className="app-dialog" onClose={closePaymentDialog}>
         <form action={handleAddPayment} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Add Payment In</h2>
+            <h2 className="text-lg font-semibold text-foreground mb-4">Record Payment</h2>
             <div className="space-y-4">
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Amount (₹) *</span>
@@ -178,7 +188,7 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
           <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
             <button type="button" onClick={closePaymentDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>
             <button type="submit" disabled={isPending} className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
-              {isPending ? "Adding..." : "Add Payment"}
+              {isPending ? "Recording..." : "Record Payment"}
             </button>
           </div>
         </form>
@@ -242,7 +252,7 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
           </div>
         </form>
       </dialog>
-    </>
+    </div>
   );
 }
 
