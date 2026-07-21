@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
-import { Plus, IndianRupee, HandCoins, ChevronDown } from "lucide-react";
+import { Plus, IndianRupee, HandCoins, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 import type { OrderRecord } from "@/app/orders/actions";
 import type { OrderPaymentRecord } from "./actions";
-import { createOrderPayment, createOrderPaymentExpense } from "./actions";
+import { createOrderPayment, createOrderPaymentExpense, updateOrderPayment, deleteOrderPayment } from "./actions";
 import { toast } from "sonner";
 import { calculateEffectiveTotal } from "@/lib/utils";
 
@@ -21,7 +21,10 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
   const paymentDialogRef = useRef<HTMLDialogElement>(null);
   const waiveDialogRef = useRef<HTMLDialogElement>(null);
   const expenseDialogRef = useRef<HTMLDialogElement>(null);
+  const editDialogRef = useRef<HTMLDialogElement>(null);
+  const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
+  const [editingPayment, setEditingPayment] = useState<OrderPaymentRecord | null>(null);
 
   function openPaymentDialog() {
     paymentDialogRef.current?.showModal();
@@ -47,6 +50,26 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
   function closeExpenseDialog() {
     expenseDialogRef.current?.close();
     setSelectedPaymentId(null);
+  }
+
+  function openEditDialog(payment: OrderPaymentRecord) {
+    setEditingPayment(payment);
+    editDialogRef.current?.showModal();
+  }
+
+  function closeEditDialog() {
+    editDialogRef.current?.close();
+    setEditingPayment(null);
+  }
+
+  function openDeleteDialog(payment: OrderPaymentRecord) {
+    setEditingPayment(payment);
+    deleteDialogRef.current?.showModal();
+  }
+
+  function closeDeleteDialog() {
+    deleteDialogRef.current?.close();
+    setEditingPayment(null);
   }
 
   async function handleAddPayment(formData: FormData) {
@@ -88,6 +111,36 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
       } else {
         toast.success("Expense added");
         closeExpenseDialog();
+      }
+    });
+  }
+
+  async function handleEditPayment(formData: FormData) {
+    if (!editingPayment) return;
+    formData.append("orderId", String(order.id));
+    formData.append("id", String(editingPayment.id));
+    startTransition(async () => {
+      const res = await updateOrderPayment(formData);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Payment updated");
+        closeEditDialog();
+      }
+    });
+  }
+
+  async function handleDeletePayment(formData: FormData) {
+    if (!editingPayment) return;
+    formData.append("orderId", String(order.id));
+    formData.append("id", String(editingPayment.id));
+    startTransition(async () => {
+      const res = await deleteOrderPayment(formData);
+      if (res.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("Payment deleted");
+        closeDeleteDialog();
       }
     });
   }
@@ -179,7 +232,13 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
         ) : (
           <div className="rounded-xl border border-border bg-background divide-y divide-border shadow-sm">
             {payments.map((payment) => (
-              <PaymentRow key={payment.id} payment={payment} openExpenseDialog={openExpenseDialog} />
+              <PaymentRow 
+                key={payment.id} 
+                payment={payment} 
+                openExpenseDialog={openExpenseDialog} 
+                openEditDialog={openEditDialog}
+                openDeleteDialog={openDeleteDialog}
+              />
             ))}
           </div>
         )}
@@ -265,11 +324,68 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
           </div>
         </form>
       </dialog>
+
+      {/* Edit Payment Dialog */}
+      <dialog ref={editDialogRef} className="app-dialog" onClose={closeEditDialog}>
+        <form action={handleEditPayment} className="flex flex-col">
+          <div className="px-5 pt-5 pb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Edit {editingPayment?.isWaived ? "Waived Amount" : "Payment"}</h2>
+            <div className="space-y-4">
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">Amount (₹) *</span>
+                <input required type="number" name="amount" min="1" step="1" defaultValue={editingPayment?.amount} className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">Date *</span>
+                <input required type="date" name="date" defaultValue={editingPayment?.date} className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">Notes</span>
+                <textarea name="notes" rows={2} defaultValue={editingPayment?.notes || ""} className="w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"></textarea>
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
+            <button type="button" onClick={closeEditDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>
+            <button type="submit" disabled={isPending} className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
+              {isPending ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </form>
+      </dialog>
+
+      {/* Delete Payment Dialog */}
+      <dialog ref={deleteDialogRef} className="app-dialog" onClose={closeDeleteDialog}>
+        <form action={handleDeletePayment} className="flex flex-col">
+          <div className="px-5 pt-5 pb-4">
+            <h2 className="text-lg font-semibold text-foreground mb-4">Delete {editingPayment?.isWaived ? "Waived Amount" : "Payment"}?</h2>
+            <p className="text-sm text-muted">
+              Are you sure you want to delete this {editingPayment?.isWaived ? "waived amount" : "payment"} of <span className="font-bold text-foreground">₹{editingPayment?.amount}</span>? This action cannot be undone and will affect the balance due.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
+            <button type="button" onClick={closeDeleteDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>
+            <button type="submit" disabled={isPending} className="inline-flex min-h-10 items-center rounded-lg border border-error/20 bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50">
+              {isPending ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+        </form>
+      </dialog>
     </div>
   );
 }
 
-function PaymentRow({ payment, openExpenseDialog }: { payment: OrderPaymentRecord, openExpenseDialog: (id: number) => void }) {
+function PaymentRow({ 
+  payment, 
+  openExpenseDialog,
+  openEditDialog,
+  openDeleteDialog
+}: { 
+  payment: OrderPaymentRecord, 
+  openExpenseDialog: (id: number) => void,
+  openEditDialog: (payment: OrderPaymentRecord) => void,
+  openDeleteDialog: (payment: OrderPaymentRecord) => void
+}) {
   const hasExpenses = payment.expenses && payment.expenses.length > 0;
   
   const content = (
@@ -288,17 +404,34 @@ function PaymentRow({ payment, openExpenseDialog }: { payment: OrderPaymentRecor
         </div>
       </div>
       
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-1.5 flex-wrap justify-end sm:justify-start">
         {!payment.isWaived && (
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); openExpenseDialog(payment.id); }}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+            title="Add Expense"
           >
-            <Plus className="size-4" />
-            Add Expense
+            <Plus className="size-3.5" />
+            <span className="hidden sm:inline">Expense</span>
           </button>
         )}
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); openEditDialog(payment); }}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+          title="Edit"
+        >
+          <Pencil className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); openDeleteDialog(payment); }}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
+          title="Delete"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
         {hasExpenses && (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface">
             <ChevronDown className="size-5 text-muted transition-transform duration-200 group-open:-rotate-180" />

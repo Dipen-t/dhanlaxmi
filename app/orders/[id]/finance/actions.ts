@@ -1,6 +1,6 @@
 "use server";
 
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -100,5 +100,47 @@ export async function createOrderPaymentExpense(data: FormData) {
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create expense" };
+  }
+}
+
+export async function updateOrderPayment(data: FormData) {
+  const id = Number(data.get("id"));
+  const orderId = Number(data.get("orderId"));
+  const amount = Number(data.get("amount"));
+  const date = data.get("date") as string;
+  const notes = data.get("notes") as string || null;
+
+  if (!id || !orderId || !amount || !date) {
+    return { error: "Missing required fields" };
+  }
+
+  try {
+    await db.update(orderPayments).set({
+      amount,
+      date: new Date(date),
+      notes,
+    }).where(and(eq(orderPayments.id, id), eq(orderPayments.orderId, orderId)));
+    
+    revalidatePath(`/orders/${orderId}/finance`);
+    return { success: true };
+  } catch (e: any) {
+    return { error: e.message || "Failed to update payment" };
+  }
+}
+
+export async function deleteOrderPayment(data: FormData) {
+  const id = Number(data.get("id"));
+  const orderId = Number(data.get("orderId"));
+
+  if (!id || !orderId) {
+    return { error: "Missing required fields" };
+  }
+
+  try {
+    await db.delete(orderPayments).where(and(eq(orderPayments.id, id), eq(orderPayments.orderId, orderId)));
+    revalidatePath(`/orders/${orderId}/finance`);
+    return { success: true };
+  } catch (e: any) {
+    return { error: e.message || "Failed to delete payment" };
   }
 }
