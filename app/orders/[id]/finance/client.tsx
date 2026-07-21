@@ -164,11 +164,11 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
           <h2 className="text-xl font-bold text-foreground mb-1">{order.orderId}</h2>
           <p className="text-sm text-muted mb-8">Manage finances and ledger</p>
           
-          <div className={`mb-8 rounded-xl py-8 px-4 border shadow-sm text-center ${isOverpaid ? 'bg-indigo-50 border-indigo-200' : 'bg-background border-border'}`}>
-            <p className={`text-sm font-semibold uppercase tracking-widest mb-3 ${isOverpaid ? 'text-indigo-700' : 'text-muted'}`}>
+          <div className="mb-8 rounded-xl py-8 px-4 border border-border shadow-sm text-center bg-background">
+            <p className="text-sm font-semibold uppercase tracking-widest mb-3 text-muted">
               {isOverpaid ? 'Overpaid / Credit' : 'Balance Due'}
             </p>
-            <p className={`text-5xl font-extrabold tracking-tight ${isOverpaid ? 'text-indigo-700' : 'text-foreground'}`}>
+            <p className="text-5xl font-extrabold tracking-tight text-foreground">
               ₹{displayBalance}
             </p>
           </div>
@@ -178,7 +178,7 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
               <div className="flex items-center gap-2 mb-1.5">
                 <p className="text-xs font-medium text-muted uppercase tracking-wider">Total</p>
                 {order.discount && (
-                  <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary uppercase">
+                  <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary uppercase">
                     Discounted
                   </span>
                 )}
@@ -188,14 +188,14 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
                 <p className="mt-1 text-xs text-muted line-through">₹{rawOrderAmount}</p>
               )}
             </div>
-            <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
-              <p className="text-xs font-medium text-emerald-700 mb-1.5 uppercase tracking-wider">Received</p>
-              <p className="text-xl font-bold text-emerald-700">₹{totalReceived}</p>
+            <div className="rounded-lg bg-background p-4 border border-border">
+              <p className="text-xs font-medium text-muted mb-1.5 uppercase tracking-wider">Received</p>
+              <p className="text-xl font-bold text-foreground">₹{totalReceived}</p>
             </div>
             {totalWaived > 0 && (
-              <div className="col-span-2 rounded-lg bg-amber-50 p-4 border border-amber-100">
-                <p className="text-xs font-medium text-amber-700 mb-1.5 uppercase tracking-wider">Waived</p>
-                <p className="text-xl font-bold text-amber-700">₹{totalWaived}</p>
+              <div className="col-span-2 rounded-lg bg-background p-4 border border-border">
+                <p className="text-xs font-medium text-muted mb-1.5 uppercase tracking-wider">Waived</p>
+                <p className="text-xl font-bold text-foreground">₹{totalWaived}</p>
               </div>
             )}
           </div>
@@ -276,21 +276,32 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
       {/* Add Waive Dialog */}
       <dialog ref={waiveDialogRef} className="app-dialog" onClose={closeWaiveDialog}>
         <form action={handleAddWaive} className="flex flex-col">
-          <input type="hidden" name="amount" value={netBalance > 0 ? netBalance : 0} />
           <input type="hidden" name="date" value={today} />
           <input type="hidden" name="notes" value="Waived remaining balance" />
           
           <div className="px-5 pt-5 pb-4">
-            <h2 className="text-lg font-semibold text-foreground mb-4">Waive Balance?</h2>
-            <p className="text-sm text-muted mb-4">
-              Are you sure you want to waive the remaining balance of <span className="font-bold text-foreground">₹{netBalance > 0 ? netBalance : 0}</span>? 
-              This will settle the order without receiving the cash.
+            <h2 className="text-lg font-semibold text-foreground mb-4">Waive Balance</h2>
+            <p className="text-sm text-muted mb-6">
+              Record a waived amount to settle the order without receiving the cash.
             </p>
+            <div className="flex flex-col gap-1.5 mb-2">
+              <label className="text-sm font-medium text-foreground">Amount to waive</label>
+              <input 
+                required 
+                type="number" 
+                name="amount" 
+                min="1" 
+                step="1" 
+                max={netBalance > 0 ? netBalance : 1}
+                defaultValue={netBalance > 0 ? netBalance : ""}
+                className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" 
+              />
+            </div>
           </div>
           <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
             <button type="button" onClick={closeWaiveDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>
-            <button type="submit" disabled={isPending || netBalance <= 0} className="inline-flex min-h-10 items-center rounded-lg bg-amber-100 px-4 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
-              {isPending ? "Waiving..." : "Yes, Waive Balance"}
+            <button type="submit" disabled={isPending || netBalance <= 0} className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
+              {isPending ? "Waiving..." : "Waive Amount"}
             </button>
           </div>
         </form>
@@ -397,7 +408,7 @@ function PaymentRow({
         <div>
           <div className="flex items-center gap-2">
             <p className="font-semibold text-foreground text-base">₹{payment.amount}</p>
-            {payment.isWaived && <span className="inline-block rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">Waived</span>}
+            {payment.isWaived && <span className="inline-block rounded border border-border bg-surface px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-muted">Waived</span>}
           </div>
           <p className="text-sm text-muted">{dateFormatter.format(new Date(payment.date))}</p>
           {payment.notes && <p className="mt-1 text-sm text-muted max-w-prose text-pretty">{payment.notes}</p>}

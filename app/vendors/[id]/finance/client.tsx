@@ -104,11 +104,11 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
           <h2 className="text-xl font-bold text-foreground mb-1">{vendor.name}</h2>
           <p className="text-sm text-muted mb-8">Manage payments made to this vendor</p>
           
-          <div className="mb-8 rounded-xl py-8 px-4 border shadow-sm text-center bg-error-soft/30 border-error/20">
-            <p className="text-sm font-semibold uppercase tracking-widest mb-3 text-error">
+          <div className="mb-8 rounded-xl py-8 px-4 border shadow-sm text-center bg-surface border-border">
+            <p className="text-sm font-semibold uppercase tracking-widest mb-3 text-muted">
               Total Paid Out
             </p>
-            <p className="text-5xl font-extrabold tracking-tight text-error">
+            <p className="text-5xl font-extrabold tracking-tight text-foreground">
               ₹{totalPaid}
             </p>
           </div>

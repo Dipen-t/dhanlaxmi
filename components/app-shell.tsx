@@ -15,7 +15,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div
-      className={`relative mx-auto flex w-full max-w-6xl min-h-full flex-1 flex-col${showFloatingActions ? " pb-24" : ""}`}
+      className={`relative flex w-full min-h-full flex-1 flex-col${showFloatingActions ? " pb-24" : ""}`}
     >
       <ClickSoundProvider />
       {children}
