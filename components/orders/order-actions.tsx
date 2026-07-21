@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, Banknote } from "lucide-react";
+import { Pencil, Trash2, IndianRupee } from "lucide-react";
 import { useRef, useTransition } from "react";
 
 import { deleteOrder, type OrderRecord } from "@/app/orders/actions";
@@ -75,7 +75,7 @@ export function OrderActions({
             aria-label={`Finance for ${order.orderId}`}
             className={`${financeClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
           >
-            <Banknote className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
+            <IndianRupee className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
             {layout === "stacked" ? (
               <span className="text-sm font-medium">Finance</span>
             ) : null}

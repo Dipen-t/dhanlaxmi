@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2, Banknote } from "lucide-react";
+import { Pencil, Trash2, IndianRupee } from "lucide-react";
 import { useEffect, useId, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
@@ -93,7 +93,7 @@ export function VendorActions({
             aria-label={`Finance for ${vendor.name}`}
             className={buttonClass}
           >
-            <Banknote className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
+            <IndianRupee className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
           </button>
         )}
       </div>
