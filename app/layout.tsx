@@ -43,7 +43,18 @@ export default function RootLayout({
       >
         <NextTopLoader color="#0f766e" showSpinner={false} />
         <AppShell>{children}</AppShell>
-        <Toaster position="top-center" richColors />
+        <Toaster 
+          position="top-center" 
+          toastOptions={{
+            className: "font-sans bg-background text-foreground border border-border shadow-sm rounded-lg",
+            classNames: {
+              error: "bg-error-soft text-error border-error/20",
+              success: "bg-emerald-50 text-emerald-700 border-emerald-200",
+              info: "bg-primary-soft text-primary border-primary/20",
+              warning: "bg-amber-50 text-amber-700 border-amber-200"
+            }
+          }}
+        />
       </body>
     </html>
   );
