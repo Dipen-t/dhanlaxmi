@@ -4,9 +4,11 @@ import { ArrowRight, ChevronRight } from "lucide-react";
 import { NavTilePending } from "@/components/nav-tile-pending";
 import type { HomeTile } from "@/lib/nav-config";
 
-type NavTileProps = HomeTile;
+type NavTileProps = HomeTile & {
+  variant?: "featured" | "compact";
+};
 
-export function NavTile({ href, title, description, icon: Icon }: NavTileProps) {
+export function NavTile({ href, title, description, icon: Icon, variant = "featured" }: NavTileProps) {
   const isClientMenu = href === "/menus";
   const isMenuCard = href === "/menus" || href === "/kitchen-menus";
   const buttonText = ["/raw-materials", "/vendors"].includes(href) ? "Manage" : "View";
@@ -20,6 +22,29 @@ export function NavTile({ href, title, description, icon: Icon }: NavTileProps) 
         iconBg: "bg-[#edf6f0] text-primary",
         pillBg: "bg-[#edf6f0] text-primary",
       };
+
+  if (variant === "compact") {
+    return (
+      <Link
+        href={href}
+        prefetch
+        className="group relative flex items-center gap-3 sm:gap-4 rounded-xl bg-white p-3 sm:p-4 shadow-sm transition-all duration-200 hover:shadow-md border border-transparent hover:border-border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        <div
+          aria-hidden
+          className={`flex size-10 sm:size-12 shrink-0 items-center justify-center rounded-lg ${themeClasses.iconBg} transition-transform duration-200 group-hover:scale-105`}
+        >
+          <Icon className="size-5" strokeWidth={2} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground text-sm sm:text-base truncate">{title}</p>
+          <p className="text-xs text-muted truncate">{description}</p>
+        </div>
+        <ChevronRight className="size-4 text-muted group-hover:text-foreground transition-colors" />
+        <NavTilePending />
+      </Link>
+    );
+  }
 
   return (
     <Link

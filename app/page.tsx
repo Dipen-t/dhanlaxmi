@@ -44,60 +44,66 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="space-y-12 md:space-y-16">
-          <section aria-labelledby="ops-heading">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex size-7 items-center justify-center rounded-full bg-[#1c6434] text-white">
-                <Package className="size-3.5" strokeWidth={2.5} />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          {/* Main Content: Primary Tasks */}
+          <div className="lg:col-span-8 flex flex-col gap-10">
+            <section aria-labelledby="events-heading">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-[#1c6434] text-white">
+                  <Calendar className="size-4" strokeWidth={2.5} />
+                </div>
+                <h2 id="events-heading" className="text-xl font-semibold text-slate-800">
+                  Events & Menus
+                </h2>
               </div>
-              <h2 id="ops-heading" className="text-xs font-bold uppercase tracking-[0.15em] text-slate-800">
-                Operations
-              </h2>
-            </div>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
-              {homeTiles.filter(t => ['/raw-materials', '/vendors'].includes(t.href)).map((tile) => (
-                <li key={tile.href}>
-                  <NavTile {...tile} />
-                </li>
-              ))}
-            </ul>
-          </section>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                <div className="sm:col-span-2">
+                  {homeTiles.filter(t => t.href === '/orders').map((tile) => (
+                    <NavTile key={tile.href} {...tile} variant="featured" />
+                  ))}
+                </div>
+                {homeTiles.filter(t => ['/menus', '/kitchen-menus'].includes(t.href)).map((tile) => (
+                  <NavTile key={tile.href} {...tile} variant="featured" />
+                ))}
+              </div>
+            </section>
+          </div>
 
-          <section aria-labelledby="events-heading">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex size-7 items-center justify-center rounded-full bg-[#1c6434] text-white">
-                <Calendar className="size-3.5" strokeWidth={2.5} />
+          {/* Sidebar: Secondary Tasks */}
+          <div className="lg:col-span-4 flex flex-col gap-10">
+            <section aria-labelledby="ops-heading">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-[#1c6434]/10 text-[#1c6434]">
+                  <Package className="size-4" strokeWidth={2.5} />
+                </div>
+                <h2 id="ops-heading" className="text-xl font-semibold text-slate-800">
+                  Operations
+                </h2>
               </div>
-              <h2 id="events-heading" className="text-xs font-bold uppercase tracking-[0.15em] text-slate-800">
-                Events
-              </h2>
-            </div>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-6">
-              {homeTiles.filter(t => ['/orders', '/menus', '/kitchen-menus'].includes(t.href)).map((tile) => (
-                <li key={tile.href}>
-                  <NavTile {...tile} />
-                </li>
-              ))}
-            </ul>
-          </section>
+              <div className="flex flex-col gap-3">
+                {homeTiles.filter(t => ['/raw-materials', '/vendors'].includes(t.href)).map((tile) => (
+                  <NavTile key={tile.href} {...tile} variant="compact" />
+                ))}
+              </div>
+            </section>
 
-          <section aria-labelledby="finance-heading">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex size-7 items-center justify-center rounded-full bg-[#1c6434] text-white">
-                <BarChart2 className="size-3.5" strokeWidth={2.5} />
+            <section aria-labelledby="finance-heading">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="flex size-8 items-center justify-center rounded-xl bg-[#1c6434]/10 text-[#1c6434]">
+                  <BarChart2 className="size-4" strokeWidth={2.5} />
+                </div>
+                <h2 id="finance-heading" className="text-xl font-semibold text-slate-800">
+                  Finance
+                </h2>
               </div>
-              <h2 id="finance-heading" className="text-xs font-bold uppercase tracking-[0.15em] text-slate-800">
-                Finance
-              </h2>
-            </div>
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6">
-              {homeTiles.filter(t => ['/reports'].includes(t.href)).map((tile) => (
-                <li key={tile.href}>
-                  <NavTile {...tile} />
-                </li>
-              ))}
-            </ul>
-          </section>
+              <div className="flex flex-col gap-3">
+                {homeTiles.filter(t => ['/reports'].includes(t.href)).map((tile) => (
+                  <NavTile key={tile.href} {...tile} variant="compact" />
+                ))}
+              </div>
+            </section>
+          </div>
         </div>
       </div>
     </div>
