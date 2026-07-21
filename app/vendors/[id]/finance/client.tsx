@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
-import { Receipt, HandCoins, Pencil, Trash2 } from "lucide-react";
+import { Plus, IndianRupee, Pencil, Trash2 } from "lucide-react";
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 import type { VendorWithMaterials } from "@/app/vendors/actions";
 import type { VendorPaymentRecord } from "./actions";
 import { createVendorPayment, updateVendorPayment, deleteVendorPayment } from "./actions";
-import { FloatingAddButton } from "@/components/floating-add-button";
 import { toast } from "sonner";
 
 type VendorFinanceClientProps = {
@@ -95,75 +94,59 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
   }
 
   const today = new Date().toISOString().split("T")[0];
+  const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
 
   return (
-    <>
-      <div className="mb-6 rounded-xl border border-border bg-surface p-4">
-        <h2 className="text-lg font-semibold text-foreground">{vendor.name} Finances</h2>
-        <p className="text-sm text-muted">Manage payments made to this vendor.</p>
-        <div className="mt-4 flex gap-4">
-          <div className="flex-1 rounded-lg bg-error-soft p-4 border border-error/20">
-            <p className="text-sm text-error">Total Paid Out</p>
-            <p className="text-2xl font-bold text-error">
-              ₹{payments.reduce((acc, p) => acc + p.amount, 0)}
+    <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-6 lg:gap-8 items-start">
+      {/* Left Panel: Command Center */}
+      <div className="lg:sticky lg:top-8 flex flex-col gap-6">
+        <div className="rounded-xl border border-border bg-surface p-5 sm:p-6 shadow-sm">
+          <h2 className="text-xl font-bold text-foreground mb-1">{vendor.name}</h2>
+          <p className="text-sm text-muted mb-8">Manage payments made to this vendor</p>
+          
+          <div className="mb-8 rounded-xl py-8 px-4 border shadow-sm text-center bg-error-soft/30 border-error/20">
+            <p className="text-sm font-semibold uppercase tracking-widest mb-3 text-error">
+              Total Paid Out
             </p>
+            <p className="text-5xl font-extrabold tracking-tight text-error">
+              ₹{totalPaid}
+            </p>
+          </div>
+          
+          <div className="flex flex-col gap-3">
+            <button 
+              onClick={openPaymentDialog} 
+              className="inline-flex w-full min-h-12 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-base font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <Plus className="size-5" />
+              Record Payment Out
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-foreground">Payments Out</h3>
-        </div>
-
+      {/* Right Panel: Ledger */}
+      <div className="flex flex-col gap-4">
+        <h3 className="text-lg font-bold text-foreground px-1 lg:mt-2">Payment Ledger</h3>
+        
         {payments.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center">
+          <div className="rounded-xl border border-dashed border-border bg-surface/30 px-6 py-16 text-center">
             <p className="text-base font-medium text-foreground">No payments yet</p>
-            <p className="mt-1 text-sm text-muted">Add a payment made to this vendor.</p>
+            <p className="mt-1 text-sm text-muted max-w-sm mx-auto">Record a payment made to this vendor to see it here.</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="rounded-xl border border-border bg-background divide-y divide-border shadow-sm">
             {payments.map((payment) => (
-              <div key={payment.id} className="rounded-xl border border-border bg-background p-4 sm:p-5 shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-error/10 text-error">
-                        <Receipt className="size-4" />
-                      </span>
-                      <div>
-                        <p className="font-semibold text-foreground text-lg">₹{payment.amount}</p>
-                        <p className="text-sm text-muted">{dateFormatter.format(new Date(payment.date))}</p>
-                      </div>
-                    </div>
-                    {payment.notes && <p className="mt-2 text-sm text-muted text-pretty">{payment.notes}</p>}
-                  </div>
-                  <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1.5 ml-4 shrink-0">
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); openEditDialog(payment); }}
-                      className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
-                      title="Edit"
-                    >
-                      <Pencil className="size-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.preventDefault(); openDeleteDialog(payment); }}
-                      className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
-                      title="Delete"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <PaymentRow 
+                key={payment.id} 
+                payment={payment} 
+                openEditDialog={openEditDialog}
+                openDeleteDialog={openDeleteDialog}
+              />
             ))}
           </div>
         )}
       </div>
-
-      <FloatingAddButton onClick={openPaymentDialog} label="Add Payment Out" />
 
       {/* Add Payment Dialog */}
       <dialog ref={paymentDialogRef} className="app-dialog" onClose={closePaymentDialog}>
@@ -187,7 +170,7 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
           </div>
           <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
             <button type="button" onClick={closePaymentDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>
-            <button type="submit" disabled={isPending} className="inline-flex min-h-10 items-center rounded-lg bg-error px-4 text-sm font-medium text-error-foreground transition-colors hover:bg-error/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
+            <button type="submit" disabled={isPending} className="inline-flex min-h-10 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
               {isPending ? "Adding..." : "Add Payment"}
             </button>
           </div>
@@ -240,6 +223,50 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
           </div>
         </form>
       </dialog>
-    </>
+    </div>
+  );
+}
+
+function PaymentRow({ 
+  payment, 
+  openEditDialog,
+  openDeleteDialog
+}: { 
+  payment: VendorPaymentRecord, 
+  openEditDialog: (payment: VendorPaymentRecord) => void,
+  openDeleteDialog: (payment: VendorPaymentRecord) => void
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 gap-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-error/10 text-error">
+          <IndianRupee className="size-4" />
+        </span>
+        <div>
+          <p className="font-semibold text-foreground text-base">₹{payment.amount}</p>
+          <p className="text-sm text-muted">{dateFormatter.format(new Date(payment.date))}</p>
+          {payment.notes && <p className="mt-1 text-sm text-muted max-w-prose text-pretty">{payment.notes}</p>}
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-1.5 flex-wrap justify-end sm:justify-start">
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); openEditDialog(payment); }}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+          title="Edit"
+        >
+          <Pencil className="size-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); openDeleteDialog(payment); }}
+          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
+          title="Delete"
+        >
+          <Trash2 className="size-3.5" />
+        </button>
+      </div>
+    </div>
   );
 }
