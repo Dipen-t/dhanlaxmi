@@ -9,6 +9,7 @@ import type { OrderRecord } from "@/app/orders/actions";
 import type { OrderPaymentRecord } from "./actions";
 import { createOrderPayment, createOrderPaymentExpense } from "./actions";
 import { toast } from "sonner";
+import { calculateEffectiveTotal } from "@/lib/utils";
 
 type OrderFinanceClientProps = {
   order: OrderRecord;
@@ -93,7 +94,8 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
 
   const today = new Date().toISOString().split("T")[0];
 
-  const totalOrderAmount = order.totalAmount || 0;
+  const rawOrderAmount = order.totalAmount || 0;
+  const totalOrderAmount = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
   const totalReceived = payments.filter(p => !p.isWaived).reduce((acc, p) => acc + p.amount, 0);
   const totalWaived = payments.filter(p => p.isWaived).reduce((acc, p) => acc + p.amount, 0);
   const balanceDue = Math.max(0, totalOrderAmount - totalReceived - totalWaived);
@@ -113,8 +115,18 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
           
           <div className="grid grid-cols-2 gap-3 mb-8">
             <div className="rounded-lg bg-background p-4 border border-border">
-              <p className="text-xs font-medium text-muted mb-1.5 uppercase tracking-wider">Total</p>
+              <div className="flex items-center gap-2 mb-1.5">
+                <p className="text-xs font-medium text-muted uppercase tracking-wider">Total</p>
+                {order.discount && (
+                  <span className="inline-flex items-center rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary uppercase">
+                    Discounted
+                  </span>
+                )}
+              </div>
               <p className="text-xl font-bold text-foreground">₹{totalOrderAmount}</p>
+              {order.discount && (
+                <p className="mt-1 text-xs text-muted line-through">₹{rawOrderAmount}</p>
+              )}
             </div>
             <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-100">
               <p className="text-xs font-medium text-emerald-700 mb-1.5 uppercase tracking-wider">Received</p>
