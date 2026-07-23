@@ -4,11 +4,12 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { vendorPayments, vendors } from "@/db/schema";
+import { vendorPayments, vendors, orders } from "@/db/schema";
 
 export type VendorPaymentRecord = {
   id: number;
   vendorId: number;
+  orderId: number | null;
   amount: number;
   date: string;
   notes: string | null;
@@ -16,6 +17,29 @@ export type VendorPaymentRecord = {
 
 function toDateString(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+export type OrderDropdownItem = {
+  id: number;
+  orderId: string;
+  date: string;
+  venue: string;
+};
+
+export async function getOrdersForDropdown(): Promise<OrderDropdownItem[]> {
+  const allOrders = await db.query.orders.findMany({
+    orderBy: (orders, { desc }) => [desc(orders.date)],
+    columns: {
+      id: true,
+      orderId: true,
+      date: true,
+      venue: true,
+    }
+  });
+  return allOrders.map(o => ({
+    ...o,
+    date: toDateString(o.date),
+  }));
 }
 
 export async function getVendorFinances(vendorId: string): Promise<VendorPaymentRecord[]> {
@@ -37,6 +61,8 @@ export async function getVendorFinances(vendorId: string): Promise<VendorPayment
 
 export async function createVendorPayment(data: FormData) {
   const vendorId = Number(data.get("vendorId"));
+  const orderIdStr = data.get("orderId") as string;
+  const orderId = orderIdStr ? Number(orderIdStr) : null;
   const amount = Number(data.get("amount"));
   const date = data.get("date") as string;
   const notes = data.get("notes") as string || null;
@@ -48,6 +74,7 @@ export async function createVendorPayment(data: FormData) {
   try {
     await db.insert(vendorPayments).values({
       vendorId,
+      orderId,
       amount,
       date: new Date(date),
       notes,
@@ -62,6 +89,8 @@ export async function createVendorPayment(data: FormData) {
 export async function updateVendorPayment(data: FormData) {
   const id = Number(data.get("id"));
   const vendorId = Number(data.get("vendorId"));
+  const orderIdStr = data.get("orderId") as string;
+  const orderId = orderIdStr ? Number(orderIdStr) : null;
   const amount = Number(data.get("amount"));
   const date = data.get("date") as string;
   const notes = data.get("notes") as string || null;
@@ -72,6 +101,7 @@ export async function updateVendorPayment(data: FormData) {
 
   try {
     await db.update(vendorPayments).set({
+      orderId,
       amount,
       date: new Date(date),
       notes,

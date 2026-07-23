@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import { PageHeader } from "@/components/page-header";
-import { getVendorFinances } from "./actions";
+import { getVendorFinances, getOrdersForDropdown } from "./actions";
 import { getVendor } from "@/app/vendors/actions";
 import { VendorFinanceClient } from "./client";
 
@@ -19,9 +19,10 @@ async function VendorFinanceContent({ vendorId }: { vendorId: string }) {
     notFound();
   }
   const payments = await getVendorFinances(vendorId);
+  const orders = await getOrdersForDropdown();
 
   return (
-    <VendorFinanceClient vendor={vendor} payments={payments} />
+    <VendorFinanceClient vendor={vendor} payments={payments} orders={orders} />
   );
 }
 

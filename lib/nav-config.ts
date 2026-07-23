@@ -54,4 +54,10 @@ export const homeTiles: HomeTile[] = [
     description: "View financial and operational reports",
     icon: BarChart3,
   },
+  {
+    href: "/payments",
+    title: "Payments",
+    description: "Manage order payments to vendors",
+    icon: Banknote,
+  },
 ];

@@ -6,16 +6,17 @@ import { Plus, IndianRupee, Pencil, Trash2 } from "lucide-react";
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 import type { VendorWithMaterials } from "@/app/vendors/actions";
-import type { VendorPaymentRecord } from "./actions";
+import type { VendorPaymentRecord, OrderDropdownItem } from "./actions";
 import { createVendorPayment, updateVendorPayment, deleteVendorPayment } from "./actions";
 import { toast } from "sonner";
 
 type VendorFinanceClientProps = {
   vendor: VendorWithMaterials;
   payments: VendorPaymentRecord[];
+  orders: OrderDropdownItem[];
 };
 
-export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientProps) {
+export function VendorFinanceClient({ vendor, payments, orders }: VendorFinanceClientProps) {
   const [isPending, startTransition] = useTransition();
   const paymentDialogRef = useRef<HTMLDialogElement>(null);
   const editDialogRef = useRef<HTMLDialogElement>(null);
@@ -142,6 +143,7 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
                 payment={payment} 
                 openEditDialog={openEditDialog}
                 openDeleteDialog={openDeleteDialog}
+                orders={orders}
               />
             ))}
           </div>
@@ -157,6 +159,17 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Amount (₹) *</span>
                 <input required type="number" name="amount" min="1" step="1" className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">Link to Order (Optional)</span>
+                <select name="orderId" defaultValue="" className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30">
+                  <option value="">-- No Order Selected --</option>
+                  {orders.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      {order.orderId} - {order.date} ({order.venue})
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Date *</span>
@@ -190,6 +203,17 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Date *</span>
                 <input required type="date" name="date" defaultValue={editingPayment?.date} className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">Link to Order (Optional)</span>
+                <select name="orderId" defaultValue={editingPayment?.orderId || ""} className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30">
+                  <option value="">-- No Order Selected --</option>
+                  {orders.map((order) => (
+                    <option key={order.id} value={order.id}>
+                      {order.orderId} - {order.date} ({order.venue})
+                    </option>
+                  ))}
+                </select>
               </label>
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Notes</span>
@@ -230,12 +254,16 @@ export function VendorFinanceClient({ vendor, payments }: VendorFinanceClientPro
 function PaymentRow({ 
   payment, 
   openEditDialog,
-  openDeleteDialog
+  openDeleteDialog,
+  orders
 }: { 
   payment: VendorPaymentRecord, 
   openEditDialog: (payment: VendorPaymentRecord) => void,
-  openDeleteDialog: (payment: VendorPaymentRecord) => void
+  openDeleteDialog: (payment: VendorPaymentRecord) => void,
+  orders: OrderDropdownItem[]
 }) {
+  const linkedOrder = payment.orderId ? orders.find(o => o.id === payment.orderId) : null;
+
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 gap-4">
       <div className="flex items-start gap-3">
@@ -243,7 +271,14 @@ function PaymentRow({
           <IndianRupee className="size-4" />
         </span>
         <div>
-          <p className="font-semibold text-foreground text-base">₹{payment.amount}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-foreground text-base">₹{payment.amount}</p>
+            {linkedOrder && (
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                {linkedOrder.orderId}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-muted">{dateFormatter.format(new Date(payment.date))}</p>
           {payment.notes && <p className="mt-1 text-sm text-muted max-w-prose text-pretty">{payment.notes}</p>}
         </div>

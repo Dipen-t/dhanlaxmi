@@ -70,6 +70,8 @@ export const vendorPayments = pgTable("vendor_payments", {
   vendorId: integer("vendor_id")
     .notNull()
     .references(() => vendors.id, { onDelete: "cascade" }),
+  orderId: integer("order_id")
+    .references(() => orders.id, { onDelete: "set null" }),
   amount: integer("amount").notNull(),
   date: timestamp("date", { mode: "date" }).notNull(),
   notes: text("notes"),
