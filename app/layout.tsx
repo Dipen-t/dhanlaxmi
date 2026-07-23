@@ -1,21 +1,9 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-
 import { AppShell } from "@/components/app-shell";
 import NextTopLoader from 'nextjs-toploader';
 import { Toaster } from 'sonner';
 
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -35,8 +23,19 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="antialiased"
     >
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" rel="stylesheet" />
+        <style>{`
+          :root {
+            --font-geist-sans: 'Geist', system-ui, sans-serif;
+            --font-geist-mono: 'Geist Mono', monospace;
+          }
+        `}</style>
+      </head>
       <body
         suppressHydrationWarning
         className="flex min-h-full flex-col bg-background text-foreground"
