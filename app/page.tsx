@@ -39,7 +39,7 @@ export default function HomePage() {
             Finance
           </h2>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 md:gap-5">
-            {homeTiles.filter(t => ['/reports'].includes(t.href)).map((tile) => (
+            {homeTiles.filter(t => ['/reports', '/payments'].includes(t.href)).map((tile) => (
               <li key={tile.href}>
                 <NavTile {...tile} />
               </li>
