@@ -144,3 +144,33 @@ export async function deleteOrderPayment(data: FormData) {
     return { error: e.message || "Failed to delete payment" };
   }
 }
+
+import { vendorPayments } from "@/db/schema";
+
+export async function createVendorPaymentForOrderFinance(data: FormData) {
+  const vendorId = Number(data.get("vendorId"));
+  const orderId = Number(data.get("orderId"));
+  const amount = Number(data.get("amount"));
+  const dateStr = data.get("date") as string;
+  const notes = data.get("notes") as string || null;
+
+  if (!vendorId || !orderId || !amount) {
+    return { error: "Missing required fields" };
+  }
+  
+  const date = dateStr ? new Date(dateStr) : new Date();
+
+  try {
+    await db.insert(vendorPayments).values({
+      vendorId,
+      orderId,
+      amount,
+      date,
+      notes,
+    });
+    revalidatePath(`/orders/${orderId}/finance`);
+    return { success: true };
+  } catch (e: any) {
+    return { error: e.message || "Failed to create vendor payment" };
+  }
+}

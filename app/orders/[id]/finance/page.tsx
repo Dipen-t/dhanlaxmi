@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { getOrderFinances } from "./actions";
 import { getOrder } from "@/app/orders/actions";
+import { getAllVendors } from "@/app/expenses/actions";
 import { OrderFinanceClient } from "./client";
 
 export const metadata: Metadata = {
@@ -19,9 +20,10 @@ async function OrderFinanceContent({ orderId }: { orderId: string }) {
     notFound();
   }
   const payments = await getOrderFinances(orderId);
+  const vendors = await getAllVendors();
 
   return (
-    <OrderFinanceClient order={order} payments={payments} />
+    <OrderFinanceClient order={order} payments={payments} vendors={vendors} />
   );
 }
 

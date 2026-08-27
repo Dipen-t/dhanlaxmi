@@ -7,16 +7,18 @@ const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'n
 
 import type { OrderRecord } from "@/app/orders/actions";
 import type { OrderPaymentRecord } from "./actions";
-import { createOrderPayment, createOrderPaymentExpense, updateOrderPayment, deleteOrderPayment } from "./actions";
+import { createOrderPayment, createOrderPaymentExpense, updateOrderPayment, deleteOrderPayment, createVendorPaymentForOrderFinance } from "./actions";
+import type { VendorDropdownItem } from "@/app/expenses/actions";
 import { toast } from "sonner";
 import { calculateEffectiveTotal } from "@/lib/utils";
 
 type OrderFinanceClientProps = {
   order: OrderRecord;
   payments: OrderPaymentRecord[];
+  vendors: VendorDropdownItem[];
 };
 
-export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps) {
+export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceClientProps) {
   const [isPending, startTransition] = useTransition();
   const paymentDialogRef = useRef<HTMLDialogElement>(null);
   const waiveDialogRef = useRef<HTMLDialogElement>(null);
@@ -25,6 +27,7 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
   const [editingPayment, setEditingPayment] = useState<OrderPaymentRecord | null>(null);
+  const [activeExpenseTab, setActiveExpenseTab] = useState<"expense" | "vendor">("expense");
 
   function openPaymentDialog() {
     paymentDialogRef.current?.showModal();
@@ -102,17 +105,29 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
   async function handleAddExpense(formData: FormData) {
     if (!selectedPaymentId) return;
     formData.append("orderId", String(order.id));
-    formData.append("orderPaymentId", String(selectedPaymentId));
     
-    startTransition(async () => {
-      const res = await createOrderPaymentExpense(formData);
-      if (res.error) {
-        toast.error(res.error);
-      } else {
-        toast.success("Expense added");
-        closeExpenseDialog();
-      }
-    });
+    if (activeExpenseTab === "expense") {
+      formData.append("orderPaymentId", String(selectedPaymentId));
+      startTransition(async () => {
+        const res = await createOrderPaymentExpense(formData);
+        if (res.error) {
+          toast.error(res.error);
+        } else {
+          toast.success("Expense added");
+          closeExpenseDialog();
+        }
+      });
+    } else {
+      startTransition(async () => {
+        const res = await createVendorPaymentForOrderFinance(formData);
+        if (res.error) {
+          toast.error(res.error);
+        } else {
+          toast.success("Vendor payment added");
+          closeExpenseDialog();
+        }
+      });
+    }
   }
 
   async function handleEditPayment(formData: FormData) {
@@ -312,11 +327,55 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
         <form action={handleAddExpense} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="text-lg font-semibold text-foreground mb-4">Add Expense</h2>
+            
+            <div className="mb-6 flex items-center gap-1 p-1 bg-surface/50 rounded-lg border border-border/30">
+              <button
+                type="button"
+                onClick={() => setActiveExpenseTab("expense")}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                  activeExpenseTab === "expense" 
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                    : "text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                }`}
+              >
+                General Expense
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveExpenseTab("vendor")}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                  activeExpenseTab === "vendor" 
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                    : "text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                }`}
+              >
+                Vendor Payment
+              </button>
+            </div>
+
             <div className="space-y-4">
-              <label className="block">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">Description *</span>
-                <input required type="text" name="description" placeholder="e.g. Transport, Helper" className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
-              </label>
+              {activeExpenseTab === "vendor" ? (
+                <>
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-foreground">Vendor *</span>
+                    <select name="vendorId" required className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30">
+                      <option value="" disabled hidden selected>Select Vendor...</option>
+                      {vendors.map(v => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 block text-sm font-medium text-foreground">Notes</span>
+                    <input type="text" name="notes" placeholder="Notes (optional)..." className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
+                  </label>
+                </>
+              ) : (
+                <label className="block">
+                  <span className="mb-1.5 block text-sm font-medium text-foreground">Description *</span>
+                  <input required type="text" name="description" placeholder="e.g. Transport, Helper" className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
+                </label>
+              )}
               <label className="block">
                 <span className="mb-1.5 block text-sm font-medium text-foreground">Amount (₹) *</span>
                 <input required type="number" name="amount" min="1" step="1" className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30" />
@@ -330,7 +389,7 @@ export function OrderFinanceClient({ order, payments }: OrderFinanceClientProps)
           <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
             <button type="button" onClick={closeExpenseDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>
             <button type="submit" disabled={isPending} className="inline-flex min-h-10 items-center rounded-lg border border-error/20 bg-error-soft px-4 text-sm font-medium text-error transition-colors hover:bg-error/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
-              {isPending ? "Adding..." : "Add Expense"}
+              {isPending ? "Adding..." : (activeExpenseTab === "expense" ? "Add Expense" : "Add Vendor Payment")}
             </button>
           </div>
         </form>
