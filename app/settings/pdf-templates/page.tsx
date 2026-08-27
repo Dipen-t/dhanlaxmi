@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/page-header";
 import { getPdfTemplates } from "./actions";
-import { PdfTemplatesClient } from "./client";
+import PdfTemplatesClient from "./client";
 
 export default async function PdfTemplatesPage() {
   const templates = await getPdfTemplates();

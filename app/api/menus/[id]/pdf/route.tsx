@@ -46,28 +46,20 @@ export async function GET(_request: Request, context: RouteContext) {
       if (!templateRecord) {
         return NextResponse.json({ error: "Template not found." }, { status: 404 });
       }
-
-      const { generate } = await import("@pdfme/generator");
-      const { text, image, barcodes } = await import("@pdfme/schemas");
       
-      const template = JSON.parse(templateRecord.templateJson);
-      
-      // Map menu data to inputs (flattening it for basic text fields)
-      const inputs = [{
-        menuName: menu.name,
-        date: new Date().toLocaleDateString(),
-        // Just providing standard fields. For arrays, pdfme expects specific table formats
-      }];
+      const config = {
+        fontFamily: templateRecord.fontFamily,
+        fontSize: templateRecord.fontSize,
+      };
 
-      const uint8Array = await generate({ 
-        template, 
-        inputs,
-        plugins: { text, image, qrcode: barcodes.qrcode, barcode: barcodes.code128 }
-      });
-      pdfBuffer = Buffer.from(uint8Array);
+      const logo = await getPdfLogoAssets();
+      
+      const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
+      pdfBuffer = await generateMenuPdfBuffer(menu, logo, templateRecord.themeType, config);
     } else {
       const logo = await getPdfLogoAssets();
-      pdfBuffer = await generateMenuPdfBuffer(menu, logo);
+      const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
+      pdfBuffer = await generateMenuPdfBuffer(menu, logo, "standard");
     }
 
     const filename = `${sanitizeFilename(menu.name)}.pdf`;

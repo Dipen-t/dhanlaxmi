@@ -15,13 +15,13 @@ const HEADER_CLEARANCE = 58;
 
 const colors = {
   white: "#FFFFFF",
-  cream: "#F7FAFA",
-  ink: "#1A2423",
-  muted: "#5A6967",
-  teal: "#0F766E",
-  tealDeep: "#0D5C56",
-  tealLine: "#A5D4CE",
-  rule: "#D5E0DE",
+  cream: "#FDFBF7",
+  ink: "#2C2422",
+  muted: "#8C7A77",
+  teal: "#C49C95", // Soft Blush / Champagne
+  tealDeep: "#8A5A53",
+  tealLine: "#E6D4D1",
+  rule: "#F2EBE9",
 };
 
 const styles = StyleSheet.create({
@@ -113,17 +113,18 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   categoryBlock: {
-    marginBottom: 14,
-    paddingBottom: 8,
+    marginBottom: 16,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: colors.rule,
   },
   categoryHeader: {
-    marginBottom: 7,
+    marginBottom: 9,
   },
   categoryTitleRow: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     width: "100%",
   },
   flankLine: {
@@ -134,19 +135,19 @@ const styles = StyleSheet.create({
   categoryName: {
     fontFamily: "Cormorant",
     fontWeight: 600,
-    fontSize: 12,
+    fontSize: 14,
     textTransform: "uppercase",
-    letterSpacing: 0.7,
+    letterSpacing: 1.2,
     color: colors.tealDeep,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     textAlign: "center",
   },
   selectionRule: {
     fontFamily: "Cormorant",
-    fontSize: 9,
+    fontSize: 9.5,
     fontStyle: "italic",
     color: colors.muted,
-    marginTop: 3,
+    marginTop: 4,
     textAlign: "center",
   },
   dishGrid: {
@@ -207,6 +208,7 @@ const styles = StyleSheet.create({
 type MenuPdfDocumentProps = {
   menu: MenuDetail;
   logo: PdfLogoAssets;
+  config?: { fontFamily: string; fontSize: string };
 };
 
 function PageHeader({ logo }: { logo: PdfLogoAssets }) {
@@ -257,10 +259,15 @@ function CategorySection({
   );
 }
 
-export function MenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
+export default function WeddingPdfDocument({ menu, logo, config }: MenuPdfDocumentProps) {
+  const dynamicStyles = config ? {
+    fontFamily: config.fontFamily || "SourceSans",
+    fontSize: config.fontSize === "10pt" ? 10 : config.fontSize === "12pt" ? 12 : 14,
+  } : {};
+
   return (
     <Document title={menu.name} author="Dhalaxmi Catering Service">
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={{ ...styles.page, ...dynamicStyles }}>
         <PageHeader logo={logo} />
 
         <View style={styles.coverSection} wrap={false}>

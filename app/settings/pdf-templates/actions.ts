@@ -5,10 +5,10 @@ import { pdfTemplates } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function getPdfTemplates(type?: string) {
-  if (type) {
+export async function getPdfTemplates(themeType?: string) {
+  if (themeType) {
     return await db.query.pdfTemplates.findMany({
-      where: eq(pdfTemplates.type, type),
+      where: eq(pdfTemplates.themeType, themeType),
       orderBy: (pdfTemplates, { desc }) => [desc(pdfTemplates.createdAt)],
     });
   }
@@ -27,11 +27,11 @@ export async function getPdfTemplate(id: number) {
 export async function savePdfTemplate(data: FormData) {
   const idStr = data.get("id") as string;
   const name = data.get("name") as string;
-  const type = data.get("type") as string;
-  const templateJson = data.get("templateJson") as string;
-  const basePdf = data.get("basePdf") as string | null;
+  const themeType = data.get("themeType") as string;
+  const fontFamily = data.get("fontFamily") as string;
+  const fontSize = data.get("fontSize") as string;
 
-  if (!name || !type || !templateJson) {
+  if (!name || !themeType || !fontFamily || !fontSize) {
     return { error: "Missing required fields" };
   }
 
@@ -43,9 +43,9 @@ export async function savePdfTemplate(data: FormData) {
         .update(pdfTemplates)
         .set({
           name,
-          type,
-          templateJson,
-          basePdf,
+          themeType,
+          fontFamily,
+          fontSize,
           updatedAt: new Date(),
         })
         .where(eq(pdfTemplates.id, id));
@@ -53,9 +53,9 @@ export async function savePdfTemplate(data: FormData) {
       // Insert
       await db.insert(pdfTemplates).values({
         name,
-        type,
-        templateJson,
-        basePdf,
+        themeType,
+        fontFamily,
+        fontSize,
       });
     }
 

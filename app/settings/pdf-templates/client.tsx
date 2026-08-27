@@ -1,168 +1,231 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import dynamic from "next/dynamic";
-import { Plus, Pencil, Trash2, LayoutTemplate } from "lucide-react";
-import { toast } from "sonner";
+import { useState, useRef } from "react";
+import { Plus, Trash2, Edit, X } from "lucide-react";
 import { savePdfTemplate, deletePdfTemplate } from "./actions";
 
-const PdfmeDesigner = dynamic(
-  () => import("./pdfme-designer").then((mod) => mod.PdfmeDesigner),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-96 items-center justify-center rounded-xl border border-dashed border-border bg-surface/50 text-muted">
-        Loading PDF Designer...
-      </div>
-    ),
-  }
-);
-
-type TemplateRecord = {
-  id: number;
-  name: string;
-  type: string;
-  templateJson: string;
-  createdAt: Date;
-};
-
-export function PdfTemplatesClient({
+export default function PdfTemplatesClient({
   initialTemplates,
 }: {
-  initialTemplates: TemplateRecord[];
+  initialTemplates: any[];
 }) {
-  const [isPending, startTransition] = useTransition();
-  const [isEditing, setIsEditing] = useState(false);
-  const [currentTemplate, setCurrentTemplate] = useState<Partial<TemplateRecord> | null>(null);
+  const [templates, setTemplates] = useState(initialTemplates);
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  const handleCreate = () => {
-    setCurrentTemplate({ name: "New Menu Template", type: "menu" });
-    setIsEditing(true);
+  const defaultForm = {
+    name: "",
+    themeType: "standard",
+    fontFamily: "SourceSans",
+    fontSize: "10pt",
   };
 
-  const handleEdit = (template: TemplateRecord) => {
-    setCurrentTemplate(template);
-    setIsEditing(true);
+  const [formData, setFormData] = useState(defaultForm);
+
+  const openDialog = (template: any = null) => {
+    if (template) {
+      setEditingTemplate(template);
+      setFormData({
+        name: template.name,
+        themeType: template.themeType,
+        fontFamily: template.fontFamily,
+        fontSize: template.fontSize,
+      });
+    } else {
+      setEditingTemplate(null);
+      setFormData(defaultForm);
+    }
+    dialogRef.current?.showModal();
   };
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Are you sure you want to delete this template?")) return;
-    
-    startTransition(async () => {
-      const res = await deletePdfTemplate(id);
-      if (res.error) toast.error(res.error);
-      else toast.success("Template deleted");
-    });
+  const closeDialog = () => {
+    dialogRef.current?.close();
   };
 
-  const handleSaveLayout = async (templateJson: string) => {
-    if (!currentTemplate) return;
-    
-    const formData = new FormData();
-    if (currentTemplate.id) formData.append("id", String(currentTemplate.id));
-    formData.append("name", currentTemplate.name || "Untitled");
-    formData.append("type", currentTemplate.type || "menu");
-    formData.append("templateJson", templateJson);
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
 
-    startTransition(async () => {
-      const res = await savePdfTemplate(formData);
-      if (res.error) {
-        toast.error(res.error);
-      } else {
-        toast.success("Template saved");
-        setIsEditing(false);
-        setCurrentTemplate(null);
+    const data = new FormData();
+    if (editingTemplate) {
+      data.append("id", editingTemplate.id.toString());
+    }
+    data.append("name", formData.name);
+    data.append("themeType", formData.themeType);
+    data.append("fontFamily", formData.fontFamily);
+    data.append("fontSize", formData.fontSize);
+
+    const result = await savePdfTemplate(data);
+    if (result.success) {
+      closeDialog();
+      window.location.reload();
+    } else {
+      alert(result.error);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDelete = async (id: number) => {
+    if (confirm("Are you sure you want to delete this template configuration?")) {
+      const result = await deletePdfTemplate(id);
+      if (result.success) {
+        setTemplates(templates.filter((t) => t.id !== id));
       }
-    });
+    }
   };
-
-  if (isEditing && currentTemplate) {
-    return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <input
-            type="text"
-            value={currentTemplate.name || ""}
-            onChange={(e) => setCurrentTemplate({ ...currentTemplate, name: e.target.value })}
-            className="text-xl font-bold bg-transparent border-b border-border/50 focus:border-primary outline-none px-1 py-0.5"
-            placeholder="Template Name"
-          />
-          <select
-            value={currentTemplate.type || "menu"}
-            onChange={(e) => setCurrentTemplate({ ...currentTemplate, type: e.target.value })}
-            className="text-sm bg-surface border border-border rounded-lg px-3 py-1.5 outline-none"
-          >
-            <option value="menu">Menu</option>
-            <option value="kitchen-menu">Kitchen Menu</option>
-            <option value="report">Report</option>
-          </select>
-        </div>
-        <PdfmeDesigner
-          initialTemplateJson={currentTemplate.templateJson}
-          onSave={handleSaveLayout}
-          onCancel={() => {
-            setIsEditing(false);
-            setCurrentTemplate(null);
-          }}
-        />
-      </div>
-    );
-  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">Your Templates</h2>
-          <p className="text-sm text-muted">Manage PDF layouts for menus and reports</p>
+          <h1 className="text-2xl font-bold tracking-tight text-teal-900">
+            Menu PDF Templates
+          </h1>
+          <p className="text-sm text-slate-500">
+            Configure beautiful ready-made themes for your menu PDFs.
+          </p>
         </div>
         <button
-          onClick={handleCreate}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          onClick={() => openDialog()}
+          className="inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600"
         >
-          <Plus className="size-4" />
-          Create Template
+          <Plus className="mr-2 h-4 w-4" />
+          New Configuration
         </button>
       </div>
 
-      {initialTemplates.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-border bg-surface/30 px-6 py-16 text-center flex flex-col items-center">
-          <LayoutTemplate className="size-10 text-muted/50 mb-3" />
-          <p className="text-base font-medium text-foreground">No templates yet</p>
-          <p className="mt-1 text-sm text-muted">Create a visual layout for your PDFs.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {initialTemplates.map((template) => (
-            <div key={template.id} className="flex flex-col p-4 rounded-xl border border-border bg-background shadow-sm">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <h3 className="font-semibold text-foreground">{template.name}</h3>
-                  <span className="inline-block mt-1 text-xs font-medium bg-surface text-muted px-2 py-0.5 rounded-full capitalize">
-                    {template.type}
-                  </span>
-                </div>
-              </div>
-              <div className="mt-auto flex justify-end gap-2 border-t border-border pt-4">
-                <button
-                  onClick={() => handleEdit(template)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/30"
-                >
-                  <Pencil className="size-3.5" />
-                  Edit Layout
-                </button>
-                <button
-                  onClick={() => handleDelete(template.id)}
-                  disabled={isPending}
-                  className="inline-flex items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-3 py-1.5 text-xs font-medium text-error hover:bg-error-soft/80 disabled:opacity-50"
-                >
-                  <Trash2 className="size-3.5" />
-                </button>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {templates.map((template) => (
+          <div key={template.id} className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <h3 className="mb-2 text-lg font-semibold text-slate-900">
+                {template.name}
+              </h3>
+              <div className="space-y-1 text-sm text-slate-600">
+                <p><span className="font-medium text-slate-700">Theme:</span> <span className="capitalize">{template.themeType}</span></p>
+                <p><span className="font-medium text-slate-700">Font:</span> {template.fontFamily}</p>
+                <p><span className="font-medium text-slate-700">Size:</span> {template.fontSize === "10pt" ? "Small (10pt)" : template.fontSize === "12pt" ? "Medium (12pt)" : "Large (14pt)"}</p>
               </div>
             </div>
-          ))}
-        </div>
-      )}
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                onClick={() => openDialog(template)}
+                className="inline-flex items-center justify-center rounded-md border border-teal-200 px-3 py-1.5 text-sm font-medium text-teal-700 hover:bg-teal-50"
+              >
+                <Edit className="mr-1 h-4 w-4" /> Edit
+              </button>
+              <button
+                onClick={() => handleDelete(template.id)}
+                className="inline-flex items-center justify-center rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        ))}
+        {templates.length === 0 && (
+          <div className="col-span-full rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 py-12 text-center">
+            <h3 className="text-lg font-medium text-slate-900">No templates configured</h3>
+            <p className="mt-1 text-slate-500">Create your first template configuration to get started.</p>
+            <button
+              onClick={() => openDialog()}
+              className="mt-4 inline-flex items-center justify-center rounded-lg bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Configuration
+            </button>
+          </div>
+        )}
+      </div>
+
+      <dialog ref={dialogRef} className="app-dialog w-full max-w-md rounded-xl p-0 backdrop:bg-slate-900/50" onClose={closeDialog}>
+        <form onSubmit={handleSave} className="flex flex-col">
+          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+            <h2 className="text-lg font-semibold text-slate-900">
+              {editingTemplate ? "Edit Template" : "New Template Configuration"}
+            </h2>
+            <button type="button" onClick={closeDialog} className="rounded-md p-1 hover:bg-slate-100 text-slate-500">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          
+          <div className="flex flex-col gap-4 p-5">
+            <div className="flex flex-col gap-2">
+              <label htmlFor="name" className="text-sm font-medium text-slate-900">Configuration Name</label>
+              <input
+                id="name"
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                placeholder="e.g. Elegant Wedding"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                required
+              />
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label htmlFor="theme" className="text-sm font-medium text-slate-900">Base Theme</label>
+              <select
+                id="theme"
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                value={formData.themeType}
+                onChange={(e) => setFormData({ ...formData, themeType: e.target.value })}
+              >
+                <option value="standard">Standard (Teal)</option>
+                <option value="wedding">Wedding (Classic/Blush)</option>
+                <option value="party">Party (Vibrant/Modern)</option>
+                <option value="corporate">Corporate (Minimal/Slate)</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label htmlFor="fontFamily" className="text-sm font-medium text-slate-900">Typography</label>
+              <select
+                id="fontFamily"
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                value={formData.fontFamily}
+                onChange={(e) => setFormData({ ...formData, fontFamily: e.target.value })}
+              >
+                <option value="SourceSans">Source Sans (Clean Sans)</option>
+                <option value="Inter">Inter (Modern Sans)</option>
+                <option value="Playball">Playball (Elegant Script)</option>
+                <option value="Cormorant">Cormorant (Classic Serif)</option>
+              </select>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              <label htmlFor="fontSize" className="text-sm font-medium text-slate-900">Base Font Size</label>
+              <select
+                id="fontSize"
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 bg-white"
+                value={formData.fontSize}
+                onChange={(e) => setFormData({ ...formData, fontSize: e.target.value })}
+              >
+                <option value="10pt">Small (10pt)</option>
+                <option value="12pt">Medium (12pt)</option>
+                <option value="14pt">Large (14pt)</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4">
+            <button
+              type="button"
+              onClick={closeDialog}
+              className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="rounded-md bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
+            >
+              {isLoading ? "Saving..." : "Save Configuration"}
+            </button>
+          </div>
+        </form>
+      </dialog>
     </div>
   );
 }

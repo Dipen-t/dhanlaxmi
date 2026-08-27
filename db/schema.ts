@@ -320,9 +320,9 @@ export const kitchenMenuDishesRelations = relations(kitchenMenuDishes, ({ one })
 export const pdfTemplates = pgTable("pdf_templates", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
-  type: text("type").notNull(),
-  templateJson: text("template_json").notNull(),
-  basePdf: text("base_pdf"),
+  themeType: text("theme_type").notNull().default("standard"),
+  fontFamily: text("font_family").notNull().default("SourceSans"),
+  fontSize: text("font_size").notNull().default("10pt"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
