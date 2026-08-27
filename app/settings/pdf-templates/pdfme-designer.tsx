@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { Designer } from "@pdfme/ui";
 import { text, image, barcodes } from "@pdfme/schemas";
 
-const BLANK_TEMPLATE = {
+import type { Template } from "@pdfme/common";
+
+const BLANK_TEMPLATE: Template = {
   basePdf: { width: 210, height: 297, padding: [10, 10, 10, 10] },
-  schemas: [{}],
+  schemas: [{} as any],
 };
 
 type PdfmeDesignerProps = {
