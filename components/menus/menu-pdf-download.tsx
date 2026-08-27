@@ -58,9 +58,9 @@ export function MenuPdfDownload({
         const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true&preview=true`;
         const response = await fetch(urlWithQuery);
         if (response.ok) {
-          const rawBlob = await response.blob();
-          // We fetched it as octet-stream to bypass download managers, now we re-cast it to application/pdf for the iframe
-          const pdfBlob = new Blob([rawBlob], { type: "application/pdf" });
+          const buffer = await response.arrayBuffer();
+          // We fetched it as octet-stream to bypass download managers, now we re-cast it to application/pdf for the embed
+          const pdfBlob = new Blob([buffer], { type: "application/pdf" });
           if (isMounted) {
             const url = URL.createObjectURL(pdfBlob);
             setPreviewBlobUrl(url);
@@ -305,10 +305,10 @@ export function MenuPdfDownload({
                   </div>
                 )}
                 {previewBlobUrl && (
-                  <iframe
+                  <embed
                     src={`${previewBlobUrl}#toolbar=0`}
+                    type="application/pdf"
                     className={`w-full h-full border-0 absolute inset-0 transition-opacity duration-300 ${isPreviewLoading ? 'opacity-50' : 'opacity-100'}`}
-                    title="PDF Preview"
                   />
                 )}
               </div>
