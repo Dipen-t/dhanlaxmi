@@ -60,4 +60,10 @@ export const homeTiles: HomeTile[] = [
     description: "Manage order payments to vendors",
     icon: Banknote,
   },
+  {
+    href: "/expenses",
+    title: "Expenses",
+    description: "Log and manage order expenses stack-wise",
+    icon: Receipt,
+  },
 ];
