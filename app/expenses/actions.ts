@@ -4,7 +4,20 @@ import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { orderPayments, orderPaymentExpenses } from "@/db/schema";
+import { orderPayments, orderPaymentExpenses, vendors, vendorPayments } from "@/db/schema";
+
+export type VendorDropdownItem = {
+  id: number;
+  name: string;
+};
+
+export async function getAllVendors(): Promise<VendorDropdownItem[]> {
+  const allVendors = await db.query.vendors.findMany({
+    orderBy: (vendors, { asc }) => [asc(vendors.name)],
+    columns: { id: true, name: true }
+  });
+  return allVendors;
+}
 
 export type OrderPaymentExpenseRecord = {
   id: number;
@@ -82,5 +95,33 @@ export async function deleteExpense(data: FormData) {
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to delete expense" };
+  }
+}
+
+export async function createVendorPaymentForExpenses(data: FormData) {
+  const vendorId = Number(data.get("vendorId"));
+  const orderId = Number(data.get("orderId"));
+  const amount = Number(data.get("amount"));
+  const dateStr = data.get("date") as string;
+  const notes = data.get("notes") as string || null;
+
+  if (!vendorId || !orderId || !amount) {
+    return { error: "Missing required fields" };
+  }
+  
+  const date = dateStr ? new Date(dateStr) : new Date();
+
+  try {
+    await db.insert(vendorPayments).values({
+      vendorId,
+      orderId,
+      amount,
+      date,
+      notes,
+    });
+    revalidatePath("/expenses");
+    return { success: true };
+  } catch (e: any) {
+    return { error: e.message || "Failed to create vendor payment" };
   }
 }

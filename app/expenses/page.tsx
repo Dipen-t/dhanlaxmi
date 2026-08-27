@@ -3,6 +3,7 @@ import { Suspense } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { getOrdersForSelection } from "@/app/payments/actions";
+import { getAllVendors } from "./actions";
 import { ExpensesClient } from "./client";
 
 export const metadata: Metadata = {
@@ -12,10 +13,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 async function ExpensesContent() {
-  const orders = await getOrdersForSelection();
+  const [orders, vendors] = await Promise.all([
+    getOrdersForSelection(),
+    getAllVendors(),
+  ]);
 
   return (
-    <ExpensesClient orders={orders} />
+    <ExpensesClient orders={orders} vendors={vendors} />
   );
 }
 

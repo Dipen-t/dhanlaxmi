@@ -5,15 +5,16 @@ import { Plus, Trash2, IndianRupee, ReceiptText } from "lucide-react";
 import { toast } from "sonner";
 
 import type { OrderSelectionItem } from "@/app/payments/actions";
-import { getOrderPaymentsWithExpenses, createExpense, deleteExpense, type OrderPaymentRecord } from "./actions";
+import { getOrderPaymentsWithExpenses, createExpense, deleteExpense, createVendorPaymentForExpenses, type OrderPaymentRecord, type VendorDropdownItem } from "./actions";
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
 type ExpensesClientProps = {
   orders: OrderSelectionItem[];
+  vendors: VendorDropdownItem[];
 };
 
-export function ExpensesClient({ orders }: ExpensesClientProps) {
+export function ExpensesClient({ orders, vendors }: ExpensesClientProps) {
   const [selectedOrderId, setSelectedOrderId] = useState<number | "">("");
   const [isPendingData, startDataTransition] = useTransition();
   const [payments, setPayments] = useState<OrderPaymentRecord[]>([]);
@@ -68,7 +69,9 @@ export function ExpensesClient({ orders }: ExpensesClientProps) {
             payments.map(payment => (
               <PaymentNotepad 
                 key={payment.id} 
-                payment={payment} 
+                payment={payment}
+                vendors={vendors}
+                orderId={selectedOrderId as number}
                 onRefresh={() => fetchPayments(selectedOrderId as number)} 
               />
             ))
@@ -79,32 +82,47 @@ export function ExpensesClient({ orders }: ExpensesClientProps) {
   );
 }
 
-function PaymentNotepad({ payment, onRefresh }: { payment: OrderPaymentRecord, onRefresh: () => void }) {
+function PaymentNotepad({ payment, vendors, orderId, onRefresh }: { payment: OrderPaymentRecord, vendors: VendorDropdownItem[], orderId: number, onRefresh: () => void }) {
   const [isPending, startTransition] = useTransition();
+  const [activeTab, setActiveTab] = useState<"expense" | "vendor">("expense");
   const formRef = useRef<HTMLFormElement>(null);
   
   // Quick reference vars
   const totalExpenses = payment.expenses.reduce((sum, e) => sum + e.amount, 0);
   const remainingAmount = payment.amount - totalExpenses;
 
-  async function handleAddExpense(formData: FormData) {
-    formData.append("orderPaymentId", String(payment.id));
-    
-    startTransition(async () => {
-      const res = await createExpense(formData);
-      if (res.error) {
-        toast.error(res.error);
-      } else {
-        toast.success("Expense added");
-        if (formRef.current) {
-          formRef.current.reset();
-          // refocus the first input for continuous entry
-          const firstInput = formRef.current.querySelector('input[name="description"]') as HTMLInputElement;
-          if (firstInput) firstInput.focus();
+  async function handleAddEntry(formData: FormData) {
+    if (activeTab === "expense") {
+      formData.append("orderPaymentId", String(payment.id));
+      startTransition(async () => {
+        const res = await createExpense(formData);
+        if (res.error) {
+          toast.error(res.error);
+        } else {
+          toast.success("Expense added");
+          if (formRef.current) {
+            formRef.current.reset();
+            const firstInput = formRef.current.querySelector('input[name="description"]') as HTMLInputElement;
+            if (firstInput) firstInput.focus();
+          }
+          onRefresh();
         }
-        onRefresh();
-      }
-    });
+      });
+    } else {
+      formData.append("orderId", String(orderId));
+      startTransition(async () => {
+        const res = await createVendorPaymentForExpenses(formData);
+        if (res.error) {
+          toast.error(res.error);
+        } else {
+          toast.success("Vendor payment added");
+          if (formRef.current) {
+            formRef.current.reset();
+          }
+          onRefresh();
+        }
+      });
+    }
   }
 
   async function handleDeleteExpense(id: number) {
@@ -169,40 +187,99 @@ function PaymentNotepad({ payment, onRefresh }: { payment: OrderPaymentRecord, o
           ))}
         </div>
 
-        <form 
-          ref={formRef} 
-          action={handleAddExpense} 
-          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 bg-surface/30 border-t-2 border-dashed border-border/50 ${isPending ? 'opacity-50 pointer-events-none' : ''}`}
-        >
-          <span className="text-xs font-mono text-muted/50 w-4 text-right shrink-0">{payment.expenses.length + 1}.</span>
-          <input 
-            type="text" 
-            name="description" 
-            placeholder="Expense description..." 
-            required 
-            autoComplete="off"
-            className="flex-1 min-w-0 bg-transparent border-none text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-0 px-0 h-8"
-          />
-          <div className="flex items-center gap-1 sm:gap-2 border-l border-border/50 pl-2 sm:pl-3 shrink-0">
-            <span className="text-muted text-sm">₹</span>
-            <input 
-              type="number" 
-              name="amount" 
-              placeholder="0" 
-              min="1"
-              step="1"
-              required 
-              className="w-16 sm:w-24 bg-transparent border-none text-sm font-semibold text-foreground placeholder:text-muted focus:outline-none focus:ring-0 px-0 h-8 text-right font-mono"
-            />
+        {/* Action Area: Tab selector and form */}
+        <div className="flex flex-col bg-surface/10 border-t border-border/50">
+          {/* Segmented Control / Tab Selector */}
+          <div className="px-5 pt-4 pb-1">
+            <div className="flex items-center gap-1 p-1 bg-surface/50 rounded-lg border border-border/30 max-w-sm">
+              <button
+                type="button"
+                onClick={() => setActiveTab("expense")}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                  activeTab === "expense" 
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                    : "text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                }`}
+              >
+                General Expense
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("vendor")}
+                className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-all duration-200 ${
+                  activeTab === "vendor" 
+                    ? "bg-background text-foreground shadow-sm ring-1 ring-border/50" 
+                    : "text-muted hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5"
+                }`}
+              >
+                Vendor Payment
+              </button>
+            </div>
           </div>
-          <button 
-            type="submit"
-            className="ml-1 sm:ml-2 flex items-center justify-center h-8 w-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
-            title="Add Expense (Enter)"
+
+          <form 
+            ref={formRef} 
+            action={handleAddEntry} 
+            className={`flex flex-col sm:flex-row sm:items-center gap-3 px-5 py-4 ${isPending ? 'opacity-50 pointer-events-none' : ''}`}
           >
-            <Plus className="size-4" />
-          </button>
-        </form>
+            <span className="hidden sm:flex items-center text-xs font-mono text-muted/40 w-4 justify-end shrink-0 select-none">
+              {activeTab === "expense" ? payment.expenses.length + 1 + "." : "+"}
+            </span>
+
+            <div className="flex-1 flex flex-col sm:flex-row gap-3 min-w-0">
+              {activeTab === "vendor" ? (
+                <>
+                  <select 
+                    name="vendorId" 
+                    required 
+                    className="flex-1 min-w-0 h-10 rounded-md border border-border/60 bg-background px-3 text-sm font-medium text-foreground outline-none transition-colors hover:border-border focus:border-primary focus:ring-1 focus:ring-primary shadow-sm"
+                  >
+                    <option value="" disabled hidden selected>Select Vendor...</option>
+                    {vendors.map(v => (
+                      <option key={v.id} value={v.id}>{v.name}</option>
+                    ))}
+                  </select>
+                  <input 
+                    type="text" 
+                    name="notes" 
+                    placeholder="Notes (optional)..." 
+                    autoComplete="off"
+                    className="flex-1 min-w-0 h-10 rounded-md border border-transparent bg-transparent px-3 text-sm font-medium text-foreground placeholder:text-muted/70 transition-colors hover:bg-surface/50 focus:bg-background focus:border-border/60 focus:outline-none focus:ring-1 focus:ring-border/60"
+                  />
+                </>
+              ) : (
+                <input 
+                  type="text" 
+                  name="description" 
+                  placeholder="Expense description..." 
+                  required 
+                  autoComplete="off"
+                  className="flex-1 min-w-0 h-10 rounded-md border border-transparent bg-transparent px-3 text-sm font-medium text-foreground placeholder:text-muted/70 transition-colors hover:bg-surface/50 focus:bg-background focus:border-border/60 focus:outline-none focus:ring-1 focus:ring-border/60"
+                />
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 border-t sm:border-t-0 sm:border-l border-border/50 pt-4 sm:pt-0 sm:pl-4 shrink-0">
+              <span className="text-muted/70 text-sm font-medium select-none">₹</span>
+              <input 
+                type="number" 
+                name="amount" 
+                placeholder="0" 
+                min="1"
+                step="1"
+                required 
+                className="w-full sm:w-28 h-10 rounded-md border border-border/60 bg-background px-3 text-sm font-semibold text-foreground placeholder:text-muted/50 outline-none transition-colors hover:border-border focus:border-primary focus:ring-1 focus:ring-primary text-right font-mono shadow-sm"
+              />
+              <button 
+                type="submit"
+                className="ml-2 flex items-center justify-center h-10 w-10 rounded-md bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background shrink-0 active:scale-95"
+                title={activeTab === "expense" ? "Add Expense" : "Add Vendor Payment"}
+              >
+                <Plus className="size-4" />
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
