@@ -55,7 +55,7 @@ export function MenuPdfDownload({
 
       setIsPreviewLoading(true);
       try {
-        const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}`;
+        const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true`;
         const response = await fetch(urlWithQuery);
         if (response.ok) {
           const blob = await response.blob();
@@ -81,7 +81,11 @@ export function MenuPdfDownload({
     };
   }, [menuId, theme, fontFamily, fontSize, isOpen]);
 
-  const openTemplateSelection = () => {
+  const openTemplateSelection = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     dialogRef.current?.showModal();
     setIsOpen(true);
   };
