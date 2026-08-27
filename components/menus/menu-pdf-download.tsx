@@ -4,7 +4,6 @@ import { FileDown, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
-import { getPdfTemplates } from "@/app/settings/pdf-templates/actions";
 
 type MenuPdfDownloadProps = {
   menuId: number;
@@ -36,46 +35,34 @@ export function MenuPdfDownload({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preferShare, setPreferShare] = useState(false);
-  const [templates, setTemplates] = useState<TemplateRecord[]>([]);
+  const [theme, setTheme] = useState("standard");
+  const [fontFamily, setFontFamily] = useState("SourceSans");
+  const [fontSize, setFontSize] = useState("10pt");
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     setPreferShare(isIpadOrIos());
-    getPdfTemplates().then(data => {
-      if (Array.isArray(data)) {
-        setTemplates(data.map(t => ({ id: t.id, name: t.name })));
-      }
-    });
   }, []);
 
   const openTemplateSelection = () => {
-    if (templates.length > 0) {
-      dialogRef.current?.showModal();
-    } else {
-      handleDownload(); // Fallback if no templates
-    }
+    dialogRef.current?.showModal();
   };
 
   const closeDialog = () => {
     dialogRef.current?.close();
   };
 
-  async function handleDownload(templateId?: number) {
+  async function handleDownload() {
     closeDialog();
     setIsLoading(true);
     setError(null);
 
-    const suffix = "";
-    const filename = `${sanitizeFilename(menuName)}${suffix}.pdf`;
+    const filename = `${sanitizeFilename(menuName)}.pdf`;
     const previewWindow =
       preferShare || isIpadOrIos() ? window.open("about:blank", "_blank") : null;
 
     try {
-      const endpoint = "pdf";
-      const urlWithQuery = templateId 
-        ? `/api/menus/${menuId}/${endpoint}?templateId=${templateId}`
-        : `/api/menus/${menuId}/${endpoint}`;
-
+      const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}`;
       const response = await fetch(urlWithQuery);
 
       if (!response.ok) {
@@ -160,6 +147,8 @@ export function MenuPdfDownload({
     buttonClassName ??
     "inline-flex min-h-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:border-primary/30 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
+  const previewUrl = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true#toolbar=0`;
+
   return (
     <div className={className}>
       {variant === "button" ? (
@@ -197,33 +186,95 @@ export function MenuPdfDownload({
         </p>
       ) : null}
 
-      <dialog ref={dialogRef} className="app-dialog" onClose={closeDialog}>
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
-            <h2 className="text-lg font-semibold text-foreground">Select PDF Template</h2>
-            <button onClick={closeDialog} className="rounded-md p-1 hover:bg-surface transition-colors">
+      <dialog ref={dialogRef} className="app-dialog max-w-5xl w-[95vw] rounded-xl p-0" onClose={closeDialog}>
+        <div className="flex flex-col h-[85vh] max-h-[800px]">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-background shrink-0">
+            <div>
+              <h2 className="text-lg font-bold text-foreground">Download PDF</h2>
+              <p className="text-sm text-muted">Customize the look and feel of your menu before downloading.</p>
+            </div>
+            <button onClick={closeDialog} className="rounded-md p-2 hover:bg-surface transition-colors">
               <X className="size-5 text-muted" />
             </button>
           </div>
-          <div className="p-5 flex flex-col gap-3">
-            {templates.map(template => (
-              <button
-                key={template.id}
-                onClick={() => handleDownload(template.id)}
-                className="w-full px-4 py-3 text-left rounded-lg border border-border bg-background hover:bg-surface hover:border-primary/50 transition-colors flex justify-between items-center group"
-              >
-                <span className="font-medium text-foreground">{template.name}</span>
-                <FileDown className="size-4 text-muted group-hover:text-primary transition-colors" />
-              </button>
-            ))}
+          
+          <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+            {/* Left side: Configuration */}
+            <div className="w-full md:w-[320px] shrink-0 border-b md:border-b-0 md:border-r border-border/50 bg-surface/30 p-5 flex flex-col gap-5 overflow-y-auto">
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="theme" className="text-sm font-semibold text-foreground">Theme</label>
+                  <select
+                    id="theme"
+                    className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                    value={theme}
+                    onChange={(e) => setTheme(e.target.value)}
+                  >
+                    <option value="standard">Standard (Teal)</option>
+                    <option value="wedding">Wedding (Classic/Blush)</option>
+                    <option value="party">Party (Vibrant/Modern)</option>
+                    <option value="corporate">Corporate (Minimal/Slate)</option>
+                  </select>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="fontFamily" className="text-sm font-semibold text-foreground">Typography</label>
+                  <select
+                    id="fontFamily"
+                    className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                    value={fontFamily}
+                    onChange={(e) => setFontFamily(e.target.value)}
+                  >
+                    <option value="SourceSans">Source Sans (Clean Sans)</option>
+                    <option value="Inter">Inter (Modern Sans)</option>
+                    <option value="Playball">Playball (Elegant Script)</option>
+                    <option value="Cormorant">Cormorant (Classic Serif)</option>
+                  </select>
+                </div>
+                
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="fontSize" className="text-sm font-semibold text-foreground">Font Size</label>
+                  <select
+                    id="fontSize"
+                    className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-full"
+                    value={fontSize}
+                    onChange={(e) => setFontSize(e.target.value)}
+                  >
+                    <option value="10pt">Small (10pt)</option>
+                    <option value="12pt">Medium (12pt)</option>
+                    <option value="14pt">Large (14pt)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: Live Preview */}
+            <div className="flex-1 bg-muted/20 p-4 sm:p-6 overflow-hidden flex flex-col items-center justify-center">
+              <div className="w-full h-full max-w-[800px] bg-white rounded-lg shadow-sm border border-border overflow-hidden relative">
+                <iframe
+                  key={previewUrl} // Force reload on config change
+                  src={previewUrl}
+                  className="w-full h-full border-0 absolute inset-0"
+                  title="PDF Preview"
+                />
+              </div>
+            </div>
           </div>
-          <div className="flex justify-between items-center px-5 py-4 border-t border-border/50 bg-surface/30">
-             <span className="text-xs text-muted">Or download without a template</span>
+          
+          <div className="flex justify-end gap-3 px-5 py-4 border-t border-border/50 bg-background shrink-0">
+             <button
+                onClick={closeDialog}
+                className="px-4 py-2.5 text-sm font-semibold border border-border rounded-lg hover:bg-surface transition-colors"
+             >
+                Cancel
+             </button>
              <button
                 onClick={() => handleDownload()}
-                className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-background transition-colors"
+                disabled={isLoading}
+                className="px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-2"
              >
-                Use Standard (Legacy)
+                <FileDown className="size-4" />
+                {isLoading ? "Downloading..." : "Download Final PDF"}
              </button>
           </div>
         </div>

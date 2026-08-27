@@ -35,41 +35,32 @@ export async function GET(_request: Request, context: RouteContext) {
 
   try {
     const url = new URL(_request.url);
-    const templateId = url.searchParams.get("templateId");
+    const theme = url.searchParams.get("theme") || "standard";
+    const fontFamily = url.searchParams.get("fontFamily") || "SourceSans";
+    const fontSize = url.searchParams.get("fontSize") || "10pt";
+    const isInline = url.searchParams.get("inline") === "true";
 
     let pdfBuffer: Buffer;
 
-    if (templateId) {
-      const { getPdfTemplate } = await import("@/app/settings/pdf-templates/actions");
-      const templateRecord = await getPdfTemplate(Number(templateId));
+    const config = {
+      fontFamily: fontFamily,
+      fontSize: fontSize,
+    };
 
-      if (!templateRecord) {
-        return NextResponse.json({ error: "Template not found." }, { status: 404 });
-      }
-      
-      const config = {
-        fontFamily: templateRecord.fontFamily,
-        fontSize: templateRecord.fontSize,
-      };
-
-      const logo = await getPdfLogoAssets();
-      
-      const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
-      pdfBuffer = await generateMenuPdfBuffer(menu, logo, templateRecord.themeType, config);
-    } else {
-      const logo = await getPdfLogoAssets();
-      const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
-      pdfBuffer = await generateMenuPdfBuffer(menu, logo, "standard");
-    }
+    const logo = await getPdfLogoAssets();
+    
+    const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
+    pdfBuffer = await generateMenuPdfBuffer(menu, logo, theme, config);
 
     const filename = `${sanitizeFilename(menu.name)}.pdf`;
+    const disposition = isInline ? "inline" : "attachment";
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
         "Content-Length": String(pdfBuffer.length),
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `${disposition}; filename="${filename}"`,
         "Cache-Control": "no-store",
       },
     });
