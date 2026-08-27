@@ -1,7 +1,12 @@
 "use client";
 
-import { FileDown, X } from "lucide-react";
+import { Download, FileDown, Loader2, X } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 
@@ -28,7 +33,7 @@ function isIpadOrIos() {
 export function MenuPdfDownload({
   menuId,
   menuName,
-  variant = "icon",
+  variant = "button",
   className = "",
   buttonClassName,
 }: MenuPdfDownloadProps) {
@@ -41,6 +46,8 @@ export function MenuPdfDownload({
   const [fontSize, setFontSize] = useState("10pt");
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [numPages, setNumPages] = useState<number>();
+  const [pageNumber, setPageNumber] = useState<number>(1);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -96,6 +103,7 @@ export function MenuPdfDownload({
     dialogRef.current?.close();
     setIsOpen(false);
     setPreviewBlobUrl(null);
+    setPageNumber(1);
   };
 
   async function handleDownload() {
@@ -187,6 +195,10 @@ export function MenuPdfDownload({
     } finally {
       setIsLoading(false);
     }
+  }
+
+  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
+    setNumPages(numPages);
   }
 
   const baseClass =
@@ -294,22 +306,60 @@ export function MenuPdfDownload({
 
             {/* Right side: Live Preview */}
             <div className="flex-1 bg-muted/20 p-4 sm:p-6 overflow-hidden flex flex-col items-center justify-center">
-              <div className="w-full h-full max-w-[800px] bg-white rounded-lg shadow-sm border border-border overflow-hidden relative flex items-center justify-center">
+              <div className="w-full h-full max-w-[800px] overflow-auto relative flex flex-col items-center">
                 {isPreviewLoading && !previewBlobUrl && (
-                  <div className="flex flex-col items-center justify-center text-muted">
-                    <svg className="animate-spin h-8 w-8 mb-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                  <div className="flex flex-col items-center justify-center text-muted h-full">
+                    <Loader2 className="h-8 w-8 mb-4 text-primary animate-spin" />
                     <p className="text-sm font-medium">Generating preview...</p>
                   </div>
                 )}
                 {previewBlobUrl && (
-                  <embed
-                    src={`${previewBlobUrl}#toolbar=0`}
-                    type="application/pdf"
-                    className={`w-full h-full border-0 absolute inset-0 transition-opacity duration-300 ${isPreviewLoading ? 'opacity-50' : 'opacity-100'}`}
-                  />
+                  <div className={`transition-opacity duration-300 shadow-sm border border-border bg-white ${isPreviewLoading ? 'opacity-50' : 'opacity-100'}`}>
+                    <Document
+                      file={previewBlobUrl}
+                      onLoadSuccess={onDocumentLoadSuccess}
+                      loading={
+                        <div className="h-[600px] w-[450px] flex items-center justify-center text-muted">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      }
+                      error={
+                        <div className="h-[600px] w-[450px] flex flex-col items-center justify-center text-error p-6 text-center bg-error-soft/30">
+                          <p className="font-semibold mb-2">Could not load preview</p>
+                          <p className="text-sm opacity-80">The PDF may be corrupted or blocked by the browser.</p>
+                        </div>
+                      }
+                    >
+                      <Page 
+                        pageNumber={pageNumber} 
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                        width={Math.min(typeof window !== 'undefined' ? (window.innerWidth > 768 ? window.innerWidth - 420 : window.innerWidth - 80) : 800, 800)}
+                        className="shadow-xl"
+                      />
+                    </Document>
+                    {numPages && numPages > 1 && (
+                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-black/70 text-white px-4 py-2 rounded-full shadow-lg z-10 backdrop-blur-md">
+                        <button
+                          disabled={pageNumber <= 1}
+                          onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
+                          className="disabled:opacity-50 hover:bg-white/20 p-1 rounded transition-colors"
+                        >
+                          &larr; Prev
+                        </button>
+                        <span className="text-sm font-medium text-white/90">
+                          Page {pageNumber} of {numPages}
+                        </span>
+                        <button
+                          disabled={pageNumber >= numPages}
+                          onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages))}
+                          className="disabled:opacity-50 hover:bg-white/20 p-1 rounded transition-colors"
+                        >
+                          Next &rarr;
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
