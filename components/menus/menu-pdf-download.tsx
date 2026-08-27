@@ -1,9 +1,10 @@
 "use client";
 
-import { FileDown } from "lucide-react";
-import { useEffect, useState } from "react";
+import { FileDown, X } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
 
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
+import { getPdfTemplates } from "@/app/settings/pdf-templates/actions";
 
 type MenuPdfDownloadProps = {
   menuId: number;
@@ -13,11 +14,15 @@ type MenuPdfDownloadProps = {
   buttonClassName?: string;
 };
 
+type TemplateRecord = {
+  id: number;
+  name: string;
+};
+
 function isIpadOrIos() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua)) return true;
-  // iPadOS 13+ reports as MacIntel with touch.
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
 }
 
@@ -31,24 +36,47 @@ export function MenuPdfDownload({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preferShare, setPreferShare] = useState(false);
+  const [templates, setTemplates] = useState<TemplateRecord[]>([]);
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     setPreferShare(isIpadOrIos());
+    getPdfTemplates("menu").then(data => {
+      if (Array.isArray(data)) {
+        setTemplates(data.map(t => ({ id: t.id, name: t.name })));
+      }
+    });
   }, []);
 
-  async function handleDownload() {
+  const openTemplateSelection = () => {
+    if (templates.length > 0) {
+      dialogRef.current?.showModal();
+    } else {
+      handleDownload(); // Fallback if no templates
+    }
+  };
+
+  const closeDialog = () => {
+    dialogRef.current?.close();
+  };
+
+  async function handleDownload(templateId?: number) {
+    closeDialog();
     setIsLoading(true);
     setError(null);
 
     const suffix = "";
     const filename = `${sanitizeFilename(menuName)}${suffix}.pdf`;
-    // Open synchronously so iPad Safari keeps the user gesture after fetch.
     const previewWindow =
       preferShare || isIpadOrIos() ? window.open("about:blank", "_blank") : null;
 
     try {
       const endpoint = "pdf";
-      const response = await fetch(`/api/menus/${menuId}/${endpoint}`);
+      const urlWithQuery = templateId 
+        ? `/api/menus/${menuId}/${endpoint}?templateId=${templateId}`
+        : `/api/menus/${menuId}/${endpoint}`;
+
+      const response = await fetch(urlWithQuery);
 
       if (!response.ok) {
         previewWindow?.close();
@@ -70,7 +98,6 @@ export function MenuPdfDownload({
       const file = new File([blob], filename, { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
-      // iPad Safari: share sheet is the reliable “save/upload” path.
       if (
         typeof navigator !== "undefined" &&
         typeof navigator.share === "function" &&
@@ -93,12 +120,10 @@ export function MenuPdfDownload({
             URL.revokeObjectURL(url);
             return;
           }
-          // Fall through to open/download.
         }
       }
 
       if (preferShare || isIpadOrIos()) {
-        // Safari often ignores <a download>; open PDF so user can share/save.
         if (previewWindow && !previewWindow.closed) {
           previewWindow.location.href = url;
         } else {
@@ -140,7 +165,7 @@ export function MenuPdfDownload({
       {variant === "button" ? (
         <button
           type="button"
-          onClick={handleDownload}
+          onClick={openTemplateSelection}
           disabled={isLoading}
           className={`${baseClass} gap-2 px-4 text-sm font-semibold text-foreground`}
         >
@@ -154,7 +179,7 @@ export function MenuPdfDownload({
       ) : (
         <button
           type="button"
-          onClick={handleDownload}
+          onClick={openTemplateSelection}
           disabled={isLoading}
           aria-label={
             preferShare
@@ -171,6 +196,38 @@ export function MenuPdfDownload({
           {error}
         </p>
       ) : null}
+
+      <dialog ref={dialogRef} className="app-dialog" onClose={closeDialog}>
+        <div className="flex flex-col">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-border/50">
+            <h2 className="text-lg font-semibold text-foreground">Select PDF Template</h2>
+            <button onClick={closeDialog} className="rounded-md p-1 hover:bg-surface transition-colors">
+              <X className="size-5 text-muted" />
+            </button>
+          </div>
+          <div className="p-5 flex flex-col gap-3">
+            {templates.map(template => (
+              <button
+                key={template.id}
+                onClick={() => handleDownload(template.id)}
+                className="w-full px-4 py-3 text-left rounded-lg border border-border bg-background hover:bg-surface hover:border-primary/50 transition-colors flex justify-between items-center group"
+              >
+                <span className="font-medium text-foreground">{template.name}</span>
+                <FileDown className="size-4 text-muted group-hover:text-primary transition-colors" />
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-between items-center px-5 py-4 border-t border-border/50 bg-surface/30">
+             <span className="text-xs text-muted">Or download without a template</span>
+             <button
+                onClick={() => handleDownload()}
+                className="px-3 py-1.5 text-xs font-medium border border-border rounded-md hover:bg-background transition-colors"
+             >
+                Use Standard (Legacy)
+             </button>
+          </div>
+        </div>
+      </dialog>
     </div>
   );
 }

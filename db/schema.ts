@@ -316,3 +316,13 @@ export const kitchenMenuDishesRelations = relations(kitchenMenuDishes, ({ one })
     references: [kitchenDishes.id],
   }),
 }));
+
+export const pdfTemplates = pgTable("pdf_templates", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: text("type").notNull(),
+  templateJson: text("template_json").notNull(),
+  basePdf: text("base_pdf"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
