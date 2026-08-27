@@ -35,21 +35,61 @@ export function MenuPdfDownload({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preferShare, setPreferShare] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [theme, setTheme] = useState("standard");
   const [fontFamily, setFontFamily] = useState("SourceSans");
   const [fontSize, setFontSize] = useState("10pt");
+  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     setPreferShare(isIpadOrIos());
   }, []);
 
+  // Fetch the PDF blob for the live preview
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPreview = async () => {
+      if (!isOpen) return;
+
+      setIsPreviewLoading(true);
+      try {
+        const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}`;
+        const response = await fetch(urlWithQuery);
+        if (response.ok) {
+          const blob = await response.blob();
+          if (isMounted) {
+            const url = URL.createObjectURL(blob);
+            setPreviewBlobUrl(url);
+          }
+        }
+      } catch (e) {
+        console.error("Preview fetch failed", e);
+      } finally {
+        if (isMounted) setIsPreviewLoading(false);
+      }
+    };
+
+    fetchPreview();
+
+    return () => {
+      isMounted = false;
+      if (previewBlobUrl) {
+        URL.revokeObjectURL(previewBlobUrl);
+      }
+    };
+  }, [menuId, theme, fontFamily, fontSize, isOpen]);
+
   const openTemplateSelection = () => {
     dialogRef.current?.showModal();
+    setIsOpen(true);
   };
 
   const closeDialog = () => {
     dialogRef.current?.close();
+    setIsOpen(false);
+    setPreviewBlobUrl(null);
   };
 
   async function handleDownload() {
@@ -146,8 +186,6 @@ export function MenuPdfDownload({
   const baseClass =
     buttonClassName ??
     "inline-flex min-h-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:border-primary/30 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
-
-  const previewUrl = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true#toolbar=0`;
 
   return (
     <div className={className}>
@@ -250,13 +288,23 @@ export function MenuPdfDownload({
 
             {/* Right side: Live Preview */}
             <div className="flex-1 bg-muted/20 p-4 sm:p-6 overflow-hidden flex flex-col items-center justify-center">
-              <div className="w-full h-full max-w-[800px] bg-white rounded-lg shadow-sm border border-border overflow-hidden relative">
-                <iframe
-                  key={previewUrl} // Force reload on config change
-                  src={previewUrl}
-                  className="w-full h-full border-0 absolute inset-0"
-                  title="PDF Preview"
-                />
+              <div className="w-full h-full max-w-[800px] bg-white rounded-lg shadow-sm border border-border overflow-hidden relative flex items-center justify-center">
+                {isPreviewLoading && !previewBlobUrl && (
+                  <div className="flex flex-col items-center justify-center text-muted">
+                    <svg className="animate-spin h-8 w-8 mb-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <p className="text-sm font-medium">Generating preview...</p>
+                  </div>
+                )}
+                {previewBlobUrl && (
+                  <iframe
+                    src={`${previewBlobUrl}#toolbar=0`}
+                    className={`w-full h-full border-0 absolute inset-0 transition-opacity duration-300 ${isPreviewLoading ? 'opacity-50' : 'opacity-100'}`}
+                    title="PDF Preview"
+                  />
+                )}
               </div>
             </div>
           </div>
