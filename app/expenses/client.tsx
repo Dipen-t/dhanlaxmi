@@ -169,22 +169,21 @@ function PaymentNotepad({ payment, onRefresh }: { payment: OrderPaymentRecord, o
           ))}
         </div>
 
-        {/* The Add Form (The next blank line) */}
         <form 
           ref={formRef} 
           action={handleAddExpense} 
-          className={`flex items-center gap-3 px-5 py-3 bg-surface/30 border-t-2 border-dashed border-border/50 ${isPending ? 'opacity-50 pointer-events-none' : ''}`}
+          className={`flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 bg-surface/30 border-t-2 border-dashed border-border/50 ${isPending ? 'opacity-50 pointer-events-none' : ''}`}
         >
-          <span className="text-xs font-mono text-muted/50 w-4 text-right">{payment.expenses.length + 1}.</span>
+          <span className="text-xs font-mono text-muted/50 w-4 text-right shrink-0">{payment.expenses.length + 1}.</span>
           <input 
             type="text" 
             name="description" 
             placeholder="Expense description..." 
             required 
             autoComplete="off"
-            className="flex-1 bg-transparent border-none text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-0 px-0 h-8"
+            className="flex-1 min-w-0 bg-transparent border-none text-sm font-medium text-foreground placeholder:text-muted focus:outline-none focus:ring-0 px-0 h-8"
           />
-          <div className="flex items-center gap-2 border-l border-border/50 pl-3">
+          <div className="flex items-center gap-1 sm:gap-2 border-l border-border/50 pl-2 sm:pl-3 shrink-0">
             <span className="text-muted text-sm">₹</span>
             <input 
               type="number" 
@@ -193,12 +192,12 @@ function PaymentNotepad({ payment, onRefresh }: { payment: OrderPaymentRecord, o
               min="1"
               step="1"
               required 
-              className="w-24 bg-transparent border-none text-sm font-semibold text-foreground placeholder:text-muted focus:outline-none focus:ring-0 px-0 h-8 text-right font-mono"
+              className="w-16 sm:w-24 bg-transparent border-none text-sm font-semibold text-foreground placeholder:text-muted focus:outline-none focus:ring-0 px-0 h-8 text-right font-mono"
             />
           </div>
           <button 
             type="submit"
-            className="ml-2 flex items-center justify-center h-8 w-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
+            className="ml-1 sm:ml-2 flex items-center justify-center h-8 w-8 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shrink-0"
             title="Add Expense (Enter)"
           >
             <Plus className="size-4" />
