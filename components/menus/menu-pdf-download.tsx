@@ -186,7 +186,7 @@ export function MenuPdfDownload({
         </p>
       ) : null}
 
-      <dialog ref={dialogRef} className="app-dialog max-w-5xl w-[95vw] rounded-xl p-0" onClose={closeDialog}>
+      <dialog ref={dialogRef} className="w-[95vw] max-w-5xl rounded-xl p-0 border border-border bg-background shadow-xl backdrop:bg-slate-900/50 open:flex open:flex-col" onClose={closeDialog}>
         <div className="flex flex-col h-[85vh] max-h-[800px]">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-background shrink-0">
             <div>
