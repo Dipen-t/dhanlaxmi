@@ -47,5 +47,19 @@ export function registerPdfFonts() {
     ],
   });
 
+  Font.register({
+    family: "Inter",
+    fonts: [
+      {
+        src: `${FONT_CDN}/inter@latest/latin-400-normal.ttf`,
+        fontWeight: 400,
+      },
+      {
+        src: `${FONT_CDN}/inter@latest/latin-600-normal.ttf`,
+        fontWeight: 600,
+      },
+    ],
+  });
+
   fontsRegistered = true;
 }
