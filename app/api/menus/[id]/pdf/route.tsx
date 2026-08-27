@@ -39,6 +39,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const fontFamily = url.searchParams.get("fontFamily") || "SourceSans";
     const fontSize = url.searchParams.get("fontSize") || "10pt";
     const isInline = url.searchParams.get("inline") === "true";
+    const isPreview = url.searchParams.get("preview") === "true";
 
     let pdfBuffer: Buffer;
 
@@ -54,11 +55,14 @@ export async function GET(_request: Request, context: RouteContext) {
 
     const filename = `${sanitizeFilename(menu.name)}.pdf`;
     const disposition = isInline ? "inline" : "attachment";
+    
+    // Use octet-stream for previews to prevent download managers (like IDM) from intercepting the fetch request
+    const contentType = isPreview ? "application/octet-stream" : "application/pdf";
 
     return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
-        "Content-Type": "application/pdf",
+        "Content-Type": contentType,
         "Content-Length": String(pdfBuffer.length),
         "Content-Disposition": `${disposition}; filename="${filename}"`,
         "Cache-Control": "no-store",

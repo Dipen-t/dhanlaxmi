@@ -55,12 +55,14 @@ export function MenuPdfDownload({
 
       setIsPreviewLoading(true);
       try {
-        const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true`;
+        const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true&preview=true`;
         const response = await fetch(urlWithQuery);
         if (response.ok) {
-          const blob = await response.blob();
+          const rawBlob = await response.blob();
+          // We fetched it as octet-stream to bypass download managers, now we re-cast it to application/pdf for the iframe
+          const pdfBlob = new Blob([rawBlob], { type: "application/pdf" });
           if (isMounted) {
-            const url = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(pdfBlob);
             setPreviewBlobUrl(url);
           }
         }
@@ -228,8 +230,8 @@ export function MenuPdfDownload({
         </p>
       ) : null}
 
-      <dialog ref={dialogRef} className="w-[95vw] max-w-5xl rounded-xl p-0 border border-border bg-background shadow-xl backdrop:bg-slate-900/50 open:flex open:flex-col" onClose={closeDialog}>
-        <div className="flex flex-col h-[85vh] max-h-[800px]">
+      <dialog ref={dialogRef} className="w-[95vw] max-w-5xl rounded-xl p-0 border border-border bg-background shadow-xl backdrop:bg-slate-900/50 m-auto" onClose={closeDialog}>
+        <div className="flex flex-col h-[85vh] max-h-[800px] w-full">
           <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-background shrink-0">
             <div>
               <h2 className="text-lg font-bold text-foreground">Download PDF</h2>
