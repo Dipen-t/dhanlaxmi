@@ -41,7 +41,7 @@ export function MenuPdfDownload({
 
   useEffect(() => {
     setPreferShare(isIpadOrIos());
-    getPdfTemplates("menu").then(data => {
+    getPdfTemplates().then(data => {
       if (Array.isArray(data)) {
         setTemplates(data.map(t => ({ id: t.id, name: t.name })));
       }
