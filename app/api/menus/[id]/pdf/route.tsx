@@ -68,10 +68,10 @@ export async function GET(_request: Request, context: RouteContext) {
         "Cache-Control": "no-store",
       },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Menu PDF generation failed:", error);
     return NextResponse.json(
-      { error: "Could not generate PDF. Try again." },
+      { error: "Could not generate PDF.", details: error?.message || String(error), stack: error?.stack },
       { status: 500 },
     );
   }
