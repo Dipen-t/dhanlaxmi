@@ -4,6 +4,8 @@ import { registerPdfFonts } from "@/lib/menus/register-pdf-fonts";
 
 import { renderToBuffer } from "@react-pdf/renderer";
 
+import { MenuPdfDocument } from "@/lib/menus/pdf-templates/standard-template";
+
 export async function generateMenuPdfBuffer(
   menu: MenuDetail,
   logo: PdfLogoAssets,
@@ -12,9 +14,8 @@ export async function generateMenuPdfBuffer(
 ): Promise<Buffer> {
   registerPdfFonts();
   
-  const DocumentComponent = (await import("@/lib/menus/pdf-templates/standard-template")).MenuPdfDocument;
   const buffer = await renderToBuffer(
-    <DocumentComponent menu={menu} logo={logo} config={config} />,
+    <MenuPdfDocument menu={menu} logo={logo} config={config} />,
   );
 
   return Buffer.from(buffer);

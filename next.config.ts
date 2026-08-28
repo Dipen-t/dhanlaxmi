@@ -4,6 +4,9 @@ const nextConfig: NextConfig = {
   // Allow iPad / phones on the LAN to load Next.js dev JS (touch + sound need this).
   allowedDevOrigins: ["192.168.1.100", "192.168.1.*", "*.local"],
   serverExternalPackages: ["@react-pdf/renderer", "sharp"],
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./app/logo.png"],
+  },
   async headers() {
     return [
       {
