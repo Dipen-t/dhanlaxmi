@@ -24,14 +24,14 @@ const colors = {
   rule: "#D5E0DE",
 };
 
-const styles = StyleSheet.create({
+const getStyles = (primaryFont: string, scale: number) => StyleSheet.create({
   page: {
     backgroundColor: colors.cream,
     paddingTop: HEADER_CLEARANCE,
     paddingBottom: 44,
     paddingHorizontal: PAGE_HORIZONTAL_PADDING,
-    fontFamily: "SourceSans",
-    fontSize: 10,
+    fontFamily: primaryFont,
+    fontSize: 10 * scale,
     color: colors.ink,
   },
   pageHeader: {
@@ -53,16 +53,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   menuTitle: {
-    fontFamily: "Playball",
-    fontSize: 28,
+    fontFamily: primaryFont,
+    fontSize: 28 * scale,
     color: colors.tealDeep,
     marginBottom: 2,
     textAlign: "center",
   },
   menuSubtitle: {
-    fontFamily: "Cormorant",
-    fontSize: 10,
-    fontStyle: "italic",
+    fontFamily: primaryFont,
+    fontSize: 10 * scale,
     color: colors.muted,
     letterSpacing: 0.6,
     marginBottom: 12,
@@ -89,8 +88,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   fieldLabel: {
-    fontSize: 8.5,
-    fontFamily: "SourceSans",
+    fontSize: 8.5 * scale,
+    fontFamily: primaryFont,
     fontWeight: 600,
     color: colors.teal,
     marginRight: 5,
@@ -103,9 +102,8 @@ const styles = StyleSheet.create({
     minWidth: 56,
   },
   sectionIntro: {
-    fontFamily: "Cormorant",
-    fontSize: 9.5,
-    fontStyle: "italic",
+    fontFamily: primaryFont,
+    fontSize: 9.5 * scale,
     color: colors.muted,
     marginTop: 6,
     marginBottom: 14,
@@ -132,9 +130,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tealLine,
   },
   categoryName: {
-    fontFamily: "Cormorant",
+    fontFamily: primaryFont,
     fontWeight: 600,
-    fontSize: 12,
+    fontSize: 12 * scale,
     textTransform: "uppercase",
     letterSpacing: 0.7,
     color: colors.tealDeep,
@@ -142,9 +140,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   selectionRule: {
-    fontFamily: "Cormorant",
-    fontSize: 9,
-    fontStyle: "italic",
+    fontFamily: primaryFont,
+    fontSize: 9 * scale,
     color: colors.muted,
     marginTop: 3,
     textAlign: "center",
@@ -165,8 +162,8 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   checkbox: {
-    width: 11,
-    height: 11,
+    width: 11 * scale,
+    height: 11 * scale,
     borderWidth: 1.2,
     borderColor: colors.tealDeep,
     marginRight: 5,
@@ -175,8 +172,8 @@ const styles = StyleSheet.create({
   },
   dishName: {
     flex: 1,
-    fontSize: 9.5,
-    fontFamily: "SourceSans",
+    fontSize: 9.5 * scale,
+    fontFamily: primaryFont,
     color: colors.ink,
     lineHeight: 1.35,
   },
@@ -193,13 +190,13 @@ const styles = StyleSheet.create({
     paddingTop: 5,
   },
   footerBrand: {
-    fontFamily: "Playball",
-    fontSize: 10,
+    fontFamily: primaryFont,
+    fontSize: 10 * scale,
     color: colors.tealDeep,
   },
   footerPage: {
-    fontFamily: "SourceSans",
-    fontSize: 7,
+    fontFamily: primaryFont,
+    fontSize: 7 * scale,
     color: colors.muted,
   },
 });
@@ -210,7 +207,7 @@ type MenuPdfDocumentProps = {
   config?: { fontFamily: string; fontSize: string };
 };
 
-function PageHeader({ logo }: { logo: PdfLogoAssets }) {
+function PageHeader({ logo, styles }: { logo: PdfLogoAssets, styles: any }) {
   return (
     <View style={styles.pageHeader} fixed>
       <Image
@@ -223,8 +220,10 @@ function PageHeader({ logo }: { logo: PdfLogoAssets }) {
 
 function CategorySection({
   category,
+  styles,
 }: {
   category: MenuDetail["categories"][number];
+  styles: any;
 }) {
   const useSingleColumn = category.dishes.length <= 3;
 
@@ -259,15 +258,16 @@ function CategorySection({
 }
 
 export function MenuPdfDocument({ menu, logo, config }: MenuPdfDocumentProps) {
-  const dynamicStyles = config ? {
-    fontFamily: config.fontFamily || "SourceSans",
-    fontSize: config.fontSize === "10pt" ? 10 : config.fontSize === "12pt" ? 12 : 14,
-  } : {};
+  const primaryFont = config?.fontFamily || "SourceSans";
+  const baseSize = config?.fontSize === "12pt" ? 12 : config?.fontSize === "14pt" ? 14 : 10;
+  const scale = baseSize / 10;
+  
+  const styles = getStyles(primaryFont, scale);
 
   return (
     <Document title={menu.name} author="Dhalaxmi Catering Service">
-      <Page size="A4" style={{ ...styles.page, ...dynamicStyles }}>
-        <PageHeader logo={logo} />
+      <Page size="A4" style={styles.page}>
+        <PageHeader logo={logo} styles={styles} />
 
         <View style={styles.coverSection} wrap={false}>
           <View style={styles.coverBody}>
@@ -298,7 +298,7 @@ export function MenuPdfDocument({ menu, logo, config }: MenuPdfDocumentProps) {
         </Text>
 
         {menu.categories.map((category) => (
-          <CategorySection key={category.id} category={category} />
+          <CategorySection key={category.id} category={category} styles={styles} />
         ))}
 
         <View style={styles.footer} fixed>
