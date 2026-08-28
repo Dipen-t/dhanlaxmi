@@ -4,8 +4,6 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { generateMenuPdfBuffer } from "@/lib/menus/generate-menu-pdf";
-import { getPdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
@@ -264,6 +262,8 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: 
   }
 
   try {
+    const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
+    const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
     const logo = await getPdfLogoAssets();
     const pdfBuffer = await generateMenuPdfBuffer(menu, logo);
     
