@@ -11,24 +11,7 @@ export async function generateMenuPdfBuffer(
   registerPdfFonts();
   const { renderToBuffer } = await import("@react-pdf/renderer");
   
-  let DocumentComponent: any;
-  
-  switch (themeType) {
-    case "wedding":
-      DocumentComponent = (await import("@/lib/menus/pdf-templates/wedding-template")).default;
-      break;
-    case "party":
-      DocumentComponent = (await import("@/lib/menus/pdf-templates/party-template")).default;
-      break;
-    case "corporate":
-      DocumentComponent = (await import("@/lib/menus/pdf-templates/corporate-template")).default;
-      break;
-    case "standard":
-    default:
-      DocumentComponent = (await import("@/lib/menus/pdf-templates/standard-template")).MenuPdfDocument;
-      break;
-  }
-
+  const DocumentComponent = (await import("@/lib/menus/pdf-templates/standard-template")).MenuPdfDocument;
   const buffer = await renderToBuffer(
     <DocumentComponent menu={menu} logo={logo} config={config} />,
   );
