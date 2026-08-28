@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 
 import { getKitchenMenuById } from "@/app/kitchen-menus/actions";
-import { generateKitchenMenuPdfBuffer } from "@/lib/menus/generate-kitchen-menu-pdf";
-import { getPdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 
 export const runtime = "nodejs";
@@ -34,6 +32,8 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   try {
+    const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
+    const { generateKitchenMenuPdfBuffer } = await import("@/lib/menus/generate-kitchen-menu-pdf");
     const logo = await getPdfLogoAssets();
     const pdfBuffer = await generateKitchenMenuPdfBuffer(menu, logo);
 
