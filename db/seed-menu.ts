@@ -1,7 +1,7 @@
 import { loadEnvConfig } from "@next/env";
 import { eq } from "drizzle-orm";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 import { menuCatalog } from "./menu-catalog";
 import * as schema from "./schema";
@@ -16,8 +16,8 @@ async function seedMenuCatalog() {
     throw new Error("DATABASE_URL is not set");
   }
 
-  const sql = neon(databaseUrl);
-  const db = drizzle({ client: sql, schema });
+  const queryClient = postgres(databaseUrl, { prepare: false });
+  const db = drizzle(queryClient, { schema });
 
   const existing = await db.query.dishCategories.findFirst();
   if (existing) {

@@ -1,5 +1,5 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 import * as schema from "./schema";
 
@@ -13,6 +13,7 @@ function getDatabaseUrl() {
   return url;
 }
 
-const sql = neon(getDatabaseUrl());
+// Disable prefetch as it is not supported for "Transaction" pool mode
+const queryClient = postgres(getDatabaseUrl(), { prepare: false });
 
-export const db = drizzle({ client: sql, schema });
+export const db = drizzle(queryClient, { schema });

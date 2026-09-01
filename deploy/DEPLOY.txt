@@ -1,0 +1,13 @@
+SIMPLE DEPLOY — 4 steps only
+
+1. STOP Node app in cPanel first
+2. Delete all files in folder (keep nothing except node_modules symlink)
+3. Upload dist/dhanlaxmi-cpanel.tar.gz → Extract
+4. Copy .env.example → .env, then RESTART (startup: server.js)
+
+DO NOT:
+- Run NPM Install
+- Run any JS scripts
+- Restart multiple times
+
+If processes hit 100/100: stop ALL Node apps, wait 10 min, try again.

@@ -1,7 +1,8 @@
 import { loadEnvConfig } from "@next/env";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
+import * as schema from "./schema";
 import { rawMaterials } from "./schema";
 
 loadEnvConfig(process.cwd());
@@ -44,8 +45,8 @@ async function seed() {
     throw new Error("DATABASE_URL is not set");
   }
 
-  const sql = neon(databaseUrl);
-  const db = drizzle({ client: sql });
+  const queryClient = postgres(databaseUrl, { prepare: false });
+  const db = drizzle(queryClient, { schema });
 
   await db
     .insert(rawMaterials)

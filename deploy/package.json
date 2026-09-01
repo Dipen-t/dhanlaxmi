@@ -1,0 +1,6 @@
+{
+  "name": "dhanlaxmi",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deps in ./vendor (CloudLinux — no node_modules in app root)"
+}

@@ -1,8 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import sharp from "sharp";
-
 const HEADER_LOGO_WIDTH = 112;
 
 export type PdfLogoAssets = {
@@ -11,27 +9,29 @@ export type PdfLogoAssets = {
   headerHeight: number;
 };
 
+function readPngDimensions(buffer: Buffer): { width: number; height: number } {
+  const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (buffer.length < 24 || !buffer.subarray(0, 8).equals(pngSignature)) {
+    return { width: HEADER_LOGO_WIDTH, height: HEADER_LOGO_WIDTH };
+  }
+
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  };
+}
+
 export async function getPdfLogoAssets(): Promise<PdfLogoAssets> {
   const logoPath = path.join(process.cwd(), "app", "logo.png");
   const file = await readFile(logoPath);
-  const metadata = await sharp(file).metadata();
+  const { width: nativeWidth, height: nativeHeight } = readPngDimensions(file);
 
-  const nativeWidth = metadata.width ?? HEADER_LOGO_WIDTH;
-  const nativeHeight = metadata.height ?? HEADER_LOGO_WIDTH;
   const aspectRatio = nativeWidth / nativeHeight;
-
   const headerWidth = HEADER_LOGO_WIDTH;
   const headerHeight = headerWidth / aspectRatio;
 
-  const rasterWidth = Math.min(nativeWidth, HEADER_LOGO_WIDTH * 4);
-
-  const optimized = await sharp(file)
-    .resize({ width: rasterWidth, withoutEnlargement: true })
-    .png({ compressionLevel: 9 })
-    .toBuffer();
-
   return {
-    src: `data:image/png;base64,${optimized.toString("base64")}`,
+    src: `data:image/png;base64,${file.toString("base64")}`,
     headerWidth,
     headerHeight,
   };

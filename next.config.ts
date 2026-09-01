@@ -1,9 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
+  experimental: {
+    serverActions: {
+      allowedOrigins: ["dhanlaxmi.nnsolutions.co.in"],
+    },
+  },
   // Allow iPad / phones on the LAN to load Next.js dev JS (touch + sound need this).
   allowedDevOrigins: ["192.168.1.100", "192.168.1.*", "*.local"],
-  serverExternalPackages: ["@react-pdf/renderer", "sharp"],
   outputFileTracingIncludes: {
     "/api/**/*": ["./app/logo.png"],
   },
