@@ -3,6 +3,7 @@
 import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import type { CategoryWithDishes, MenuSummary } from "@/app/menus/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
@@ -26,9 +27,10 @@ export function MenusView({ menus, catalog }: MenusViewProps) {
 
   useEffect(() => {
     const stored = localStorage.getItem("menus-view");
-    if (stored === "grid" || stored === "list") {
-      setView(stored);
-    }
+    const frame = requestAnimationFrame(() => {
+      if (stored === "grid" || stored === "list") setView(stored);
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const filteredMenus = useMemo(() => {
@@ -65,6 +67,11 @@ export function MenusView({ menus, catalog }: MenusViewProps) {
 
   return (
     <>
+      <div className="mb-4 flex justify-end">
+        <Link href="/menus/catalog" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border px-4 text-sm font-semibold text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+          Category &amp; Dishes
+        </Link>
+      </div>
       <div className="sticky top-0 z-20 -mx-4 mb-5 border-b border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
           <label className="relative block min-w-0 flex-1">

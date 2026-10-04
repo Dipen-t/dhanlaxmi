@@ -11,6 +11,10 @@
 # testing
 /coverage
 
+# Generated menu PDF samples and verification artifacts
+/output/pdf/
+/tmp/pdfs/
+
 # next.js
 /.next/
 /out/

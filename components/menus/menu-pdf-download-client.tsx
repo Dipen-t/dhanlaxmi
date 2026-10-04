@@ -1,12 +1,9 @@
 "use client";
 
-import { Download, FileDown, Loader2, X } from "lucide-react";
-import { useEffect, useState, useRef } from "react";
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+import { Check, FileDown, X } from "lucide-react";
+import { useEffect, useState, useRef, useId } from "react";
+import Image from "next/image";
+import { menuPdfThemes } from "@/lib/menus/pdf-themes";
 
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 
@@ -16,11 +13,6 @@ type MenuPdfDownloadProps = {
   variant?: "icon" | "button";
   className?: string;
   buttonClassName?: string;
-};
-
-type TemplateRecord = {
-  id: number;
-  name: string;
 };
 
 function isIpadOrIos() {
@@ -40,54 +32,16 @@ export function MenuPdfDownload({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preferShare, setPreferShare] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const uid = useId();
   const [fontFamily, setFontFamily] = useState("SourceSans");
   const [fontSize, setFontSize] = useState("10pt");
-  const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [numPages, setNumPages] = useState<number>();
-  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [theme, setTheme] = useState("standard");
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
-    setPreferShare(isIpadOrIos());
+    const frame = requestAnimationFrame(() => setPreferShare(isIpadOrIos()));
+    return () => cancelAnimationFrame(frame);
   }, []);
-
-  // Fetch the PDF blob for the live preview
-  useEffect(() => {
-    let isMounted = true;
-    const fetchPreview = async () => {
-      if (!isOpen) return;
-
-      setIsPreviewLoading(true);
-      try {
-        const urlWithQuery = `/api/menus/${menuId}/pdf?fontFamily=${fontFamily}&fontSize=${fontSize}&inline=true&preview=true`;
-        const response = await fetch(urlWithQuery);
-        if (response.ok) {
-          const buffer = await response.arrayBuffer();
-          // We fetched it as octet-stream to bypass download managers, now we re-cast it to application/pdf for the embed
-          const pdfBlob = new Blob([buffer], { type: "application/pdf" });
-          if (isMounted) {
-            const url = URL.createObjectURL(pdfBlob);
-            setPreviewBlobUrl(url);
-          }
-        }
-      } catch (e) {
-        console.error("Preview fetch failed", e);
-      } finally {
-        if (isMounted) setIsPreviewLoading(false);
-      }
-    };
-
-    fetchPreview();
-
-    return () => {
-      isMounted = false;
-      if (previewBlobUrl) {
-        URL.revokeObjectURL(previewBlobUrl);
-      }
-    };
-  }, [menuId, fontFamily, fontSize, isOpen]);
 
   const openTemplateSelection = (e?: React.MouseEvent) => {
     if (e) {
@@ -95,14 +49,12 @@ export function MenuPdfDownload({
       e.stopPropagation();
     }
     dialogRef.current?.showModal();
-    setIsOpen(true);
+
   };
 
   const closeDialog = () => {
     dialogRef.current?.close();
-    setIsOpen(false);
-    setPreviewBlobUrl(null);
-    setPageNumber(1);
+
   };
 
   async function handleDownload() {
@@ -115,7 +67,7 @@ export function MenuPdfDownload({
       preferShare || isIpadOrIos() ? window.open("about:blank", "_blank") : null;
 
     try {
-      const urlWithQuery = `/api/menus/${menuId}/pdf?fontFamily=${fontFamily}&fontSize=${fontSize}`;
+      const urlWithQuery = `/api/menus/${menuId}/pdf?theme=${theme}&fontFamily=${fontFamily}&fontSize=${fontSize}`;
       const response = await fetch(urlWithQuery);
 
       if (!response.ok) {
@@ -196,10 +148,6 @@ export function MenuPdfDownload({
     }
   }
 
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages);
-  }
-
   const baseClass =
     buttonClassName ??
     "inline-flex min-h-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:border-primary/30 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
@@ -241,130 +189,36 @@ export function MenuPdfDownload({
         </p>
       ) : null}
 
-      <dialog ref={dialogRef} className="w-[95vw] max-w-5xl rounded-xl p-0 border border-border bg-background shadow-xl backdrop:bg-slate-900/50 m-auto" onClose={closeDialog}>
-        <div className="flex flex-col h-[85vh] max-h-[800px] w-full">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-border/50 bg-background shrink-0">
-            <div>
-              <h2 className="text-lg font-bold text-foreground">Download PDF</h2>
-              <p className="text-sm text-muted">Customize the look and feel of your menu before downloading.</p>
-            </div>
-            <button onClick={closeDialog} className="rounded-md p-2 hover:bg-surface transition-colors">
-              <X className="size-5 text-muted" />
-            </button>
+      <dialog ref={dialogRef} aria-labelledby={`${uid}-title`} className="m-auto w-[95vw] max-w-5xl rounded-xl border border-border bg-background p-0 shadow-xl backdrop:bg-slate-900/50">
+        <div className="flex max-h-[90vh] flex-col">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
+            <div><h2 id={`${uid}-title`} className="text-lg font-semibold">Choose a menu theme</h2><p className="mt-1 text-sm text-muted">Sample designs shown below. Your menu content is added when you download.</p></div>
+            <button type="button" aria-label="Close theme selection" onClick={closeDialog} className="rounded-lg p-2 hover:bg-surface"><X className="size-5" /></button>
           </div>
-          
-          <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-            {/* Left side: Configuration */}
-            <div className="w-full md:w-[320px] shrink-0 border-b md:border-b-0 md:border-r border-border/50 bg-surface/30 p-5 flex flex-col gap-5 overflow-y-auto">
-              <div className="space-y-4">
-
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="fontFamily" className="text-sm font-semibold text-foreground">Typography</label>
-                  <select
-                    id="fontFamily"
-                    className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-full"
-                    value={fontFamily}
-                    onChange={(e) => setFontFamily(e.target.value)}
-                  >
-                    <option value="SourceSans">Source Sans (Clean Sans)</option>
-                    <option value="Inter">Inter (Modern Sans)</option>
-                    <option value="Playball">Playball (Elegant Script)</option>
-                    <option value="Cormorant">Cormorant (Classic Serif)</option>
-                  </select>
-                </div>
-                
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="fontSize" className="text-sm font-semibold text-foreground">Font Size</label>
-                  <select
-                    id="fontSize"
-                    className="rounded-lg border border-border bg-background px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary w-full"
-                    value={fontSize}
-                    onChange={(e) => setFontSize(e.target.value)}
-                  >
-                    <option value="10pt">Small (10pt)</option>
-                    <option value="12pt">Medium (12pt)</option>
-                    <option value="14pt">Large (14pt)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* Right side: Live Preview */}
-            <div className="flex-1 bg-muted/20 p-4 sm:p-6 overflow-hidden flex flex-col items-center justify-center">
-              <div className="w-full h-full max-w-[800px] overflow-auto relative flex flex-col items-center">
-                {isPreviewLoading && !previewBlobUrl && (
-                  <div className="flex flex-col items-center justify-center text-muted h-full">
-                    <Loader2 className="h-8 w-8 mb-4 text-primary animate-spin" />
-                    <p className="text-sm font-medium">Generating preview...</p>
+          <div className="overflow-y-auto p-5">
+            <fieldset><legend className="sr-only">Menu theme</legend>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {menuPdfThemes.map(item => <label key={item.id} className="relative cursor-pointer">
+                  <input type="radio" name={`${uid}-theme`} value={item.id} checked={theme === item.id} onChange={() => setTheme(item.id)} className="peer sr-only" />
+                  <div className="h-full overflow-hidden rounded-xl border-2 border-border transition-colors peer-checked:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 hover:border-primary/50">
+                    <div className="flex h-64 items-center justify-center gap-2 bg-surface p-3">
+                      <Image src={item.coverPreview} alt={`${item.name} ${item.menuPreview ? "cover" : "menu page"}`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />
+                      {item.menuPreview && <Image src={item.menuPreview} alt={`${item.name} menu page`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />}
+                    </div>
+                    <div className="p-3"><div className="flex items-center justify-between"><span className="font-semibold">{item.name}</span>{theme === item.id && <Check className="size-5 text-primary" aria-hidden />}</div><p className="mt-1 text-xs text-muted">{item.description}</p></div>
                   </div>
-                )}
-                {previewBlobUrl && (
-                  <div className={`transition-opacity duration-300 shadow-sm border border-border bg-white ${isPreviewLoading ? 'opacity-50' : 'opacity-100'}`}>
-                    <Document
-                      file={previewBlobUrl}
-                      onLoadSuccess={onDocumentLoadSuccess}
-                      loading={
-                        <div className="h-[600px] w-[450px] flex items-center justify-center text-muted">
-                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                      }
-                      error={
-                        <div className="h-[600px] w-[450px] flex flex-col items-center justify-center text-error p-6 text-center bg-error-soft/30">
-                          <p className="font-semibold mb-2">Could not load preview</p>
-                          <p className="text-sm opacity-80">The PDF may be corrupted or blocked by the browser.</p>
-                        </div>
-                      }
-                    >
-                      <Page 
-                        pageNumber={pageNumber} 
-                        renderTextLayer={false}
-                        renderAnnotationLayer={false}
-                        width={Math.min(typeof window !== 'undefined' ? (window.innerWidth > 768 ? window.innerWidth - 420 : window.innerWidth - 80) : 800, 800)}
-                        className="shadow-xl"
-                      />
-                    </Document>
-                    {numPages && numPages > 1 && (
-                      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-black/70 text-white px-4 py-2 rounded-full shadow-lg z-10 backdrop-blur-md">
-                        <button
-                          disabled={pageNumber <= 1}
-                          onClick={() => setPageNumber(prev => Math.max(prev - 1, 1))}
-                          className="disabled:opacity-50 hover:bg-white/20 p-1 rounded transition-colors"
-                        >
-                          &larr; Prev
-                        </button>
-                        <span className="text-sm font-medium text-white/90">
-                          Page {pageNumber} of {numPages}
-                        </span>
-                        <button
-                          disabled={pageNumber >= numPages}
-                          onClick={() => setPageNumber(prev => Math.min(prev + 1, numPages))}
-                          className="disabled:opacity-50 hover:bg-white/20 p-1 rounded transition-colors"
-                        >
-                          Next &rarr;
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                </label>)}
               </div>
-            </div>
+            </fieldset>
+            {theme === "standard" && <div className="mt-5 flex flex-wrap gap-4 rounded-lg border border-border p-4">
+              <label className="space-y-1 text-sm font-medium" htmlFor={`${uid}-font`}>Typography<select id={`${uid}-font`} value={fontFamily} onChange={e => setFontFamily(e.target.value)} className="block rounded-lg border border-border bg-background px-3 py-2"><option value="SourceSans">Source Sans</option><option value="Inter">Inter</option><option value="Playball">Playball</option><option value="Cormorant">Cormorant</option></select></label>
+              <label className="space-y-1 text-sm font-medium" htmlFor={`${uid}-size`}>Font size<select id={`${uid}-size`} value={fontSize} onChange={e => setFontSize(e.target.value)} className="block rounded-lg border border-border bg-background px-3 py-2"><option value="10pt">Small (10pt)</option><option value="12pt">Medium (12pt)</option><option value="14pt">Large (14pt)</option></select></label>
+            </div>}
           </div>
-          
-          <div className="flex justify-end gap-3 px-5 py-4 border-t border-border/50 bg-background shrink-0">
-             <button
-                onClick={closeDialog}
-                className="px-4 py-2.5 text-sm font-semibold border border-border rounded-lg hover:bg-surface transition-colors"
-             >
-                Cancel
-             </button>
-             <button
-                onClick={() => handleDownload()}
-                disabled={isLoading}
-                className="px-4 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors inline-flex items-center gap-2"
-             >
-                <FileDown className="size-4" />
-                {isLoading ? "Downloading..." : "Download Final PDF"}
-             </button>
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
+            <span className="mr-auto text-sm text-muted">{menuPdfThemes.find(item => item.id === theme)?.name}</span>
+            <button type="button" onClick={closeDialog} className="rounded-lg border border-border px-4 py-2.5 text-sm font-semibold hover:bg-surface">Cancel</button>
+            <button type="button" onClick={handleDownload} disabled={isLoading} className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"><FileDown className="size-4" />Download PDF</button>
           </div>
         </div>
       </dialog>
