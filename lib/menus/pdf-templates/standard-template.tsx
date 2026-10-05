@@ -262,7 +262,7 @@ function CategorySection({
           </View>
         ))}
       </View>
-      {photo ? <View style={{ width: 148, height: 100, marginLeft: 14, overflow: "hidden", borderRadius: 6, borderWidth: 0.5, borderColor: colors.tealLine, backgroundColor: "#120c07" }}>
+      {photo ? <View style={{ width: 148, height: 100, marginLeft: 14 }}>
         {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not an HTML element. */}
         <Image src={photo} style={{ width: 148, height: 100, objectFit: "contain" }} />
       </View> : null}

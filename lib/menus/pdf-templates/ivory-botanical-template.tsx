@@ -170,7 +170,7 @@ function CategorySection({ section, styles, categoryPhotos }: { section: Section
         <View style={styles.headingRule} />
       </View>
     </View>
-    {photo ? <View style={{ position: "absolute", left: 138, top: section.headerHeight, width: 130, height: section.photoHeight, overflow: "hidden", borderRadius: 5, borderWidth: 0.5, borderColor: gold, backgroundColor: "#120c07" }}>
+    {photo ? <View style={{ position: "absolute", left: 138, top: section.headerHeight, width: 130, height: section.photoHeight }}>
       {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not an HTML element. */}
       <Image src={photo} style={{ width: 130, height: section.photoHeight, objectFit: "contain" }} />
     </View> : null}
