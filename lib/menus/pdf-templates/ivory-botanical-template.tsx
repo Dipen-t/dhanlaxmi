@@ -1,4 +1,5 @@
 import path from "node:path";
+import { getCategoryImageKey, type CategoryPhotoSources } from "../category-images";
 import { Document, Font, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import type { MenuDetail } from "@/app/menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
@@ -81,7 +82,7 @@ const artDecoStyles: typeof styles = StyleSheet.create({
 });
 
 type Category = MenuDetail["categories"][number];
-type Section = { category: Category; number: number; continued: boolean; dishes: string[][]; columns: number; lineBudget: number; headingLines: string[]; selectionLines: string[]; headingSize: number; headerHeight: number; headerWidth: number; top: number };
+type Section = { category: Category; number: number; continued: boolean; dishes: string[][]; columns: number; lineBudget: number; headingLines: string[]; selectionLines: string[]; headingSize: number; headerHeight: number; headerWidth: number; top: number; photoHeight: number };
 
 // Explicit wrapping makes capacity predictable before laying out the fixed panels.
 function wrapName(name: string, width: number): string[] {
@@ -109,51 +110,50 @@ function wrapName(name: string, width: number): string[] {
   return lines.length ? lines : [""];
 }
 
-export function createBotanicalSections(categories: Category[], emerald = false, artDeco = false): Section[] {
+export function createBotanicalSections(categories: Category[], artDeco = false): Section[] {
   const sections: Section[] = [];
   categories.forEach((category, index) => {
     const remaining = category.dishes.map(dish => dish.name);
     let continued = false;
     do {
       const slot = sections.length % 6;
-      // The upper right panel has enough negative space for the reference's two-column list.
-      const columns = slot === 3 && remaining.length > 9 ? 2 : 1;
-      const textWidth = columns === 2 ? 93 : slot >= 3 ? 153 : 130;
-      const sectionWidth = columns === 2 ? 210 : slot >= 3 ? 169 : 146;
-      // The top/bottom of the middle panel has a clear band above the photographs.
-      const headerWidth = slot === 0 || slot === 2 ? 268 : sectionWidth;
+      // Each category owns its photograph; reserve the right side for it.
+      const columns = 1;
+      const hasPhoto = !!getCategoryImageKey(category);
+      const textWidth = hasPhoto ? 118 : 252;
+      // Headings use the complete band above each category photo.
+      const headerWidth = 268;
       const headingSize = category.name.length > 20 ? 10.2 : 11.6;
       const headingLines = wrapName(`${category.name.toUpperCase()}${continued ? " (CONT.)" : ""}`, (headerWidth - 43) * BODY_SIZE / headingSize * 0.93);
       const selectionLines = category.selectionRule ? wrapName(`(${category.selectionRule.toUpperCase()})`, (headerWidth - 43) * 0.86) : [];
       const headerHeight = Math.max(32, headingLines.length * headingSize * 1.1 + (selectionLines.length ? selectionLines.length * 10 + 3 : 0) + 6) + 7;
-      const top = (artDeco ? [32, 232, 403] : [52, 224, emerald ? 388 : 360])[slot % 3];
-      const availableHeight = (artDeco ? [181, 148, 152] : [160, 124, emerald ? 167 : 178])[slot % 3];
+      const top = (artDeco ? [32, 232, 403] : [52, 224, 388])[slot % 3];
+      const availableHeight = (artDeco ? [181, 160, 152] : [160, 160, 167])[slot % 3];
       const lineBudget = Math.max(1, Math.floor((availableHeight - headerHeight) / (artDeco ? 10 : LINE_HEIGHT)));
+      const photoHeight = Math.max(40, Math.min(94, availableHeight - headerHeight));
       const chosen: string[][] = [];
       let used = 0;
       while (remaining.length) {
         const lines = wrapName(remaining[0], textWidth);
         const cost = Math.min(lines.length, lineBudget);
-        const column = columns === 2 && used + cost > lineBudget ? 1 : 0;
-        if (used + cost > lineBudget * columns || (columns === 1 && used + cost > lineBudget)) break;
-        if (column === 1 && used < lineBudget) used = lineBudget;
-        if (used + cost > lineBudget * columns) break;
+        if (used + cost > lineBudget) break;
         chosen.push(lines.slice(0, lineBudget));
         // Preserve very long names across continuation blocks as well.
         if (lines.length > lineBudget) remaining[0] = lines.slice(lineBudget).join(" ");
         else remaining.shift();
         used += cost;
       }
-      sections.push({ category, number: index + 1, continued, dishes: chosen, columns, lineBudget, headingLines, selectionLines, headingSize, headerHeight, headerWidth, top });
+      sections.push({ category, number: index + 1, continued, dishes: chosen, columns, lineBudget, headingLines, selectionLines, headingSize, headerHeight, headerWidth, top, photoHeight });
       continued = true;
     } while (remaining.length);
   });
   return sections;
 }
 
-function CategorySection({ section, slot, styles }: { section: Section; slot: number; styles: typeof burgundyStyles }) {
-  const panel = slot < 3 ? 1 : 2;
-  const width = section.columns === 2 ? 210 : panel === 2 ? 169 : 146;
+function CategorySection({ section, styles, categoryPhotos }: { section: Section; styles: typeof burgundyStyles; categoryPhotos: CategoryPhotoSources }) {
+  const key = getCategoryImageKey(section.category);
+  const photo = key ? categoryPhotos[key] : undefined;
+  const width = photo ? 134 : 268;
   // Lists read down each column, matching the printed reference.
   const columnLists: string[][][] = [[]];
   let used = 0;
@@ -161,7 +161,7 @@ function CategorySection({ section, slot, styles }: { section: Section; slot: nu
     if (section.columns === 2 && used + lines.length > section.lineBudget && columnLists.length === 1) { columnLists.push([]); used = 0; }
     columnLists[columnLists.length - 1].push(lines); used += lines.length;
   }
-  return <View style={[styles.section, { left: 15, top: section.top, width }]}>
+  return <View style={[styles.section, { left: 15, top: section.top, width: 268 }]}>
     <View style={[styles.header, { width: section.headerWidth, height: section.headerHeight - 7 }]}>
       <Text style={styles.number}>{String(section.number).padStart(2, "0")}</Text>
       <View style={{ flex: 1 }}>
@@ -170,7 +170,11 @@ function CategorySection({ section, slot, styles }: { section: Section; slot: nu
         <View style={styles.headingRule} />
       </View>
     </View>
-    <View style={{ flexDirection: "row" }}>
+    {photo ? <View style={{ position: "absolute", left: 138, top: section.headerHeight, width: 130, height: section.photoHeight, overflow: "hidden", borderRadius: 5, borderWidth: 0.5, borderColor: gold, backgroundColor: "#120c07" }}>
+      {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not an HTML element. */}
+      <Image src={photo} style={{ width: 130, height: section.photoHeight, objectFit: "contain" }} />
+    </View> : null}
+    <View style={{ flexDirection: "row", width }}>
       {columnLists.map((list, column) => <View key={column} style={{ width: width / section.columns }}>
         {list.map((lines, index) => <View key={index} style={styles.dish}>
           <Text style={styles.bullet}>•</Text>
@@ -189,15 +193,15 @@ function PageArtwork({ background, panel }: { background: string; panel: number 
   </View>;
 }
 
-export function IvoryBotanicalPdfDocument({ menu, logo, background, theme = "ivory-botanical" }: { menu: MenuDetail; logo: PdfLogoAssets; background: string; theme?: "ivory-botanical" | "burgundy-gold" | "emerald-gold" | "art-deco-gold" }) {
+export function IvoryBotanicalPdfDocument({ menu, logo, background, contentBackground, categoryPhotos, theme = "ivory-botanical" }: { menu: MenuDetail; logo: PdfLogoAssets; background: string; contentBackground: string; categoryPhotos: CategoryPhotoSources; theme?: "ivory-botanical" | "burgundy-gold" | "emerald-gold" | "art-deco-gold" }) {
   const themeStyles = theme === "art-deco-gold" ? artDecoStyles : theme === "emerald-gold" ? emeraldStyles : theme === "burgundy-gold" ? burgundyStyles : styles;
   // Artwork themes share pagination and positioning while retaining their own palette.
   const middleCaption = theme === "emerald-gold" || theme === "art-deco-gold" ? "Timeless Favourites\nAlways a Good Idea" : "Crafted with Passion\nServed with Love";
-  return <ArtworkMenuPdfDocument menu={menu} logo={logo} background={background} styles={themeStyles} middleCaption={middleCaption} emerald={theme === "emerald-gold"} artDeco={theme === "art-deco-gold"} />;
+  return <ArtworkMenuPdfDocument menu={menu} logo={logo} background={background} contentBackground={contentBackground} categoryPhotos={categoryPhotos} styles={themeStyles} middleCaption={middleCaption} emerald={theme === "emerald-gold"} artDeco={theme === "art-deco-gold"} />;
 }
 
-function ArtworkMenuPdfDocument({ menu, logo, background, styles, middleCaption, emerald, artDeco }: { menu: MenuDetail; logo: PdfLogoAssets; background: string; styles: typeof burgundyStyles; middleCaption: string; emerald: boolean; artDeco: boolean }) {
-  const sections = createBotanicalSections(menu.categories, emerald, artDeco);
+function ArtworkMenuPdfDocument({ menu, logo, background, contentBackground, categoryPhotos, styles, middleCaption, emerald, artDeco }: { menu: MenuDetail; logo: PdfLogoAssets; background: string; contentBackground: string; categoryPhotos: CategoryPhotoSources; styles: typeof burgundyStyles; middleCaption: string; emerald: boolean; artDeco: boolean }) {
+  const sections = createBotanicalSections(menu.categories, artDeco);
   const logoWidth = emerald ? 228 : 252;
   const contentPageCount = Math.ceil(sections.length / 3);
   const pageCount = 1 + contentPageCount;
@@ -222,9 +226,9 @@ function ArtworkMenuPdfDocument({ menu, logo, background, styles, middleCaption,
     {Array.from({ length: contentPageCount }, (_, page) => {
       const panel = page % 2 === 0 ? 1 : 2;
       return <Page key={page} size={[WIDTH, HEIGHT]} style={styles.page} wrap={false}>
-      <PageArtwork background={background} panel={panel} />
+      <PageArtwork background={contentBackground} panel={panel} />
       <Text style={[styles.note, { left: panel === 1 ? 166 : 153 }]}>{panel === 1 ? (artDeco ? "REFRESH · REJOICE\nREPEAT" : "SMALL BITES\nBIG CELEBRATIONS") : "GOOD FOOD\nGOOD COMPANY\nGREAT MEMORIES"}</Text>
-      {sections.slice(page * 3, page * 3 + 3).map((section, row) => <CategorySection key={`${section.number}-${row}`} section={section} slot={(panel - 1) * 3 + row} styles={styles} />)}
+      {sections.slice(page * 3, page * 3 + 3).map((section, row) => <CategorySection key={`${section.number}-${row}`} section={section} categoryPhotos={categoryPhotos} styles={styles} />)}
       <Text style={[styles.bottomCaption, { left: panel === 1 ? 107 : 95 }]}>{panel === 1 ? middleCaption : "Sweet Endings\nTo Beautiful Beginnings"}</Text>
       <Text style={styles.pageNumber}>{page + 2} / {pageCount}</Text>
     </Page>;

@@ -10,6 +10,8 @@ import {
 import type { MenuDetail } from "@/app/menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 
+import { getCategoryImageKey, type CategoryPhotoSources } from "../category-images";
+
 const PAGE_HORIZONTAL_PADDING = 36;
 const HEADER_CLEARANCE = 58;
 
@@ -205,11 +207,13 @@ type MenuPdfDocumentProps = {
   menu: MenuDetail;
   logo: PdfLogoAssets;
   config?: { fontFamily: string; fontSize: string };
+  categoryPhotos: CategoryPhotoSources;
 };
 
-function PageHeader({ logo, styles }: { logo: PdfLogoAssets, styles: any }) {
+function PageHeader({ logo, styles }: { logo: PdfLogoAssets, styles: ReturnType<typeof getStyles> }) {
   return (
     <View style={styles.pageHeader} fixed>
+      {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not an HTML element. */}
       <Image
         src={logo.src}
         style={{ width: logo.headerWidth, height: logo.headerHeight }}
@@ -221,10 +225,14 @@ function PageHeader({ logo, styles }: { logo: PdfLogoAssets, styles: any }) {
 function CategorySection({
   category,
   styles,
+  categoryPhotos,
 }: {
   category: MenuDetail["categories"][number];
-  styles: any;
+  styles: ReturnType<typeof getStyles>;
+  categoryPhotos: CategoryPhotoSources;
 }) {
+  const key = getCategoryImageKey(category);
+  const photo = key ? categoryPhotos[key] : undefined;
   const useSingleColumn = category.dishes.length <= 3;
 
   return (
@@ -238,7 +246,8 @@ function CategorySection({
         <Text style={styles.selectionRule}>{category.selectionRule}</Text>
       </View>
 
-      <View style={styles.dishGrid}>
+      <View style={{ flexDirection: "row", alignItems: "flex-start" }}>
+      <View style={[styles.dishGrid, { flex: 1 }]}>
         {category.dishes.map((dish) => (
           <View
             key={dish.id}
@@ -253,11 +262,16 @@ function CategorySection({
           </View>
         ))}
       </View>
+      {photo ? <View style={{ width: 148, height: 100, marginLeft: 14, overflow: "hidden", borderRadius: 6, borderWidth: 0.5, borderColor: colors.tealLine, backgroundColor: "#120c07" }}>
+        {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not an HTML element. */}
+        <Image src={photo} style={{ width: 148, height: 100, objectFit: "contain" }} />
+      </View> : null}
+      </View>
     </View>
   );
 }
 
-export function MenuPdfDocument({ menu, logo, config }: MenuPdfDocumentProps) {
+export function MenuPdfDocument({ menu, logo, config, categoryPhotos }: MenuPdfDocumentProps) {
   const primaryFont = config?.fontFamily || "SourceSans";
   const baseSize = config?.fontSize === "12pt" ? 12 : config?.fontSize === "14pt" ? 14 : 10;
   const scale = baseSize / 10;
@@ -298,7 +312,7 @@ export function MenuPdfDocument({ menu, logo, config }: MenuPdfDocumentProps) {
         </Text>
 
         {menu.categories.map((category) => (
-          <CategorySection key={category.id} category={category} styles={styles} />
+          <CategorySection key={category.id} category={category} styles={styles} categoryPhotos={categoryPhotos} />
         ))}
 
         <View style={styles.footer} fixed>

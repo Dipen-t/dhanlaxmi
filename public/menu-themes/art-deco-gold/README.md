@@ -1,5 +1,7 @@
 # Art Deco Gold menu theme
 
+Content pages use `background-content-v1.png`, an imagegen edit with the fixed food photography removed and section frames retained. Category photos are loaded dynamically from `public/menu-category-images` beside their own dishes; `background-v2.png` remains the cover artwork. Static theme previews are rendered from the updated sample PDF.
+
 Choose **Art Deco Gold** in Download PDF. The cover appears once, followed by separate 300 × 600 point portrait menu pages. Text is dynamic, with gold logo lettering, numbering and script captions, cream serif text, and continuation blocks/pages for longer menus. Text positions and list capacities follow the artwork's horizontal section frames. The cover uses the reference's cocktail imagery and “Sip / Socialize / Celebrate” caption; content pages use “Timeless Favourites / Always a Good Idea.” Fonts approximate the raster reference.
 
 `background-v2.png` is the final 1536 × 1024 text-free artwork created from the reference with the built-in image generation tool. A second pass removed heading rules and darkened the text zones. `background-v1.png` is the initial draft. Each panel is clipped onto a separate PDF page at render time.

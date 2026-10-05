@@ -4,11 +4,11 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
+import { categoryImageKeyById } from "@/lib/menus/category-images";
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
   dishCategories,
-  dishes,
   menuCategories,
   menus,
 } from "@/db/schema";
@@ -22,6 +22,7 @@ export type CategoryWithDishes = {
   id: number;
   name: string;
   selectionRule: string;
+  imageKey?: string;
   dishes: DishItem[];
 };
 
@@ -49,6 +50,7 @@ export async function getCatalogCategories(): Promise<CategoryWithDishes[]> {
     id: category.id,
     name: category.name,
     selectionRule: category.selectionRule,
+    imageKey: categoryImageKeyById(category.id),
     dishes: category.dishes
       .sort((a, b) => a.sortOrder - b.sortOrder)
       .map((dish) => ({ id: dish.id, name: dish.name })),
@@ -112,6 +114,7 @@ export async function getMenuById(id: number): Promise<MenuDetail | null> {
       id: category.id,
       name: category.name,
       selectionRule: category.selectionRule,
+      imageKey: categoryImageKeyById(category.id),
       dishes: category.dishes
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((dish) => ({ id: dish.id, name: dish.name })),

@@ -1,0 +1,142 @@
+[
+  {
+    "key": "veg-soup",
+    "name": "Choice of Veg Soup",
+    "catalogId": 1,
+    "original": "IMG_2347.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "paneer-mushroom-starter",
+    "name": "Paneer Mush Starter",
+    "catalogId": 2,
+    "original": "IMG_2349.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "veg-starter",
+    "name": "Choice of Veg Starter",
+    "catalogId": 3,
+    "original": "IMG_2350.PNG",
+    "backgroundCleaned": true
+  },
+  {
+    "key": "palak-starter",
+    "name": "Choice of Palak Starter",
+    "catalogId": 4,
+    "original": "IMG_2351.PNG",
+    "backgroundCleaned": true
+  },
+  {
+    "key": "non-veg-starter",
+    "name": "Choice of Non Veg Starter",
+    "catalogId": 5,
+    "original": "IMG_2352.PNG",
+    "backgroundCleaned": true
+  },
+  {
+    "key": "fish-starter",
+    "name": "Fish Starter",
+    "catalogId": 6,
+    "original": "IMG_2363.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "veg-main-course",
+    "name": "Veg Main Course",
+    "catalogId": 7,
+    "original": "IMG_2354.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "non-veg-main-course",
+    "name": "Non Veg Main Course",
+    "catalogId": 8,
+    "original": "IMG_2359.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "dal-curry",
+    "name": "Dal / Curry",
+    "catalogId": 9,
+    "original": "IMG_2360.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "rotis",
+    "name": "Rotis",
+    "catalogId": 10,
+    "original": "IMG_2361.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "rice",
+    "name": "Rice",
+    "catalogId": 11,
+    "original": "IMG_2339 (1).PNG",
+    "backgroundCleaned": true
+  },
+  {
+    "key": "salad",
+    "name": "Salad",
+    "catalogId": 12,
+    "original": "IMG_2334.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "raita",
+    "name": "Raita",
+    "catalogId": 13,
+    "original": "IMG_2332.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "dessert",
+    "name": "Dessert",
+    "catalogId": 14,
+    "original": "IMG_2362.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "sweet-counter",
+    "name": "Sweet Counter",
+    "catalogId": 15,
+    "original": "IMG_2335.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "chat-counter",
+    "name": "Chat Counter",
+    "catalogId": 16,
+    "original": "IMG_2336.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "south-indian-counter",
+    "name": "South Indian Counter",
+    "catalogId": 17,
+    "original": "IMG_2340 (1).PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "chinese-counter",
+    "name": "Chinese Counter",
+    "catalogId": 18,
+    "original": "IMG_2342.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "fruit-juices",
+    "name": "Fruit & Juices",
+    "catalogId": 19,
+    "original": "IMG_2343.PNG",
+    "backgroundCleaned": false
+  },
+  {
+    "key": "italian-counter",
+    "name": "Italian Counter",
+    "catalogId": 20,
+    "original": "IMG_2346.PNG",
+    "backgroundCleaned": false
+  }
+]

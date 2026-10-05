@@ -25,7 +25,7 @@ async function main() {
     await writeFile(`tmp/pdfs/${theme}-stress.pdf`, stress);
     await writeFile("tmp/pdfs/expected-dishes.json", JSON.stringify(stressCategories.flatMap(category => category.dishes.map(dish => dish.name))));
   }
-  console.log("Botanical sample PDF generated.");
+  console.log(`${theme} sample PDF generated.`);
 }
 
 main().catch(error => { console.error(error); process.exitCode = 1; });

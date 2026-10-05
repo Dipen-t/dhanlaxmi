@@ -1,5 +1,7 @@
 # Emerald Gold menu theme
 
+Content pages use `background-content-v1.png`, an imagegen edit with the fixed food photography removed. Category photos are loaded dynamically from `public/menu-category-images` beside their own dishes; the original cover artwork is retained. Static theme previews are rendered from the updated sample PDF.
+
 Select **Emerald Gold** in the Download PDF dialog. The cover appears once on page 1, followed by separate portrait menu pages with up to three category blocks each. Longer lists continue across blocks/pages with their category number retained. The theme uses gold logo lettering, gold numbering, cream serif text, locally bundled Playball script, and the reference's “Timeless Favourites / Always a Good Idea” footer caption.
 
 The artwork was created from the supplied reference using the built-in image generator. `background-v1.png` is 1536 × 1024; each panel is clipped into its own 300 × 600 point PDF page during rendering. Fonts approximate the raster reference, whose original font metadata is unavailable.

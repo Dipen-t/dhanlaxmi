@@ -1,5 +1,7 @@
 # Burgundy Gold menu theme
 
+Content pages use `background-content-v1.png`, an imagegen edit with the fixed food photography removed. Category photos are loaded dynamically from `public/menu-category-images` beside their own dishes; the original cover artwork is retained. Static theme previews are rendered from the updated sample PDF.
+
 Select **Burgundy Gold** in the Download PDF dialog. Page 1 is the cover; the following portrait pages contain up to three category blocks, with additional pages for longer menus. This uses the same pagination as Ivory Botanical, with cream serif text, gold ink, and the locally bundled Playball script. The original logo retains its lettering and transparency with gold applied at render time.
 
 The `background-v1.png` artwork was generated from the provided reference with the built-in image generation tool. The source is a 1536 × 1024 three-panel image. Each panel is clipped into a separate 300 × 600 point PDF page. The original reference's font metadata is unavailable, so the fonts approximate its appearance.

@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.100", "192.168.1.*", "*.local"],
   outputFileTracingIncludes: {
     "/api/**/*": ["./app/logo.png"],
-    "/api/menus/*/pdf": ["./public/menu-themes/*/background-*.png", "./public/fonts/menu/*.ttf"],
+    "/api/menus/*/pdf": ["./public/menu-themes/*/background-*.png", "./public/fonts/menu/*.ttf", "./public/menu-category-images/*.jpg"],
   },
   async headers() {
     return [
