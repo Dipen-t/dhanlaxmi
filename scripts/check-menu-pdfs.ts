@@ -28,8 +28,9 @@ async function main() {
     for (const theme of ["standard", "ivory-botanical", "burgundy-gold", "emerald-gold", "art-deco-gold"]) {
       const result = await generateMenuPdfBuffer(menu, logo, theme);
       assert.equal(result.subarray(0, 5).toString(), "%PDF-");
+      assert(result.length < 6 * 1024 * 1024, `${theme}: full-catalog PDF exceeds 6 MiB`);
       await writeFile(`tmp/pdfs/${theme}-stress.pdf`, result);
-      console.log(`${theme}: PDF generated without fetch or Sharp`);
+      console.log(`${theme}: ${(result.length / 1024 / 1024).toFixed(2)} MiB; PDF generated without fetch or Sharp`);
     }
     for (const fontFamily of ["Inter", "Playball", "Cormorant"]) {
       const result = await generateMenuPdfBuffer({ ...menu, categories: categories.slice(0, 2) }, logo, "standard", { fontFamily, fontSize: "14pt" });

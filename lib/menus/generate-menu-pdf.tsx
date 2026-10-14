@@ -20,13 +20,12 @@ export async function generateMenuPdfBuffer(
   const categoryPhotos = await loadCategoryImages(menu.categories);
   if (themeType === "ivory-botanical" || themeType === "burgundy-gold" || themeType === "emerald-gold" || themeType === "art-deco-gold") {
     registerBotanicalFonts();
-    const backgroundFile = themeType === "art-deco-gold" ? "background-v2.png" : "background-v1.png";
-    const artwork = await readFile(path.join(process.cwd(), "public/menu-themes", themeType, backgroundFile));
-    const contentArtwork = await readFile(path.join(process.cwd(), "public/menu-themes", themeType, "background-content-v1.png"));
+    const artwork = await readFile(path.join(process.cwd(), "public/menu-themes", themeType, "background-pdf.jpg"));
+    const contentArtwork = await readFile(path.join(process.cwd(), "public/menu-themes", themeType, "background-content-pdf.jpg"));
     // Prepared assets keep Android/Termux PDF generation independent of native Sharp.
     const coverLogo = await getPdfCoverLogoAssets(themeType !== "ivory-botanical");
     const buffer = await renderToBuffer(
-      <IvoryBotanicalPdfDocument menu={menu} logo={coverLogo} background={`data:image/png;base64,${artwork.toString("base64")}`} theme={themeType} contentBackground={`data:image/png;base64,${contentArtwork.toString("base64")}`} categoryPhotos={categoryPhotos} />,
+      <IvoryBotanicalPdfDocument menu={menu} logo={coverLogo} background={`data:image/jpeg;base64,${artwork.toString("base64")}`} theme={themeType} contentBackground={`data:image/jpeg;base64,${contentArtwork.toString("base64")}`} categoryPhotos={categoryPhotos} />,
     );
     return Buffer.from(buffer);
   }
