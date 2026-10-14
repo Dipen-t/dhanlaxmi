@@ -23,7 +23,9 @@ export const exportProfitabilityToExcel = (reports: EventProfitability[]) => {
     "Client Paid": r.clientPaid,
     "Client Waived": r.clientWaived,
     "Client Balance": r.clientBalance,
-    "Vendor Expenses": r.vendorExpenses,
+    "Vendor Paid": r.vendorExpenses,
+    "Other Expenses": r.otherExpenses,
+    "Total Expenses": r.totalExpenses,
     "Net Profit": r.netProfit,
   }));
   exportToExcel(data, "Event_Profitability_Report");
@@ -98,7 +100,7 @@ export const exportProfitabilityToPDF = async (reports: EventProfitability[]) =>
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
 export const exportLedgerToPDF = async (ledger: LedgerTransaction[]) => {
@@ -111,7 +113,7 @@ export const exportLedgerToPDF = async (ledger: LedgerTransaction[]) => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
 export const exportCustomerReportToPDF = async (reports: CustomerReport[]) => {
@@ -124,7 +126,7 @@ export const exportCustomerReportToPDF = async (reports: CustomerReport[]) => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
 export const exportVendorReportToPDF = async (reports: VendorOrderReport[]) => {
@@ -137,5 +139,5 @@ export const exportVendorReportToPDF = async (reports: VendorOrderReport[]) => {
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };

@@ -14,16 +14,17 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
 
   return (
     <div className="w-full flex-1 overflow-auto">
-      <table className="w-full min-w-[900px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[1100px] table-fixed text-left text-sm">
         <thead className="bg-surface/50 text-muted uppercase text-xs sticky top-0 border-b border-border">
           <tr>
-            <th className="w-[25%] px-3 py-3 font-semibold whitespace-nowrap">Customer</th>
-            <th className="w-[12.5%] px-3 py-3 font-semibold whitespace-nowrap">Revenue</th>
-            <th className="w-[12.5%] px-3 py-3 font-semibold whitespace-nowrap">Client Paid</th>
-            <th className="w-[12.5%] px-3 py-3 font-semibold whitespace-nowrap">Waived</th>
-            <th className="w-[12.5%] px-3 py-3 font-semibold whitespace-nowrap">Balance Due</th>
-            <th className="w-[12.5%] px-3 py-3 font-semibold whitespace-nowrap">Vendor Expenses</th>
-            <th className="w-[12.5%] px-3 py-3 font-semibold text-right whitespace-nowrap">Net Profit</th>
+            <th className="w-[23%] px-3 py-3 font-semibold whitespace-nowrap">Customer</th>
+            <th className="w-[11%] px-3 py-3 font-semibold whitespace-nowrap">Revenue</th>
+            <th className="w-[11%] px-3 py-3 font-semibold whitespace-nowrap">Client Paid</th>
+            <th className="w-[11%] px-3 py-3 font-semibold whitespace-nowrap">Waived</th>
+            <th className="w-[11%] px-3 py-3 font-semibold whitespace-nowrap">Balance Due</th>
+            <th className="w-[11%] px-3 py-3 font-semibold whitespace-nowrap">Vendor Paid</th>
+            <th className="w-[11%] px-3 py-3 font-semibold whitespace-nowrap">Other Expenses</th>
+            <th className="w-[11%] px-3 py-3 font-semibold text-right whitespace-nowrap">Net Profit</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -75,6 +76,9 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
                   ) : (
                     <span className="text-muted text-xs font-medium">—</span>
                   )}
+                </td>
+                <td className="px-3 py-3 font-medium text-foreground truncate">
+                  {formatCurrency(r.otherExpenses)}
                 </td>
                 <td className={`px-3 py-3 text-right font-bold truncate ${profitColor}`}>
                   {formatCurrency(r.netProfit)}

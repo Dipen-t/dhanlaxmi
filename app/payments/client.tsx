@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { Banknote, Plus, Store, History } from "lucide-react";
+import { Plus, Store, History } from "lucide-react";
 import { toast } from "sonner";
 
 import type { OrderSelectionItem, VendorBasicInfo, OrderPaymentInfo } from "./actions";
@@ -25,22 +25,26 @@ export function PaymentsClient({ orders, allVendors }: PaymentsClientProps) {
   const [activeTab, setActiveTab] = useState<"linked" | "other">("linked");
 
   useEffect(() => {
-    if (selectedOrderId === "") {
-      setLinkedVendors([]);
-      setOrderPayments([]);
-      setManualVendors([]);
-      setActiveTab("linked");
-      return;
-    }
+    if (selectedOrderId === "") return;
+    let cancelled = false;
 
     startDataTransition(async () => {
-      const vendors = await getOrderVendors(selectedOrderId as number);
-      const payments = await getOrderPayments(selectedOrderId as number);
-      setLinkedVendors(vendors);
-      setOrderPayments(payments);
-      setManualVendors([]); // reset manual additions on order change
+      const [vendors, payments] = await Promise.all([getOrderVendors(selectedOrderId), getOrderPayments(selectedOrderId)]);
+      if (!cancelled) {
+        setLinkedVendors(vendors);
+        setOrderPayments(payments);
+      }
     });
+    return () => { cancelled = true; };
   }, [selectedOrderId]);
+
+  function selectOrder(value: string) {
+    setSelectedOrderId(value ? Number(value) : "");
+    setLinkedVendors([]);
+    setOrderPayments([]);
+    setManualVendors([]);
+    setActiveTab("linked");
+  }
 
   async function handleAddPayment(vendorId: number, formData: FormData) {
     if (!selectedOrderId) return;
@@ -91,7 +95,7 @@ export function PaymentsClient({ orders, allVendors }: PaymentsClientProps) {
           <select 
             className="min-h-12 w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-base font-medium outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30 shadow-sm"
             value={selectedOrderId}
-            onChange={(e) => setSelectedOrderId(e.target.value ? Number(e.target.value) : "")}
+            onChange={(e) => selectOrder(e.target.value)}
           >
             <option value="">-- Choose an order --</option>
             {orders.map((order) => (
@@ -130,7 +134,7 @@ export function PaymentsClient({ orders, allVendors }: PaymentsClientProps) {
                 <p className="mt-1 text-sm text-muted">This order has no raw materials assigned to vendors yet.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6">
+              <div className="grid grid-cols-1 min-[720px]:grid-cols-2 min-[1200px]:grid-cols-3 gap-4 sm:gap-6">
                 {displayedVendors.map(vendor => (
                   <VendorCard 
                     key={vendor.id} 
@@ -167,7 +171,14 @@ export function PaymentsClient({ orders, allVendors }: PaymentsClientProps) {
   );
 }
 
-function VendorCard({ vendor, orderPayments, isPendingPayment, handleAddPayment }: any) {
+type VendorCardProps = {
+  vendor: VendorBasicInfo;
+  orderPayments: OrderPaymentInfo[];
+  isPendingPayment: boolean;
+  handleAddPayment: (vendorId: number, formData: FormData) => Promise<void>;
+};
+
+function VendorCard({ vendor, orderPayments, isPendingPayment, handleAddPayment }: VendorCardProps) {
   const [showHistory, setShowHistory] = useState(false);
   
   const vendorPayments = orderPayments.filter((p: OrderPaymentInfo) => p.vendorId === vendor.id);
@@ -196,27 +207,28 @@ function VendorCard({ vendor, orderPayments, isPendingPayment, handleAddPayment 
           </div>
         </div>
 
-        <form id={`payment-form-${vendor.id}`} action={(fd) => handleAddPayment(vendor.id, fd)} className="flex items-end gap-3">
-          <label className="flex-1 block">
-            <span className="sr-only">Amount</span>
+        <form id={`payment-form-${vendor.id}`} action={(fd) => handleAddPayment(vendor.id, fd)} className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3">
+          <label className="min-w-0 block">
+            <span className="mb-1.5 block text-sm font-medium text-foreground">Amount</span>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">₹</span>
               <input 
                 required 
                 type="number" 
+                inputMode="numeric"
                 name="amount" 
                 min="1" 
                 step="1" 
                 placeholder="0"
                 disabled={isPendingPayment}
-                className="min-h-11 w-full rounded-lg border border-border bg-surface pl-8 pr-3 py-2 outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30 disabled:opacity-50" 
+                className="min-h-12 w-full min-w-0 rounded-lg border border-border bg-surface pl-8 pr-3 py-2.5 text-base tabular-nums outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30 disabled:opacity-50"
               />
             </div>
           </label>
           <button 
             type="submit" 
             disabled={isPendingPayment}
-            className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0"
+            className="inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 shrink-0"
           >
             <Plus className="size-4 mr-1.5" />
             Add

@@ -54,9 +54,10 @@ export function KitchenMenuPdfDownload({
         previewWindow?.close();
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
+          details?: string;
         } | null;
         throw new Error(
-          payload?.error ?? `PDF request failed (${response.status}).`,
+          payload?.details ? `${payload.error ?? "Could not generate PDF."} ${payload.details}` : payload?.error ?? `PDF request failed (${response.status}).`,
         );
       }
 
@@ -118,7 +119,7 @@ export function KitchenMenuPdfDownload({
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (downloadError) {
       previewWindow?.close();
       setError(

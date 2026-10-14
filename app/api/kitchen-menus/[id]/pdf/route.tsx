@@ -48,10 +48,10 @@ export async function GET(_request: Request, context: RouteContext) {
         "Cache-Control": "no-store",
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Kitchen Menu PDF generation failed:", error);
     return NextResponse.json(
-      { error: "Could not generate PDF.", details: error?.message || String(error), stack: error?.stack },
+      { error: "Could not generate PDF.", details: error instanceof Error ? error.message : String(error) },
       { status: 500 },
     );
   }

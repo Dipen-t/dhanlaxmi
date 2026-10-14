@@ -1,10 +1,10 @@
 "use server";
 
-import { desc, eq, inArray, asc } from "drizzle-orm";
+import { eq, inArray, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { orders, vendorPayments, vendors, orderRawMaterials } from "@/db/schema";
+import { vendorPayments, vendors, orderRawMaterials } from "@/db/schema";
 import type { DeliveryLocation } from "@/app/vendors/actions";
 
 function toDateString(date: Date) {
@@ -111,8 +111,8 @@ export async function recordPayment(data: FormData) {
   const orderId = Number(data.get("orderId"));
   const amount = Number(data.get("amount"));
 
-  if (!vendorId || !orderId || !amount) {
-    return { error: "Missing required fields" };
+  if (!Number.isSafeInteger(vendorId) || vendorId <= 0 || !Number.isSafeInteger(orderId) || orderId <= 0 || !Number.isSafeInteger(amount) || amount <= 0) {
+    return { error: "Choose an order and vendor, and enter a positive whole-rupee amount." };
   }
 
   try {
@@ -125,10 +125,11 @@ export async function recordPayment(data: FormData) {
     
     // We revalidate both vendors and payments to keep everything fresh
     revalidatePath("/payments");
+    revalidatePath("/reports");
     revalidatePath(`/vendors/${vendorId}/finance`);
     
     return { success: true };
-  } catch (e: any) {
-    return { error: e.message || "Failed to record payment" };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Failed to record payment" };
   }
 }

@@ -74,9 +74,10 @@ export function MenuPdfDownload({
         previewWindow?.close();
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
+          details?: string;
         } | null;
         throw new Error(
-          payload?.error ?? `PDF request failed (${response.status}).`,
+          payload?.details ? `${payload.error ?? "Could not generate PDF."} ${payload.details}` : payload?.error ?? `PDF request failed (${response.status}).`,
         );
       }
 
@@ -135,7 +136,8 @@ export function MenuPdfDownload({
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
-      URL.revokeObjectURL(url);
+      // Android's download manager needs time to read the blob after the click.
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (downloadError) {
       previewWindow?.close();
       setError(
@@ -202,8 +204,8 @@ export function MenuPdfDownload({
                   <input type="radio" name={`${uid}-theme`} value={item.id} checked={theme === item.id} onChange={() => setTheme(item.id)} className="peer sr-only" />
                   <div className="h-full overflow-hidden rounded-xl border-2 border-border transition-colors peer-checked:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 hover:border-primary/50">
                     <div className="flex h-64 items-center justify-center gap-2 bg-surface p-3">
-                      <Image src={item.coverPreview} alt={`${item.name} ${item.menuPreview ? "cover" : "menu page"}`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />
-                      {item.menuPreview && <Image src={item.menuPreview} alt={`${item.name} menu page`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />}
+                      <Image unoptimized src={item.coverPreview} alt={`${item.name} ${item.menuPreview ? "cover" : "menu page"}`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />
+                      {item.menuPreview && <Image unoptimized src={item.menuPreview} alt={`${item.name} menu page`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />}
                     </div>
                     <div className="p-3"><div className="flex items-center justify-between"><span className="font-semibold">{item.name}</span>{theme === item.id && <Check className="size-5 text-primary" aria-hidden />}</div><p className="mt-1 text-xs text-muted">{item.description}</p></div>
                   </div>

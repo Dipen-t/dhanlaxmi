@@ -76,6 +76,7 @@ export async function createExpense(data: FormData) {
       date,
     });
     revalidatePath("/expenses");
+    revalidatePath("/reports");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create expense" };
@@ -92,6 +93,7 @@ export async function deleteExpense(data: FormData) {
   try {
     await db.delete(orderPaymentExpenses).where(eq(orderPaymentExpenses.id, id));
     revalidatePath("/expenses");
+    revalidatePath("/reports");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to delete expense" };
@@ -120,6 +122,7 @@ export async function createVendorPaymentForExpenses(data: FormData) {
       notes,
     });
     revalidatePath("/expenses");
+    revalidatePath("/reports");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create vendor payment" };

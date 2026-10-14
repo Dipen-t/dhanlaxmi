@@ -2,7 +2,8 @@
 
 import { desc } from "drizzle-orm";
 import { db } from "@/db";
-import { orders, orderPayments, vendorPayments, vendors } from "@/db/schema";
+import { orders } from "@/db/schema";
+import { calculateCashPosition } from "@/lib/reports/cash-position";
 import { calculateEffectiveTotal } from "@/lib/utils";
 import type { MealType } from "@/app/orders/actions";
 
@@ -19,6 +20,8 @@ export type EventProfitability = {
   clientWaived: number;
   clientBalance: number;
   vendorExpenses: number;
+  otherExpenses: number;
+  totalExpenses: number;
   netProfit: number;
 };
 
@@ -59,30 +62,18 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
           expenses: true,
         },
       },
+      vendorPayments: true,
     },
   });
 
   return allOrders.map(order => {
     const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
     
-    let clientPaid = 0;
-    let totalWaived = 0;
-    let vendorExpenses = 0;
-    for (const p of order.orderPayments) {
-      if (p.isWaived) {
-        totalWaived += p.amount;
-      } else {
-        clientPaid += p.amount;
-      }
-      for (const e of p.expenses) {
-        vendorExpenses += e.amount;
-      }
-    }
+    const cash = calculateCashPosition(order.orderPayments, order.vendorPayments);
+    const { clientPaid, clientWaived: totalWaived, vendorExpenses, otherExpenses, totalExpenses, netProfit } = cash;
 
     const clientBalance = Math.max(0, effectiveTotal - clientPaid - totalWaived);
     const actualRevenue = Math.max(effectiveTotal, clientPaid + totalWaived);
-
-    const netProfit = clientPaid - vendorExpenses;
 
     return {
       id: order.id,
@@ -97,6 +88,8 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
       clientWaived: totalWaived,
       clientBalance,
       vendorExpenses,
+      otherExpenses,
+      totalExpenses,
       netProfit,
     };
   });
@@ -274,6 +267,7 @@ export async function getVendorOrderReport(): Promise<VendorOrderReport[]> {
           vendor: true,
         },
       },
+      vendorPayments: { with: { vendor: true } },
     },
   });
 
@@ -304,6 +298,19 @@ export async function getVendorOrderReport(): Promise<VendorOrderReport[]> {
       });
     }
 
+    for (const payment of order.vendorPayments) {
+      if (!vendorMap.has(payment.vendorId)) {
+        vendorMap.set(payment.vendorId, {
+          vendorId: payment.vendorId,
+          vendorName: payment.vendor.name,
+          vendorPhone: payment.vendor.phone,
+          deliveries: [], payments: [], totalPaid: 0,
+        });
+      }
+      const vendor = vendorMap.get(payment.vendorId)!;
+      vendor.totalPaid += payment.amount;
+      vendor.payments.push({ amount: payment.amount, date: toDateString(payment.date), notes: payment.notes });
+    }
     const vendorsArray = Array.from(vendorMap.values());
     const totalVendorPayments = vendorsArray.reduce((sum, v) => sum + v.totalPaid, 0);
 

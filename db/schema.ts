@@ -251,6 +251,7 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
 export const ordersRelations = relations(orders, ({ many }) => ({
   orderRawMaterials: many(orderRawMaterials),
   orderPayments: many(orderPayments),
+  vendorPayments: many(vendorPayments),
 }));
 
 export const orderPaymentsRelations = relations(orderPayments, ({ one, many }) => ({
@@ -269,6 +270,10 @@ export const orderPaymentExpensesRelations = relations(orderPaymentExpenses, ({ 
 }));
 
 export const vendorPaymentsRelations = relations(vendorPayments, ({ one }) => ({
+  order: one(orders, {
+    fields: [vendorPayments.orderId],
+    references: [orders.id],
+  }),
   vendor: one(vendors, {
     fields: [vendorPayments.vendorId],
     references: [vendors.id],

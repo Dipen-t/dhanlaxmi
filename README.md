@@ -16,6 +16,14 @@ cp .env.example .env
 npm run dev
 ```
 
+### Tablet / Termux PDFs
+
+Menu and Kitchen PDFs use bundled fonts and prepared logo assets. They require no font downloads or native Sharp processing during generation. Deploy the `public/fonts/menu`, `public/menu-category-images`, `public/menu-themes` and `app/logo.png` assets along with the app. Standalone tracing includes the PDF assets; cPanel packing also copies `public`.
+
+`node --import tsx scripts/check-menu-pdfs.ts` verifies generation with network access and Sharp deliberately disabled. `node --import tsx --test lib/reports/cash-position.test.ts` checks the cash-profit calculation. Refresh fonts/logos with `node scripts/prepare-pdf-assets.cjs` only on a development machine; the generated assets are already committed for deployments.
+
+Event profit for now = client payments received − vendor payments linked to that order − other expenses linked to its client payments. Unpaid bill amounts and waived balances do not count as money received.
+
 ### Database
 
 ```bash

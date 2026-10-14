@@ -3,6 +3,12 @@ import path from "node:path";
 
 const HEADER_LOGO_WIDTH = 112;
 
+export async function getPdfCoverLogoAssets(gold: boolean): Promise<PdfLogoAssets> {
+  const file = await readFile(path.join(process.cwd(), "public/menu-themes", gold ? "logo-gold.png" : "logo-ink.png"));
+  const { width, height } = readPngDimensions(file);
+  return { src: `data:image/png;base64,${file.toString("base64")}`, headerWidth: width, headerHeight: height };
+}
+
 export type PdfLogoAssets = {
   src: string;
   headerWidth: number;
