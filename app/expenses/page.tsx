@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import { PageHeader } from "@/components/page-header";
-import { getOrdersForSelection } from "@/app/payments/actions";
-import { getAllVendors } from "./actions";
+import { getOrdersForSelection, getAllVendors } from "./actions";
 import { ExpensesClient } from "./client";
 
 export const metadata: Metadata = {
@@ -29,7 +28,7 @@ export default function ExpensesPage() {
       <PageHeader title="Expense Ledger" />
       <div className="mb-6">
         <p className="text-sm text-muted">
-          Log expenses directly against payments in a notepad-like stack.
+          View vendor payments and other expenses together for each order.
         </p>
       </div>
       <Suspense fallback={<div className="mt-8 animate-pulse rounded-xl bg-surface h-64" />}>

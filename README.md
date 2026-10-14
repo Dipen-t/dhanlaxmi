@@ -24,6 +24,8 @@ Menu and Kitchen PDFs use bundled fonts and prepared logo assets. They require n
 
 Event profit for now = client payments received − vendor payments linked to that order − other expenses linked to its client payments. Unpaid bill amounts and waived balances do not count as money received.
 
+Expenses is the unified screen for outgoing money. Selecting an order shows the cash summary, vendor-wise paid totals and history, and other expenses. Vendor payments can be recorded before any client receipt; other expenses remain linked to a client receipt. The former `/payments` page redirects to `/expenses`, using the same existing ledger entries without a database migration.
+
 ### Database
 
 ```bash

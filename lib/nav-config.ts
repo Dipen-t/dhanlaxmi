@@ -4,7 +4,6 @@ import {
   Truck,
   UtensilsCrossed,
   ChefHat,
-  Banknote,
   Receipt,
   BarChart3,
   type LucideIcon,
@@ -55,15 +54,9 @@ export const homeTiles: HomeTile[] = [
     icon: BarChart3,
   },
   {
-    href: "/payments",
-    title: "Payments",
-    description: "Manage order payments to vendors",
-    icon: Banknote,
-  },
-  {
     href: "/expenses",
     title: "Expenses",
-    description: "Log and manage order expenses stack-wise",
+    description: "Vendor payments and other order expenses",
     icon: Receipt,
   },
 ];

@@ -81,6 +81,7 @@ export async function createVendorPayment(data: FormData) {
     });
     revalidatePath(`/vendors/${vendorId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create payment out" };
@@ -110,6 +111,7 @@ export async function updateVendorPayment(data: FormData) {
     
     revalidatePath(`/vendors/${vendorId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to update payment out" };
@@ -128,6 +130,7 @@ export async function deleteVendorPayment(data: FormData) {
     await db.delete(vendorPayments).where(and(eq(vendorPayments.id, id), eq(vendorPayments.vendorId, vendorId)));
     revalidatePath(`/vendors/${vendorId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to delete payment out" };

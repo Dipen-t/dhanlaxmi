@@ -73,6 +73,7 @@ export async function createOrderPayment(data: FormData) {
     });
     revalidatePath(`/orders/${orderId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create payment" };
@@ -99,6 +100,7 @@ export async function createOrderPaymentExpense(data: FormData) {
     });
     revalidatePath(`/orders/${orderId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create expense" };
@@ -125,6 +127,7 @@ export async function updateOrderPayment(data: FormData) {
     
     revalidatePath(`/orders/${orderId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to update payment" };
@@ -143,6 +146,7 @@ export async function deleteOrderPayment(data: FormData) {
     await db.delete(orderPayments).where(and(eq(orderPayments.id, id), eq(orderPayments.orderId, orderId)));
     revalidatePath(`/orders/${orderId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to delete payment" };
@@ -174,6 +178,7 @@ export async function createVendorPaymentForOrderFinance(data: FormData) {
     });
     revalidatePath(`/orders/${orderId}/finance`);
     revalidatePath("/reports");
+    revalidatePath("/expenses");
     return { success: true };
   } catch (e: any) {
     return { error: e.message || "Failed to create vendor payment" };
