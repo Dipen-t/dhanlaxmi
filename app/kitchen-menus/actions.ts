@@ -33,7 +33,7 @@ export type KitchenMenuSummary = {
   numberOfPersons?: number | null;
   mealType?: "Lunch" | "Dinner" | null;
   dishCount: number;
-  dishes: { id: number; quantity?: string }[];
+  dishes: { id: number; quantity?: string; sortOrder: number }[];
 };
 
 export type KitchenMenuDetail = {
@@ -79,9 +79,12 @@ export async function getKitchenMenus(): Promise<KitchenMenuSummary[]> {
     numberOfPersons: menu.numberOfPersons,
     mealType: menu.mealType as any,
     dishCount: menu.kitchenMenuDishes.length,
-    dishes: menu.kitchenMenuDishes.map((kmd) => ({
+    dishes: [...menu.kitchenMenuDishes]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((kmd) => ({
       id: kmd.kitchenDishId,
       quantity: kmd.quantity ?? undefined,
+      sortOrder: kmd.sortOrder,
     })),
   }));
 }
@@ -104,46 +107,30 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
     return null;
   }
 
-  const categoryMap = new Map<number, KitchenCategoryWithDishes & { _sortOrder: number }>();
+  const categories: KitchenCategoryWithDishes[] = [];
 
-  for (const kmd of menu.kitchenMenuDishes) {
+  for (const kmd of [...menu.kitchenMenuDishes].sort((a, b) => a.sortOrder - b.sortOrder)) {
     const dish = kmd.kitchenDish;
     const category = dish.category;
 
-    if (!categoryMap.has(category.id)) {
-      categoryMap.set(category.id, {
+    let group = categories.at(-1);
+    if (!group || group.id !== category.id) {
+      group = {
         id: category.id,
         name: category.name,
         selectionRule: category.selectionRule,
         isQtyField: category.isQtyField,
         dishes: [],
-        _sortOrder: category.sortOrder,
-      });
+      };
+      categories.push(group);
     }
 
-    categoryMap.get(category.id)!.dishes.push({
+    group.dishes.push({
       id: dish.id,
       name: dish.name,
       quantity: kmd.quantity ?? undefined,
-      _sortOrder: dish.sortOrder,
-    } as KitchenDishItem & { _sortOrder: number });
-  }
-
-  const categories = Array.from(categoryMap.values())
-    .sort((a, b) => a._sortOrder - b._sortOrder)
-    .map((c) => {
-      (c.dishes as (KitchenDishItem & { _sortOrder?: number })[]).sort(
-        (a, b) => (a._sortOrder ?? 0) - (b._sortOrder ?? 0),
-      );
-      const { _sortOrder: _, ...cleaned } = c;
-      return {
-        ...cleaned,
-        dishes: c.dishes.map((d: any) => {
-          const { _sortOrder: __, ...cleanedDish } = d;
-          return cleanedDish;
-        }),
-      };
     });
+  }
 
   return {
     id: menu.id,
@@ -160,20 +147,35 @@ function normalizeName(name: string) {
   return name.trim();
 }
 
-function parseDishes(formData: FormData): { id: number; quantity?: string }[] {
+type SelectedKitchenDish = { id: number; quantity?: string; sortOrder: number };
+
+function parseDishes(formData: FormData): SelectedKitchenDish[] {
   const data = formData.get("dishes");
   if (!data || typeof data !== "string") return [];
   try {
     const parsed = JSON.parse(data);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((item) => typeof item.id === "number");
+    return parsed
+      .filter((item) => Number.isInteger(item?.id) && item.id > 0)
+      .map((item, index) => ({
+        id: item.id,
+        quantity:
+          typeof item.quantity === "string"
+            ? item.quantity.trim().slice(0, 120) || undefined
+            : undefined,
+        sortOrder: index,
+      }));
   } catch {
     return [];
   }
 }
 
-async function syncKitchenMenuDishes(kitchenMenuId: number, dishes: { id: number; quantity?: string }[]) {
+async function syncKitchenMenuDishes(kitchenMenuId: number, dishes: SelectedKitchenDish[]) {
   const uniqueIds = [...new Set(dishes.map((d) => d.id))];
+
+  if (uniqueIds.length !== dishes.length) {
+    return { error: "A dish was selected more than once." };
+  }
 
   if (uniqueIds.length > 0) {
     const found = await db.query.kitchenDishes.findMany({
@@ -193,6 +195,7 @@ async function syncKitchenMenuDishes(kitchenMenuId: number, dishes: { id: number
         kitchenMenuId,
         kitchenDishId: dish.id,
         quantity: dish.quantity || null,
+        sortOrder: dish.sortOrder,
       })),
     );
   }

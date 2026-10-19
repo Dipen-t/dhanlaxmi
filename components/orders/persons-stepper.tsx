@@ -9,6 +9,8 @@ type PersonsStepperProps = {
   defaultValue?: number;
   min?: number;
   max?: number;
+  label?: string;
+  onValueChange?: (value: number) => void;
 };
 
 type HoldState = {
@@ -32,6 +34,8 @@ export function PersonsStepper({
   defaultValue = 1,
   min = 1,
   max = 100000,
+  label = "number of persons",
+  onValueChange,
 }: PersonsStepperProps) {
   const [value, setValue] = useState<number | string>(() =>
     Math.max(min, Math.min(max, defaultValue || min)),
@@ -44,7 +48,11 @@ export function PersonsStepper({
   }
 
   function applyStep(delta: number) {
-    setValue((prev) => clamp((prev === "" ? min : Number(prev)) + delta));
+    setValue((prev) => {
+      const next = clamp((prev === "" ? min : Number(prev)) + delta);
+      onValueChange?.(next);
+      return next;
+    });
   }
 
   function clearHold() {
@@ -103,7 +111,7 @@ export function PersonsStepper({
     <div className="flex items-center gap-2">
       <button
         type="button"
-        aria-label="Decrease number of persons"
+        aria-label={`Decrease ${label}`}
         disabled={value !== "" && Number(value) <= min}
         className={buttonClass}
         {...bindHold(-1)}
@@ -124,14 +132,19 @@ export function PersonsStepper({
           if (raw === "") {
             setValue("");
           } else {
-            setValue(Number(raw));
+            const next = Number(raw);
+            setValue(next);
+            onValueChange?.(next);
           }
         }}
         onBlur={() => {
           if (value === "") {
             setValue(min);
+            onValueChange?.(min);
           } else {
-            setValue(clamp(Number(value)));
+            const next = clamp(Number(value));
+            setValue(next);
+            onValueChange?.(next);
           }
         }}
         className="min-h-11 w-full min-w-0 rounded-lg border border-border bg-background px-3 text-center text-base font-semibold tabular-nums text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
@@ -139,7 +152,7 @@ export function PersonsStepper({
 
       <button
         type="button"
-        aria-label="Increase number of persons"
+        aria-label={`Increase ${label}`}
         disabled={value !== "" && Number(value) >= max}
         className={buttonClass}
         {...bindHold(1)}

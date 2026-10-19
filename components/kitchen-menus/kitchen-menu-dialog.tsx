@@ -1,8 +1,26 @@
 "use client";
 
-import { useEffect, useId, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, GripVertical, X } from "lucide-react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import {
   createKitchenMenu,
@@ -18,6 +36,54 @@ type KitchenMenuDialogProps = {
   onClose: () => void;
 };
 
+function SortableSelectedDish({
+  id,
+  name,
+  category,
+  onRemove,
+}: {
+  id: number;
+  name: string;
+  category: string;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex min-h-12 items-center gap-2 rounded-lg border bg-background px-2 ${
+        isDragging ? "z-10 border-primary shadow-lg" : "border-border"
+      }`}
+    >
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        className="inline-flex size-11 shrink-0 touch-none items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`Drag ${name} to reorder`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-5" aria-hidden />
+      </button>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
+        <span className="block truncate text-xs text-muted">{category}</span>
+      </span>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`Remove ${name}`}
+      >
+        <X className="size-4" aria-hidden />
+      </button>
+    </li>
+  );
+}
+
 export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuDialogProps) {
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
@@ -25,10 +91,25 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [selectedDishIds, setSelectedDishIds] = useState<Set<number>>(new Set());
+  const [selectedDishOrder, setSelectedDishOrder] = useState<number[]>([]);
   const [quantities, setQuantities] = useState<Record<number, string>>({});
   const [expandedCategories, setExpandedCategories] = useState<Set<number>>(new Set());
 
   const isEditing = menu !== null;
+  const dishMetaById = useMemo(
+    () =>
+      new Map(
+        catalog.flatMap((category) =>
+          category.dishes.map((dish) => [dish.id, { name: dish.name, category: category.name }] as const),
+        ),
+      ),
+    [catalog],
+  );
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 10 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -46,7 +127,9 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
       });
     }
     setQuantities(initialQuantities);
-    setSelectedDishIds(new Set(menu?.dishes?.map((d) => d.id) ?? []));
+    const initialDishOrder = menu?.dishes?.map((d) => d.id) ?? [];
+    setSelectedDishIds(new Set(initialDishOrder));
+    setSelectedDishOrder(initialDishOrder);
     // Expand categories that have selected dishes when editing, or first category if creating
     if (menu?.dishes && menu.dishes.length > 0) {
       const categoriesToExpand = new Set<number>();
@@ -95,8 +178,10 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
       const next = new Set(current);
       if (next.has(id)) {
         next.delete(id);
+        setSelectedDishOrder((order) => order.filter((dishId) => dishId !== id));
       } else {
         next.add(id);
+        setSelectedDishOrder((order) => [...order, id]);
       }
       return next;
     });
@@ -125,12 +210,28 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
           next.add(dish.id);
         }
       }
+      setSelectedDishOrder((order) =>
+        allSelected
+          ? order.filter((id) => !category.dishes.some((dish) => dish.id === id))
+          : [...order, ...category.dishes.map((dish) => dish.id).filter((id) => !next.has(id) || !order.includes(id))],
+      );
       return next;
     });
   }
 
   function clearAll() {
     setSelectedDishIds(new Set());
+    setSelectedDishOrder([]);
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSelectedDishOrder((order) => {
+      const oldIndex = order.indexOf(Number(active.id));
+      const newIndex = order.indexOf(Number(over.id));
+      return oldIndex < 0 || newIndex < 0 ? order : arrayMove(order, oldIndex, newIndex);
+    });
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -151,7 +252,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
       return;
     }
 
-    const dishesArray = Array.from(selectedDishIds).map(id => ({
+    const dishesArray = selectedDishOrder.filter((id) => selectedDishIds.has(id)).map(id => ({
       id,
       quantity: quantities[id] || undefined,
     }));
@@ -257,6 +358,39 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   <option value="Dinner">Dinner</option>
                 </select>
               </div>
+
+              {selectedDishOrder.length > 0 ? (
+                <section aria-labelledby="selected-dishes-heading" className="rounded-xl border border-border bg-surface/35 p-3">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <div>
+                      <h3 id="selected-dishes-heading" className="text-sm font-semibold text-foreground">
+                        Selected dish order
+                      </h3>
+                      <p className="mt-0.5 text-xs text-muted">Drag the handle to set the kitchen menu and PDF order.</p>
+                    </div>
+                    <span className="shrink-0 text-xs font-medium tabular-nums text-muted">{selectedDishOrder.length} dishes</span>
+                  </div>
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={selectedDishOrder} strategy={verticalListSortingStrategy}>
+                      <ol className="grid max-h-64 grid-cols-1 gap-1.5 overflow-y-auto overscroll-contain sm:grid-cols-2">
+                        {selectedDishOrder.map((dishId) => {
+                          const dish = dishMetaById.get(dishId);
+                          if (!dish) return null;
+                          return (
+                            <SortableSelectedDish
+                              key={dishId}
+                              id={dishId}
+                              name={dish.name}
+                              category={dish.category}
+                              onRemove={() => toggleDish(dishId)}
+                            />
+                          );
+                        })}
+                      </ol>
+                    </SortableContext>
+                  </DndContext>
+                </section>
+              ) : null}
 
               <fieldset>
                 <div className="flex items-center justify-between gap-2">

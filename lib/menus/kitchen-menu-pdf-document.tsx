@@ -314,8 +314,8 @@ export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
           </View>
         </View>
 
-        {menu.categories.map((category) => (
-          <CategorySection key={category.id} category={category} />
+        {menu.categories.map((category, index) => (
+          <CategorySection key={`${category.id}-${index}`} category={category} />
         ))}
 
         <View style={styles.footer} fixed>

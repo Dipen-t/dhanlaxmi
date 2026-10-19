@@ -18,6 +18,13 @@ npm run dev
 
 ### Tablet / Termux PDFs
 
+On Termux, use the explicit Webpack scripts because Turbopack is not supported:
+
+```bash
+npm run dev:webpack
+npm run build:webpack
+```
+
 Menu and Kitchen PDFs use bundled fonts and prepared logo assets. They require no font downloads or native Sharp processing during generation. Deploy the `public/fonts/menu`, `public/menu-category-images`, `public/menu-themes` and `app/logo.png` assets along with the app. Standalone tracing includes the PDF assets; cPanel packing also copies `public`.
 
 `node --import tsx scripts/check-menu-pdfs.ts` verifies generation with network access and Sharp deliberately disabled. `node --import tsx --test lib/reports/cash-position.test.ts` checks the cash-profit calculation. Refresh fonts/logos with `node scripts/prepare-pdf-assets.cjs` only on a development machine; the generated assets are already committed for deployments.
@@ -25,6 +32,8 @@ Menu and Kitchen PDFs use bundled fonts and prepared logo assets. They require n
 Event profit for now = client payments received − vendor payments linked to that order − other expenses linked to its client payments. Unpaid bill amounts and waived balances do not count as money received.
 
 Expenses is the unified screen for outgoing money. Selecting an order shows the cash summary, vendor-wise paid totals and history, and other expenses. Vendor payments can be recorded before any client receipt; other expenses remain linked to a client receipt. The former `/payments` page redirects to `/expenses`, using the same existing ledger entries without a database migration.
+
+Order totals are calculated from number of plates × per-plate amount and validated again on the server. Kitchen menu dishes can be reordered by drag, touch, or keyboard; the saved order is used on the detail page and PDF.
 
 ### Database
 
@@ -62,8 +71,10 @@ If process limit hits 88–100/100: stop all Node apps, wait 10 min, then deploy
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Development |
+| `npm run dev:webpack` | Termux-compatible development |
 | `npm run pack:cpanel` | Build + create `dist/dhanlaxmi-cpanel.tar.gz` |
 | `npm run build` | Production build only |
+| `npm run build:webpack` | Termux-compatible production build |
 | `npm start` | Run locally after build |
 
 ---

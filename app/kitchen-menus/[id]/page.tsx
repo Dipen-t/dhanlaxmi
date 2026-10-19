@@ -58,9 +58,9 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
       </div>
 
       <div className="space-y-4">
-        {menu.categories.map((category) => (
+        {menu.categories.map((category, index) => (
           <section
-            key={category.id}
+            key={`${category.id}-${index}`}
             className="overflow-hidden rounded-xl border border-border bg-background"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface/60 px-4 py-3 sm:px-5">

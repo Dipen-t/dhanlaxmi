@@ -22,6 +22,7 @@ import {
   type OrderMaterialDraft,
 } from "@/components/orders/order-materials-panel";
 import { PersonsStepper } from "@/components/orders/persons-stepper";
+import { calculatePlateTotal } from "@/lib/orders/pricing";
 
 type OrderFormProps = {
   order: OrderRecord | null;
@@ -78,12 +79,17 @@ export function OrderForm({
 
   const [mealType, setMealType] = useState<MealType>(order?.mealType ?? "lunch");
   const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
-  const [totalAmountDisplay, setTotalAmountDisplay] = useState(() => {
-    if (order?.totalAmount) {
-      return Number(order.totalAmount).toLocaleString("en-IN");
+  const initialPlateCount = order?.numberOfPersons ?? 1;
+  const [plateCount, setPlateCount] = useState(initialPlateCount);
+  const [perPlateAmountDisplay, setPerPlateAmountDisplay] = useState(() => {
+    if (order?.perPlateAmount) return order.perPlateAmount.toLocaleString("en-IN");
+    if (order?.totalAmount && order.totalAmount % initialPlateCount === 0) {
+      return (order.totalAmount / initialPlateCount).toLocaleString("en-IN");
     }
     return "";
   });
+  const perPlateAmount = Number(perPlateAmountDisplay.replace(/\D/g, ""));
+  const calculatedTotal = calculatePlateTotal(plateCount, perPlateAmount);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
@@ -166,8 +172,8 @@ export function OrderForm({
       date: String(formData.get("date") || ""),
       venue: String(formData.get("venue") || ""),
       numberOfPersons: Number(formData.get("numberOfPersons")),
+      perPlateAmount,
       mealType,
-      totalAmount: String(formData.get("totalAmount") || "").trim(),
       discount: finalDiscount,
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
@@ -327,12 +333,12 @@ export function OrderForm({
               />
             </div>
 
-            <div className="min-w-0 sm:col-span-2 sm:max-w-md">
+            <div className="min-w-0">
               <label
                 htmlFor="order-persons"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Number of persons
+                Number of plates
               </label>
               <PersonsStepper
                 id="order-persons"
@@ -340,32 +346,52 @@ export function OrderForm({
                 defaultValue={order?.numberOfPersons ?? 1}
                 min={1}
                 max={100000}
+                label="number of plates"
+                onValueChange={setPlateCount}
               />
             </div>
 
-            <div className="min-w-0 sm:col-span-2 sm:max-w-md grid grid-cols-2 gap-4">
+            <div className="min-w-0">
               <div>
                 <label
-                  htmlFor="order-total-amount"
+                  htmlFor="order-per-plate-amount"
                   className="mb-1.5 block text-sm font-medium text-foreground"
                 >
-                  Total Amount
+                  Per-plate amount
                 </label>
                 <input
-                  id="order-total-amount"
+                  id="order-per-plate-amount"
                   type="text"
                   inputMode="numeric"
-                  value={totalAmountDisplay}
+                  required
+                  value={perPlateAmountDisplay}
                   onChange={(e) => {
                     const raw = e.target.value.replace(/\D/g, "");
-                    setTotalAmountDisplay(raw ? Number(raw).toLocaleString("en-IN") : "");
+                    setPerPlateAmountDisplay(raw ? Number(raw).toLocaleString("en-IN") : "");
                   }}
                   className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                  placeholder="e.g. 50,000"
+                  placeholder="e.g. 800"
                 />
-                <input type="hidden" name="totalAmount" value={totalAmountDisplay.replace(/\D/g, "")} />
               </div>
+            </div>
 
+            <div className="min-w-0 sm:col-span-2">
+              <div className="rounded-xl border border-primary/20 bg-primary-soft/35 px-4 py-3">
+                <p className="text-xs font-medium text-muted">Calculated total</p>
+                <output
+                  htmlFor="order-persons order-per-plate-amount"
+                  aria-live="polite"
+                  className="mt-1 block text-2xl font-semibold tabular-nums text-foreground"
+                >
+                  {calculatedTotal === null ? "—" : `₹${calculatedTotal.toLocaleString("en-IN")}`}
+                </output>
+                <p className="mt-1 text-xs text-muted">
+                  {plateCount.toLocaleString("en-IN")} plates × {perPlateAmount > 0 ? `₹${perPlateAmount.toLocaleString("en-IN")}` : "rate required"}
+                </p>
+              </div>
+            </div>
+
+            <div className="min-w-0 sm:max-w-md">
               <div>
                 <label
                   htmlFor="order-discount"

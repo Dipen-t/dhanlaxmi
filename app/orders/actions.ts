@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { orders, orderRawMaterials, rawMaterials, vendors } from "@/db/schema";
+import { calculatePlateTotal } from "@/lib/orders/pricing";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 
@@ -24,6 +25,7 @@ export type OrderRecord = {
   date: string;
   venue: string;
   numberOfPersons: number;
+  perPlateAmount: number | null;
   mealType: MealType;
   totalAmount: number | null;
   discount: string | null;
@@ -44,6 +46,7 @@ function serializeOrder(order: {
   date: Date;
   venue: string;
   numberOfPersons: number;
+  perPlateAmount: number | null;
   mealType: MealType;
   totalAmount: number | null;
   discount: string | null;
@@ -62,6 +65,7 @@ function serializeOrder(order: {
     date: toDateString(order.date),
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
+    perPlateAmount: order.perPlateAmount,
     mealType: order.mealType,
     totalAmount: order.totalAmount,
     discount: order.discount,
@@ -139,6 +143,7 @@ function validateOrderFields(
   date: string,
   venue: string,
   numberOfPersons: number,
+  perPlateAmount: number,
   mealType: string,
 ) {
   if (!orderId) {
@@ -160,10 +165,13 @@ function validateOrderFields(
     return "Venue must be 200 characters or less.";
   }
   if (!Number.isInteger(numberOfPersons) || numberOfPersons < 1) {
-    return "Number of persons must be at least 1.";
+    return "Number of plates must be at least 1.";
   }
   if (numberOfPersons > 100000) {
-    return "Number of persons is too large.";
+    return "Number of plates is too large.";
+  }
+  if (calculatePlateTotal(numberOfPersons, perPlateAmount) === null) {
+    return "Enter a valid per-plate amount. The calculated total must be within ₹2,14,74,83,647.";
   }
   if (mealType !== "breakfast" && mealType !== "lunch" && mealType !== "dinner") {
     return "Select a meal type.";
@@ -177,8 +185,8 @@ export type OrderInput = {
   date: string;
   venue: string;
   numberOfPersons: number;
+  perPlateAmount: number;
   mealType: string;
-  totalAmount?: string;
   discount?: string;
   customerName?: string;
   customerPhone?: string;
@@ -190,8 +198,9 @@ export async function createOrder(data: OrderInput) {
   const date = data.date || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
+  const perPlateAmount = Number(data.perPlateAmount);
   const mealType = data.mealType || "";
-  const totalAmount = data.totalAmount ? Number(data.totalAmount) : null;
+  const totalAmount = calculatePlateTotal(numberOfPersons, perPlateAmount);
   const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
@@ -203,6 +212,7 @@ export async function createOrder(data: OrderInput) {
     date,
     venue,
     numberOfPersons,
+    perPlateAmount,
     mealType,
   );
   if (error) {
@@ -220,6 +230,7 @@ export async function createOrder(data: OrderInput) {
       date: new Date(date),
       venue,
       numberOfPersons,
+      perPlateAmount,
       mealType: mealType as MealType,
       totalAmount,
       discount,
@@ -323,8 +334,9 @@ export async function updateOrder(data: OrderInput) {
   const date = data.date || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
+  const perPlateAmount = Number(data.perPlateAmount);
   const mealType = data.mealType || "";
-  const totalAmount = data.totalAmount ? Number(data.totalAmount) : null;
+  const totalAmount = calculatePlateTotal(numberOfPersons, perPlateAmount);
   const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
@@ -340,6 +352,7 @@ export async function updateOrder(data: OrderInput) {
     date,
     venue,
     numberOfPersons,
+    perPlateAmount,
     mealType,
   );
   if (error) {
@@ -359,6 +372,7 @@ export async function updateOrder(data: OrderInput) {
         date: new Date(date),
         venue,
         numberOfPersons,
+        perPlateAmount,
         mealType: mealType as MealType,
         totalAmount,
         discount,

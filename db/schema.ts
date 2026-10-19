@@ -42,6 +42,7 @@ export const orders = pgTable("orders", {
   date: timestamp("date", { mode: "date" }).notNull(),
   venue: text("venue").notNull(),
   numberOfPersons: integer("number_of_persons").notNull(),
+  perPlateAmount: integer("per_plate_amount"),
   mealType: mealTypeEnum("meal_type").notNull(),
   totalAmount: integer("total_amount"),
   isPaymentAmount: boolean("is_payment_amount").notNull().default(false),
@@ -196,6 +197,7 @@ export const kitchenMenuDishes = pgTable(
       .notNull()
       .references(() => kitchenDishes.id, { onDelete: "cascade" }),
     quantity: text("quantity"),
+    sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.kitchenMenuId, table.kitchenDishId] })]
 );

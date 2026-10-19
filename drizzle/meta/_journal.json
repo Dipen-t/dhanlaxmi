@@ -8,6 +8,13 @@
       "when": 1783947702616,
       "tag": "0000_broken_anthem",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792412830273,
+      "tag": "0001_redundant_hex",
+      "breakpoints": true
     }
   ]
 }
