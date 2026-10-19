@@ -1,6 +1,6 @@
 "use server";
 
-import { desc, eq, inArray } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -17,6 +17,7 @@ export type OrderRawMaterialRecord = {
   unitName: string;
   notes?: string | null;
   vendorId?: number | null;
+  sortOrder?: number;
 };
 
 export type OrderRecord = {
@@ -55,7 +56,7 @@ function serializeOrder(order: {
   customerName: string | null;
   customerPhone: string | null;
   isPaymentAmount: boolean;
-  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId: number | null; vendor?: { name: string } | null }[];
+  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId: number | null; sortOrder: number; vendor?: { name: string } | null }[];
 }): OrderRecord {
   const vendors = Array.from(new Set((order.orderRawMaterials || [])
     .map(rm => rm.vendor?.name)
@@ -88,6 +89,7 @@ export async function getOrders(): Promise<OrderRecord[]> {
     orderBy: desc(orders.createdAt),
     with: {
       orderRawMaterials: {
+        orderBy: asc(orderRawMaterials.sortOrder),
         with: {
           vendor: true,
         },
@@ -108,6 +110,7 @@ export async function getOrder(id: string): Promise<OrderRecord | null> {
     where: eq(orders.id, numericId),
     with: {
       orderRawMaterials: {
+        orderBy: asc(orderRawMaterials.sortOrder),
         with: {
           vendor: true,
         },
@@ -243,13 +246,14 @@ export async function createOrder(data: OrderInput) {
 
     if (materials.length > 0) {
       await db.insert(orderRawMaterials).values(
-        materials.map((m) => ({
+        materials.map((m, index) => ({
           orderId: newOrder.id,
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
           notes: m.notes || null,
           vendorId: m.vendorId || null,
+          sortOrder: index,
         }))
       );
     }
@@ -406,13 +410,14 @@ export async function updateOrder(data: OrderInput) {
     await db.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
     if (materials.length > 0) {
       await db.insert(orderRawMaterials).values(
-        materials.map((m) => ({
+        materials.map((m, index) => ({
           orderId: id,
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
           notes: m.notes || null,
           vendorId: m.vendorId || null,
+          sortOrder: index,
         }))
       );
     }

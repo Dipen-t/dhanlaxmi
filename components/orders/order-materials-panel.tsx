@@ -1,7 +1,25 @@
 "use client";
 
-import { Check, Search, X } from "lucide-react";
+import { Check, GripVertical, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
+import {
+  closestCenter,
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import { QtyStepper } from "@/components/orders/qty-stepper";
@@ -33,7 +51,38 @@ type OrderMaterialsPanelProps = {
     updates: Partial<OrderMaterialDraft>,
   ) => void;
   onCommitOrder: () => void;
+  onReorder: (selectedIds: number[]) => void;
 };
+
+function SortableSelectedMaterial({ id, name, quantity }: { id: number; name: string; quantity: string }) {
+  const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } =
+    useSortable({ id });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={`flex min-h-12 items-center gap-2 rounded-lg border bg-background px-2 ${
+        isDragging ? "z-30 border-primary shadow-lg" : "border-border"
+      }`}
+    >
+      <button
+        ref={setActivatorNodeRef}
+        type="button"
+        className="inline-flex size-11 shrink-0 touch-none items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={`Drag ${name} to reorder`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="size-5" aria-hidden />
+      </button>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
+        <span className="block truncate text-xs text-muted">{quantity}</span>
+      </span>
+    </li>
+  );
+}
 
 function isComplete(item: OrderMaterialDraft) {
   return (
@@ -53,9 +102,15 @@ export function OrderMaterialsPanel({
   selectedMaterials,
   onUpdate,
   onCommitOrder,
+  onReorder,
 }: OrderMaterialsPanelProps) {
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   const selectedById = useMemo(() => {
     const map = new Map<number, OrderMaterialDraft>();
@@ -90,6 +145,24 @@ export function OrderMaterialsPanel({
 
   const editingItem =
     editingId === null ? null : (selectedById.get(editingId) ?? null);
+
+  const completedMaterials = useMemo(
+    () => visibleMaterials.filter((material) => {
+      const item = selectedById.get(material.id);
+      return item ? isComplete(item) : false;
+    }),
+    [visibleMaterials, selectedById],
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const selectedIds = completedMaterials.map((material) => material.id);
+    const oldIndex = selectedIds.indexOf(Number(active.id));
+    const newIndex = selectedIds.indexOf(Number(over.id));
+    if (oldIndex < 0 || newIndex < 0) return;
+    onReorder(arrayMove(selectedIds, oldIndex, newIndex));
+  }
 
   function openEditor(materialId: number) {
     if (editingId !== null && editingId !== materialId) {
@@ -163,6 +236,34 @@ export function OrderMaterialsPanel({
               editingMaterial ? "pt-52 sm:pt-44" : ""
             }`}
           >
+            {!query && completedMaterials.length > 1 ? (
+              <section aria-labelledby="selected-material-order" className="mb-2 rounded-xl border border-border bg-surface/35 p-3">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div>
+                    <h3 id="selected-material-order" className="text-sm font-semibold text-foreground">Selected material order</h3>
+                    <p className="mt-0.5 text-xs text-muted">Drag the handle to arrange the saved material and vendor list.</p>
+                  </div>
+                  <span className="shrink-0 text-xs font-medium tabular-nums text-muted">{completedMaterials.length} selected</span>
+                </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={completedMaterials.map((material) => material.id)} strategy={verticalListSortingStrategy}>
+                    <ol className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                      {completedMaterials.map((material) => {
+                        const item = selectedById.get(material.id)!;
+                        return (
+                          <SortableSelectedMaterial
+                            key={material.id}
+                            id={material.id}
+                            name={material.name}
+                            quantity={`${item.unitQty} ${item.unitName}`}
+                          />
+                        );
+                      })}
+                    </ol>
+                  </SortableContext>
+                </DndContext>
+              </section>
+            ) : null}
             <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5">
               {visibleMaterials.map((material) => {
                 const item = selectedById.get(material.id);

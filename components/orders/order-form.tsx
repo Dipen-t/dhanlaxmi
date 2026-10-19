@@ -51,16 +51,22 @@ function isMaterialComplete(item: OrderMaterialDraft) {
 function orderMaterialsByCompletion(
   materials: MaterialWithVendor[],
   selected: OrderMaterialDraft[],
+  currentOrder?: number[],
 ) {
   const completeIds = new Set(
     selected.filter(isMaterialComplete).map((item) => item.rawMaterialId),
   );
+
+  const rank = new Map((currentOrder ?? []).map((id, index) => [id, index]));
 
   return [...materials]
     .sort((a, b) => {
       const aComplete = completeIds.has(a.id);
       const bComplete = completeIds.has(b.id);
       if (aComplete !== bComplete) return aComplete ? -1 : 1;
+      const aRank = rank.get(a.id);
+      const bRank = rank.get(b.id);
+      if (aRank !== undefined && bRank !== undefined) return aRank - bRank;
       return a.name.localeCompare(b.name);
     })
     .map((material) => material.id);
@@ -119,11 +125,22 @@ export function OrderForm({
   selectedMaterialsRef.current = selectedMaterials;
 
   const [orderedMaterialIds, setOrderedMaterialIds] = useState<number[]>(() =>
-    orderMaterialsByCompletion(rawMaterials, selectedMaterials),
+    orderMaterialsByCompletion(
+      rawMaterials,
+      selectedMaterials,
+      order?.rawMaterials.map((material) => material.rawMaterialId),
+    ),
   );
 
   function refreshMaterialOrder(next = selectedMaterialsRef.current) {
-    setOrderedMaterialIds(orderMaterialsByCompletion(rawMaterials, next));
+    setOrderedMaterialIds((current) => orderMaterialsByCompletion(rawMaterials, next, current));
+  }
+
+  function reorderSelectedMaterials(selectedIds: number[]) {
+    setOrderedMaterialIds((current) => [
+      ...selectedIds,
+      ...current.filter((id) => !selectedIds.includes(id)),
+    ]);
   }
 
   const sortedMaterials = useMemo(() => {
@@ -147,9 +164,11 @@ export function OrderForm({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const itemsToSubmit = selectedMaterials.filter(
-      (item) => item.unitQty.trim() !== "" && item.unitQty !== "0",
-    );
+    const selectedById = new Map(selectedMaterials.map((item) => [item.rawMaterialId, item]));
+    const itemsToSubmit = orderedMaterialIds
+      .map((id) => selectedById.get(id))
+      .filter((item): item is OrderMaterialDraft => Boolean(item))
+      .filter((item) => item.unitQty.trim() !== "" && item.unitQty !== "0");
 
     if (itemsToSubmit.length === 0) {
       setError("Please specify a quantity for at least one raw material.");
@@ -484,6 +503,7 @@ export function OrderForm({
           selectedMaterials={selectedMaterials}
           onUpdate={updateMaterial}
           onCommitOrder={refreshMaterialOrder}
+          onReorder={reorderSelectedMaterials}
         />
       </div>
 
