@@ -13,7 +13,7 @@
 
 # Generated menu PDF samples and verification artifacts
 /output/pdf/
-/tmp/pdfs/
+/tmp/
 
 # next.js
 /.next/
@@ -30,6 +30,8 @@
 .agents/
 .cursor/
 .impeccable/
+.codex/
+web/
 
 # debug
 npm-debug.log*
@@ -43,6 +45,7 @@ yarn-error.log*
 db.conf
 pass
 *.sql
+!drizzle/*.sql
 
 # deploy artifacts
 *.tar.gz

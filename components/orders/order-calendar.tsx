@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import type { OrderRecord } from "@/app/orders/actions";
 import { formatCurrency } from "@/lib/utils";
 
-import { MealBadge, PersonsBadge } from "./order-badges";
+import { ExtraPlatesBadge, MealBadge, PersonsBadge } from "./order-badges";
 import { OrderActions } from "./order-actions";
 
 type OrderCalendarProps = {
@@ -207,7 +207,8 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                   ) : null}
                   <span className="mt-2 flex flex-wrap gap-2">
                     <MealBadge mealType={order.mealType} />
-                    <PersonsBadge count={order.numberOfPersons} />
+                    <PersonsBadge count={order.numberOfPersons + order.extraPlates} />
+                    <ExtraPlatesBadge count={order.extraPlates} />
                   </span>
                   {order.totalAmount !== null ? (
                     <span className="mt-2 block text-sm font-medium text-foreground">

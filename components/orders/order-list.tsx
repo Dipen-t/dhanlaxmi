@@ -2,6 +2,7 @@ import type { OrderRecord } from "@/app/orders/actions";
 
 import {
   DiscountBadge,
+  ExtraPlatesBadge,
   formatOrderDate,
   MealBadge,
   PaymentBadge,
@@ -36,7 +37,8 @@ export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
               </div>
               <div className="flex flex-wrap gap-2">
                 <MealBadge mealType={order.mealType} />
-                <PersonsBadge count={order.numberOfPersons} />
+                <PersonsBadge count={order.numberOfPersons + order.extraPlates} />
+                <ExtraPlatesBadge count={order.extraPlates} />
                 <PaymentBadge totalAmount={order.totalAmount} isPaymentAmount={order.isPaymentAmount} />
                 <DiscountBadge discount={order.discount} />
               </div>

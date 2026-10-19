@@ -30,6 +30,15 @@ export function PersonsBadge({ count }: { count: number }) {
   );
 }
 
+export function ExtraPlatesBadge({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span className="inline-flex items-center rounded-md bg-info-soft px-2.5 py-1 text-sm font-medium text-info ring-1 ring-inset ring-info/20">
+      +{count} extra
+    </span>
+  );
+}
+
 export function PaymentBadge({ totalAmount, isPaymentAmount }: { totalAmount?: number | null, isPaymentAmount: boolean }) {
   if (isPaymentAmount && totalAmount) {
     return (

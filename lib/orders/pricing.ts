@@ -18,3 +18,12 @@ export function calculatePlateTotal(plates: number, perPlateAmount: number) {
     ? total
     : null;
 }
+
+export function calculateTotalWithExtraPlates(
+  originalPlates: number,
+  extraPlates: number,
+  perPlateAmount: number,
+) {
+  if (!Number.isInteger(extraPlates) || extraPlates < 0) return null;
+  return calculatePlateTotal(originalPlates + extraPlates, perPlateAmount);
+}

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { orders, orderRawMaterials, rawMaterials, vendors } from "@/db/schema";
-import { calculatePlateTotal } from "@/lib/orders/pricing";
+import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 
@@ -25,6 +25,7 @@ export type OrderRecord = {
   date: string;
   venue: string;
   numberOfPersons: number;
+  extraPlates: number;
   perPlateAmount: number | null;
   mealType: MealType;
   totalAmount: number | null;
@@ -46,6 +47,7 @@ function serializeOrder(order: {
   date: Date;
   venue: string;
   numberOfPersons: number;
+  extraPlates: number;
   perPlateAmount: number | null;
   mealType: MealType;
   totalAmount: number | null;
@@ -65,6 +67,7 @@ function serializeOrder(order: {
     date: toDateString(order.date),
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
+    extraPlates: order.extraPlates,
     perPlateAmount: order.perPlateAmount,
     mealType: order.mealType,
     totalAmount: order.totalAmount,
@@ -218,7 +221,6 @@ export async function createOrder(data: OrderInput) {
   if (error) {
     return { error };
   }
-
   const uniqueMaterialIds = new Set(materials.map((m) => m.rawMaterialId));
   if (uniqueMaterialIds.size !== materials.length) {
     return { error: "Duplicate raw materials selected. Please remove the duplicates." };
@@ -336,7 +338,14 @@ export async function updateOrder(data: OrderInput) {
   const numberOfPersons = Number(data.numberOfPersons);
   const perPlateAmount = Number(data.perPlateAmount);
   const mealType = data.mealType || "";
-  const totalAmount = calculatePlateTotal(numberOfPersons, perPlateAmount);
+  const existingOrder = Number.isSafeInteger(id) && id > 0
+    ? await db.query.orders.findFirst({
+        where: eq(orders.id, id),
+        columns: { extraPlates: true },
+      })
+    : null;
+  const extraPlates = existingOrder?.extraPlates ?? 0;
+  const totalAmount = calculateTotalWithExtraPlates(numberOfPersons, extraPlates, perPlateAmount);
   const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
@@ -345,6 +354,9 @@ export async function updateOrder(data: OrderInput) {
 
   if (!id || Number.isNaN(id)) {
     return { error: "Invalid order." };
+  }
+  if (!existingOrder) {
+    return { error: "Order not found." };
   }
 
   const error = validateOrderFields(
@@ -357,6 +369,9 @@ export async function updateOrder(data: OrderInput) {
   );
   if (error) {
     return { error };
+  }
+  if (totalAmount === null) {
+    return { error: "The combined original and extra plate count is too large." };
   }
 
   const uniqueMaterialIds = new Set(materials.map((m) => m.rawMaterialId));
@@ -434,4 +449,57 @@ export async function deleteOrder(formData: FormData) {
 
   revalidatePath("/orders");
   return { success: true as const };
+}
+
+export async function addExtraPlates(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const additionalPlates = Number(formData.get("additionalPlates"));
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return { error: "Invalid order." };
+  }
+  if (!Number.isSafeInteger(additionalPlates) || additionalPlates < 1 || additionalPlates > 100000) {
+    return { error: "Enter between 1 and 100,000 extra plates." };
+  }
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, id),
+    columns: {
+      numberOfPersons: true,
+      extraPlates: true,
+      perPlateAmount: true,
+    },
+  });
+
+  if (!order) return { error: "Order not found." };
+  if (!order.perPlateAmount) {
+    return { error: "Set the per-plate amount before adding extra plates." };
+  }
+
+  const newExtraPlates = order.extraPlates + additionalPlates;
+  const totalPlates = order.numberOfPersons + newExtraPlates;
+  const totalAmount = calculateTotalWithExtraPlates(
+    order.numberOfPersons,
+    newExtraPlates,
+    order.perPlateAmount,
+  );
+  if (totalAmount === null) {
+    return { error: "The updated plate count or total amount is too large." };
+  }
+
+  await db
+    .update(orders)
+    .set({
+      extraPlates: newExtraPlates,
+      totalAmount,
+      isPaymentAmount: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, id));
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${id}/edit`);
+  revalidatePath(`/orders/${id}/finance`);
+  revalidatePath("/reports");
+  return { success: true as const, extraPlates: newExtraPlates, totalPlates, totalAmount };
 }

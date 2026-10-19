@@ -22,7 +22,7 @@ import {
   type OrderMaterialDraft,
 } from "@/components/orders/order-materials-panel";
 import { PersonsStepper } from "@/components/orders/persons-stepper";
-import { calculatePlateTotal } from "@/lib/orders/pricing";
+import { calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 
 type OrderFormProps = {
   order: OrderRecord | null;
@@ -89,7 +89,9 @@ export function OrderForm({
     return "";
   });
   const perPlateAmount = Number(perPlateAmountDisplay.replace(/\D/g, ""));
-  const calculatedTotal = calculatePlateTotal(plateCount, perPlateAmount);
+  const extraPlates = order?.extraPlates ?? 0;
+  const totalPlateCount = plateCount + extraPlates;
+  const calculatedTotal = calculateTotalWithExtraPlates(plateCount, extraPlates, perPlateAmount);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
@@ -338,7 +340,7 @@ export function OrderForm({
                 htmlFor="order-persons"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Number of plates
+                {extraPlates > 0 ? "Original plates" : "Number of plates"}
               </label>
               <PersonsStepper
                 id="order-persons"
@@ -386,7 +388,9 @@ export function OrderForm({
                   {calculatedTotal === null ? "—" : `₹${calculatedTotal.toLocaleString("en-IN")}`}
                 </output>
                 <p className="mt-1 text-xs text-muted">
-                  {plateCount.toLocaleString("en-IN")} plates × {perPlateAmount > 0 ? `₹${perPlateAmount.toLocaleString("en-IN")}` : "rate required"}
+                  {totalPlateCount.toLocaleString("en-IN")} plates
+                  {extraPlates > 0 ? ` (${plateCount.toLocaleString("en-IN")} original + ${extraPlates.toLocaleString("en-IN")} extra)` : ""}
+                  {" × "}{perPlateAmount > 0 ? `₹${perPlateAmount.toLocaleString("en-IN")}` : "rate required"}
                 </p>
               </div>
             </div>
