@@ -28,6 +28,7 @@ export function KitchenMenuGrid({ menus, onEdit, onView }: KitchenMenuGridProps)
             </p>
             <KitchenMenuStats
               dishCount={menu.dishCount}
+              deliveryTime={menu.deliveryTime}
             />
           </button>
           <div className="border-t border-border p-3">

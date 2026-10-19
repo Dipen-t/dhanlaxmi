@@ -112,12 +112,16 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
   );
 
   useEffect(() => {
+    // The portal target is only available after the client mounts.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!open) return;
 
+    // Opening the dialog intentionally resets its draft state from server data.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormKey((key) => key + 1);
     setError(null);
     const initialQuantities: Record<number, string> = {};
@@ -341,12 +345,22 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   defaultValue={menu?.date ? new Date(menu.date).toISOString().split('T')[0] : ""}
                   className="col-span-2 sm:col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
                 />
+                <label className="col-span-1 min-w-0">
+                  <span className="sr-only">Deliver by time</span>
+                  <input
+                    name="deliveryTime"
+                    type="time"
+                    defaultValue={menu?.deliveryTime ?? ""}
+                    aria-label="Deliver by time"
+                    className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  />
+                </label>
                 <input
                   name="numberOfPersons"
                   type="number"
                   placeholder="Persons"
                   defaultValue={menu?.numberOfPersons ?? ""}
-                  className="sm:col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
+                  className="col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
                 />
                 <select
                   name="mealType"

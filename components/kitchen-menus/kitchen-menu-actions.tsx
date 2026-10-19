@@ -5,6 +5,7 @@ import { useRef, useTransition } from "react";
 
 import { deleteKitchenMenu, type KitchenMenuSummary } from "@/app/kitchen-menus/actions";
 import { KitchenMenuPdfDownload } from "@/components/kitchen-menus/kitchen-menu-pdf-download";
+import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
 type KitchenMenuActionsProps = {
   menu: KitchenMenuSummary;
@@ -125,14 +126,22 @@ export function KitchenMenuActions({
 
 export function KitchenMenuStats({
   dishCount,
+  deliveryTime,
 }: {
   dishCount: number;
+  deliveryTime?: string | null;
 }) {
+  const formattedTime = formatDeliveryTime(deliveryTime);
   return (
     <div className="flex flex-wrap gap-2">
       <span className="inline-flex items-center rounded-md bg-surface px-2.5 py-1 text-sm font-medium text-muted">
         {dishCount} dishes
       </span>
+      {formattedTime ? (
+        <span className="inline-flex items-center rounded-md bg-primary-soft px-2.5 py-1 text-sm font-medium text-primary">
+          Deliver by {formattedTime}
+        </span>
+      ) : null}
     </div>
   );
 }

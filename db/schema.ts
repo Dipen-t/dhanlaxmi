@@ -181,6 +181,7 @@ export const kitchenMenus = pgTable("kitchen_menus", {
   name: text("name").notNull(),
   venue: text("venue"),
   date: timestamp("date"),
+  deliveryTime: text("delivery_time"),
   numberOfPersons: integer("number_of_persons"),
   mealType: text("meal_type", { enum: ["Lunch", "Dinner"] }),
   createdAt: timestamp("created_at").defaultNow().notNull(),

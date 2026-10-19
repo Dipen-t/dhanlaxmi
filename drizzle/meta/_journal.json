@@ -15,6 +15,13 @@
       "when": 1792412830273,
       "tag": "0001_redundant_hex",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792417557466,
+      "tag": "0002_moaning_stardust",
+      "breakpoints": true
     }
   ]
 }

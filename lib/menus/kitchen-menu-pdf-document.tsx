@@ -9,6 +9,7 @@ import {
 
 import type { KitchenMenuDetail } from "@/app/kitchen-menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
+import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
 const PAGE_HORIZONTAL_PADDING = 36;
 const HEADER_CLEARANCE = 58;
@@ -227,8 +228,6 @@ function CategorySection({
   category: KitchenMenuDetail["categories"][number];
 }) {
   const useSingleColumn = category.dishes.length <= 3;
-  const isQtyField = category.isQtyField;
-
   return (
     <View style={styles.categoryBlock} wrap={false}>
       <View style={styles.categoryHeader}>
@@ -263,6 +262,7 @@ function CategorySection({
 }
 
 export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
+  const deliveryTime = formatDeliveryTime(menu.deliveryTime);
   return (
     <Document title={`${menu.name} - Kitchen`} author="Dhalaxmi Catering Service">
       <Page size="A4" style={styles.page}>
@@ -302,14 +302,23 @@ export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
                   )}
                 </View>
                 <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Meal:</Text>
-                  {menu.mealType ? (
-                    <Text style={styles.fieldValue}>{menu.mealType}</Text>
+                  <Text style={styles.fieldLabel}>Deliver by:</Text>
+                  {deliveryTime ? (
+                    <Text style={styles.fieldValue}>{deliveryTime}</Text>
                   ) : (
                     <View style={styles.fieldLine} />
                   )}
                 </View>
               </View>
+              {menu.mealType ? (
+                <View style={[styles.fieldsRow, { marginTop: 8 }]}>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>Meal:</Text>
+                    <Text style={styles.fieldValue}>{menu.mealType}</Text>
+                  </View>
+                  <View style={styles.field} />
+                </View>
+              ) : null}
             </View>
           </View>
         </View>

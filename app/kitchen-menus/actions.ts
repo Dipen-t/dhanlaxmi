@@ -30,6 +30,7 @@ export type KitchenMenuSummary = {
   name: string;
   venue?: string | null;
   date?: Date | null;
+  deliveryTime?: string | null;
   numberOfPersons?: number | null;
   mealType?: "Lunch" | "Dinner" | null;
   dishCount: number;
@@ -41,6 +42,7 @@ export type KitchenMenuDetail = {
   name: string;
   venue?: string | null;
   date?: Date | null;
+  deliveryTime?: string | null;
   numberOfPersons?: number | null;
   mealType?: "Lunch" | "Dinner" | null;
   categories: KitchenCategoryWithDishes[];
@@ -76,8 +78,9 @@ export async function getKitchenMenus(): Promise<KitchenMenuSummary[]> {
     name: menu.name,
     venue: menu.venue,
     date: menu.date,
+    deliveryTime: menu.deliveryTime,
     numberOfPersons: menu.numberOfPersons,
-    mealType: menu.mealType as any,
+    mealType: menu.mealType,
     dishCount: menu.kitchenMenuDishes.length,
     dishes: [...menu.kitchenMenuDishes]
       .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -137,8 +140,9 @@ export async function getKitchenMenuById(id: number): Promise<KitchenMenuDetail 
     name: menu.name,
     venue: menu.venue,
     date: menu.date,
+    deliveryTime: menu.deliveryTime,
     numberOfPersons: menu.numberOfPersons,
-    mealType: menu.mealType as any,
+    mealType: menu.mealType,
     categories,
   };
 }
@@ -208,6 +212,7 @@ export async function createKitchenMenu(formData: FormData) {
   const venue = String(formData.get("venue") ?? "").trim() || null;
   const dateStr = String(formData.get("date") ?? "").trim();
   const date = dateStr ? new Date(dateStr) : null;
+  const deliveryTime = String(formData.get("deliveryTime") ?? "").trim() || null;
   const numberOfPersonsStr = String(formData.get("numberOfPersons") ?? "").trim();
   const numberOfPersons = numberOfPersonsStr ? parseInt(numberOfPersonsStr, 10) : null;
   const mealTypeRaw = String(formData.get("mealType") ?? "").trim();
@@ -221,13 +226,16 @@ export async function createKitchenMenu(formData: FormData) {
   if (name.length > 120) {
     return { error: "Menu name must be 120 characters or less." };
   }
+  if (deliveryTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(deliveryTime)) {
+    return { error: "Enter a valid delivery time." };
+  }
   if (dishes.length === 0) {
     return { error: "Select at least one dish." };
   }
 
   const [created] = await db
     .insert(kitchenMenus)
-    .values({ name, venue, date, numberOfPersons, mealType })
+    .values({ name, venue, date, deliveryTime, numberOfPersons, mealType })
     .returning({ id: kitchenMenus.id });
 
   const syncResult = await syncKitchenMenuDishes(created.id, dishes);
@@ -247,6 +255,7 @@ export async function updateKitchenMenu(formData: FormData) {
   const venue = String(formData.get("venue") ?? "").trim() || null;
   const dateStr = String(formData.get("date") ?? "").trim();
   const date = dateStr ? new Date(dateStr) : null;
+  const deliveryTime = String(formData.get("deliveryTime") ?? "").trim() || null;
   const numberOfPersonsStr = String(formData.get("numberOfPersons") ?? "").trim();
   const numberOfPersons = numberOfPersonsStr ? parseInt(numberOfPersonsStr, 10) : null;
   const mealTypeRaw = String(formData.get("mealType") ?? "").trim();
@@ -260,13 +269,16 @@ export async function updateKitchenMenu(formData: FormData) {
   if (!name) {
     return { error: "Menu name is required." };
   }
+  if (deliveryTime && !/^([01]\d|2[0-3]):[0-5]\d$/.test(deliveryTime)) {
+    return { error: "Enter a valid delivery time." };
+  }
   if (dishes.length === 0) {
     return { error: "Select at least one dish." };
   }
 
   const [updated] = await db
     .update(kitchenMenus)
-    .set({ name, venue, date, numberOfPersons, mealType, updatedAt: new Date() })
+    .set({ name, venue, date, deliveryTime, numberOfPersons, mealType, updatedAt: new Date() })
     .where(eq(kitchenMenus.id, id))
     .returning({ id: kitchenMenus.id });
 

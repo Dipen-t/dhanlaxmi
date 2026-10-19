@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getKitchenMenuById } from "@/app/kitchen-menus/actions";
 import { KitchenMenuPdfDownload } from "@/components/kitchen-menus/kitchen-menu-pdf-download";
 import { PageHeader } from "@/components/page-header";
+import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
 type KitchenMenuDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -35,6 +36,7 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
     (sum, category) => sum + category.dishes.length,
     0,
   );
+  const deliveryTime = formatDeliveryTime(menu.deliveryTime);
 
   return (
     <div className="mx-auto w-full px-4 py-6 sm:px-6 sm:py-8">
@@ -46,6 +48,7 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
             {menu.categories.length}{" "}
             {menu.categories.length === 1 ? "category" : "categories"} ·{" "}
             {dishTotal} dishes · preview for printing
+            {deliveryTime ? ` · Deliver by ${deliveryTime}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <KitchenMenuPdfDownload

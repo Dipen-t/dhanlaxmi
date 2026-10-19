@@ -28,6 +28,7 @@ export function KitchenMenuList({ menus, onEdit, onView }: KitchenMenuListProps)
               </div>
               <KitchenMenuStats
                 dishCount={menu.dishCount}
+                deliveryTime={menu.deliveryTime}
               />
             </button>
 
