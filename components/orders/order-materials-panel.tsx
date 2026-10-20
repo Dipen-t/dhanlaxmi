@@ -14,10 +14,10 @@ import {
 } from "@dnd-kit/core";
 import {
   arrayMove,
+  rectSortingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
-  verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
@@ -54,33 +54,81 @@ type OrderMaterialsPanelProps = {
   onReorder: (selectedIds: number[]) => void;
 };
 
-function SortableSelectedMaterial({ id, name, quantity }: { id: number; name: string; quantity: string }) {
+function SortableMaterialCard({
+  id,
+  name,
+  detail,
+  notes,
+  active,
+  complete,
+  partial,
+  dragDisabled,
+  onEdit,
+}: {
+  id: number;
+  name: string;
+  detail?: string;
+  notes?: string;
+  active: boolean;
+  complete: boolean;
+  partial: boolean;
+  dragDisabled: boolean;
+  onEdit: () => void;
+}) {
   const { attributes, listeners, setActivatorNodeRef, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id });
+    useSortable({ id, disabled: dragDisabled });
 
   return (
-    <li
+    <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex min-h-12 items-center gap-2 rounded-lg border bg-background px-2 ${
-        isDragging ? "z-30 border-primary shadow-lg" : "border-border"
+      className={`relative flex min-h-16 items-stretch rounded-xl border transition-colors ${
+        isDragging
+          ? "z-30 border-primary bg-background shadow-lg"
+          : active
+            ? "border-primary bg-primary text-primary-foreground"
+            : complete
+              ? "border-primary/40 bg-primary-soft/50 text-foreground"
+              : partial
+                ? "border-border bg-surface text-foreground"
+                : "border-border bg-background text-foreground hover:border-primary/35 hover:bg-primary-soft/30"
       }`}
     >
       <button
         ref={setActivatorNodeRef}
         type="button"
-        className="inline-flex size-11 shrink-0 touch-none items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        disabled={dragDisabled}
+        className={`inline-flex w-10 shrink-0 touch-none items-center justify-center rounded-l-xl border-r focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${
+          active ? "border-primary-foreground/25 text-primary-foreground/80" : "border-border text-muted hover:bg-surface hover:text-foreground"
+        } ${dragDisabled ? "cursor-default opacity-35" : "cursor-grab active:cursor-grabbing"}`}
         aria-label={`Drag ${name} to reorder`}
         {...attributes}
         {...listeners}
       >
         <GripVertical className="size-5" aria-hidden />
       </button>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
-        <span className="block truncate text-xs text-muted">{quantity}</span>
-      </span>
-    </li>
+      <button
+        type="button"
+        id={`order-material-${id}`}
+        onClick={onEdit}
+        aria-pressed={active}
+        className="flex min-w-0 flex-1 touch-manipulation flex-col items-start justify-center px-2.5 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+      >
+        <span className={`w-full truncate text-base font-semibold tracking-[-0.01em] ${active ? "text-primary-foreground" : "text-foreground"}`} title={name}>
+          {name}
+        </span>
+        {detail ? (
+          <span className={`mt-0.5 w-full truncate text-sm font-semibold tabular-nums ${active ? "text-primary-foreground/90" : complete ? "text-primary" : "text-muted"}`}>
+            {detail}
+          </span>
+        ) : null}
+        {notes ? (
+          <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
+            Note: {notes}
+          </span>
+        ) : null}
+      </button>
+    </div>
   );
 }
 
@@ -146,22 +194,14 @@ export function OrderMaterialsPanel({
   const editingItem =
     editingId === null ? null : (selectedById.get(editingId) ?? null);
 
-  const completedMaterials = useMemo(
-    () => visibleMaterials.filter((material) => {
-      const item = selectedById.get(material.id);
-      return item ? isComplete(item) : false;
-    }),
-    [visibleMaterials, selectedById],
-  );
-
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const selectedIds = completedMaterials.map((material) => material.id);
-    const oldIndex = selectedIds.indexOf(Number(active.id));
-    const newIndex = selectedIds.indexOf(Number(over.id));
+    const materialIds = sortedMaterials.map((material) => material.id);
+    const oldIndex = materialIds.indexOf(Number(active.id));
+    const newIndex = materialIds.indexOf(Number(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
-    onReorder(arrayMove(selectedIds, oldIndex, newIndex));
+    onReorder(arrayMove(materialIds, oldIndex, newIndex));
   }
 
   function openEditor(materialId: number) {
@@ -236,35 +276,12 @@ export function OrderMaterialsPanel({
               editingMaterial ? "pt-52 sm:pt-44" : ""
             }`}
           >
-            {!query && completedMaterials.length > 1 ? (
-              <section aria-labelledby="selected-material-order" className="mb-2 rounded-xl border border-border bg-surface/35 p-3">
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <div>
-                    <h3 id="selected-material-order" className="text-sm font-semibold text-foreground">Selected material order</h3>
-                    <p className="mt-0.5 text-xs text-muted">Drag the handle to arrange the saved material and vendor list.</p>
-                  </div>
-                  <span className="shrink-0 text-xs font-medium tabular-nums text-muted">{completedMaterials.length} selected</span>
-                </div>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={completedMaterials.map((material) => material.id)} strategy={verticalListSortingStrategy}>
-                    <ol className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                      {completedMaterials.map((material) => {
-                        const item = selectedById.get(material.id)!;
-                        return (
-                          <SortableSelectedMaterial
-                            key={material.id}
-                            id={material.id}
-                            name={material.name}
-                            quantity={`${item.unitQty} ${item.unitName}`}
-                          />
-                        );
-                      })}
-                    </ol>
-                  </SortableContext>
-                </DndContext>
-              </section>
-            ) : null}
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(8.25rem,1fr))] gap-1.5">
+            <p className="mb-2 px-1 text-xs text-muted">
+              {query ? "Clear search to rearrange materials." : "Drag the handle on any card to arrange materials."}
+            </p>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={visibleMaterials.map((material) => material.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-1.5">
               {visibleMaterials.map((material) => {
                 const item = selectedById.get(material.id);
                 if (!item) return null;
@@ -277,56 +294,23 @@ export function OrderMaterialsPanel({
                   : null;
 
                 return (
-                  <button
+                  <SortableMaterialCard
                     key={material.id}
-                    type="button"
-                    id={`order-material-${material.id}`}
-                    onClick={() => openEditor(material.id)}
-                    aria-pressed={active}
-                    className={`flex min-h-12 touch-manipulation flex-col items-start justify-center rounded-xl border px-2.5 py-2 text-left transition-colors duration-150 ease-out motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : complete
-                          ? "border-primary/40 bg-primary-soft/50 text-foreground"
-                          : partial
-                            ? "border-border bg-surface text-foreground"
-                            : "border-border bg-background text-foreground hover:border-primary/35 hover:bg-primary-soft/30"
-                    }`}
-                  >
-                    <span
-                      className={`w-full truncate text-base font-semibold tracking-[-0.01em] ${
-                        active ? "text-primary-foreground" : "text-foreground"
-                      }`}
-                      title={material.name}
-                    >
-                      {material.name}
-                    </span>
-                    {complete ? (
-                      <span
-                        className={`mt-0.5 w-full truncate text-sm font-semibold tabular-nums ${
-                          active ? "text-primary-foreground/90" : "text-primary"
-                        }`}
-                      >
-                        {item.unitQty} {item.unitName}{vendorName ? ` ${vendorName}` : ""}
-                      </span>
-                    ) : partial ? (
-                      <span
-                        className={`mt-0.5 text-sm font-medium ${
-                          active ? "text-primary-foreground/80" : "text-muted"
-                        }`}
-                      >
-                        {item.unitQty} · need unit
-                      </span>
-                    ) : null}
-                    {item.notes ? (
-                      <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
-                        Note: {item.notes}
-                      </span>
-                    ) : null}
-                  </button>
+                    id={material.id}
+                    name={material.name}
+                    detail={complete ? `${item.unitQty} ${item.unitName}${vendorName ? ` ${vendorName}` : ""}` : partial ? `${item.unitQty} · need unit` : undefined}
+                    notes={item.notes}
+                    active={active}
+                    complete={complete}
+                    partial={partial}
+                    dragDisabled={Boolean(query)}
+                    onEdit={() => openEditor(material.id)}
+                  />
                 );
               })}
-            </div>
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
         )}
 
