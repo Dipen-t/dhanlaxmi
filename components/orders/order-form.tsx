@@ -170,12 +170,6 @@ export function OrderForm({
       .filter((item): item is OrderMaterialDraft => Boolean(item))
       .filter((item) => item.unitQty.trim() !== "" && item.unitQty !== "0");
 
-    if (itemsToSubmit.length === 0) {
-      setError("Please specify a quantity for at least one raw material.");
-      switchTab("materials");
-      return;
-    }
-
     if (itemsToSubmit.some((item) => item.unitName.trim() === "")) {
       setError("Please specify a unit for all selected materials.");
       switchTab("materials");
@@ -523,7 +517,7 @@ export function OrderForm({
               onClick={() => switchTab("materials")}
               className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
             >
-              Continue to materials
+              Continue to materials (optional)
               <Package className="size-4" strokeWidth={1.75} aria-hidden />
             </button>
           ) : (
