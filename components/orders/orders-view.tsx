@@ -1,7 +1,7 @@
 "use client";
 
 import { CalendarDays, LayoutGrid, List, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { OrderRecord } from "@/app/orders/actions";
@@ -18,17 +18,8 @@ type OrdersViewProps = {
 
 export function OrdersView({ orders }: OrdersViewProps) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("calendar");
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("orders-view");
-    if (stored === "grid" || stored === "list" || stored === "calendar") {
-      // The saved preference only exists in the browser after hydration.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setView(stored);
-    }
-  }, []);
 
   const filteredOrders = useMemo(() => {
     let result = orders;
@@ -58,7 +49,6 @@ export function OrdersView({ orders }: OrdersViewProps) {
 
   function setViewMode(mode: ViewMode) {
     setView(mode);
-    localStorage.setItem("orders-view", mode);
   }
 
   function openCreate() {
