@@ -161,21 +161,12 @@ export const menuCategories = pgTable(
   (table) => [primaryKey({ columns: [table.menuId, table.categoryId] })],
 );
 
-export const orderMenuSelections = pgTable("order_menu_selections", {
-  orderId: integer("order_id")
-    .primaryKey()
-    .references(() => orders.id, { onDelete: "cascade" }),
-  menuId: integer("menu_id")
-    .notNull()
-    .references(() => menus.id, { onDelete: "cascade" }),
-});
-
 export const orderMenuDishes = pgTable(
   "order_menu_dishes",
   {
     orderId: integer("order_id")
       .notNull()
-      .references(() => orderMenuSelections.orderId, { onDelete: "cascade" }),
+      .references(() => orders.id, { onDelete: "cascade" }),
     dishId: integer("dish_id")
       .notNull()
       .references(() => dishes.id, { onDelete: "cascade" }),
@@ -276,23 +267,11 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
   }),
 }));
 
-export const ordersRelations = relations(orders, ({ one, many }) => ({
+export const ordersRelations = relations(orders, ({ many }) => ({
   orderRawMaterials: many(orderRawMaterials),
-  orderMenuSelection: one(orderMenuSelections),
   orderMenuDishes: many(orderMenuDishes),
   orderPayments: many(orderPayments),
   vendorPayments: many(vendorPayments),
-}));
-
-export const orderMenuSelectionsRelations = relations(orderMenuSelections, ({ one }) => ({
-  order: one(orders, {
-    fields: [orderMenuSelections.orderId],
-    references: [orders.id],
-  }),
-  menu: one(menus, {
-    fields: [orderMenuSelections.menuId],
-    references: [menus.id],
-  }),
 }));
 
 export const orderMenuDishesRelations = relations(orderMenuDishes, ({ one }) => ({

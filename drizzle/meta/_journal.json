@@ -43,6 +43,13 @@
       "when": 1792681609519,
       "tag": "0005_even_pet_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792684252335,
+      "tag": "0006_boring_freak",
+      "breakpoints": true
     }
   ]
 }

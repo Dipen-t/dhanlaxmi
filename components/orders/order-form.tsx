@@ -19,8 +19,8 @@ import {
   type OrderRecord,
 } from "@/app/orders/actions";
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
-import type { CategoryWithDishes, MenuSummary } from "@/app/menus/actions";
-import { OrderMenuPanel } from "@/components/orders/order-menu-panel";
+import type { CategoryWithDishes } from "@/app/menus/actions";
+import { OrderDishesPanel } from "@/components/orders/order-menu-panel";
 import {
   OrderMaterialsPanel,
   type OrderMaterialDraft,
@@ -32,11 +32,10 @@ type OrderFormProps = {
   order: OrderRecord | null;
   suggestedOrderId: string;
   rawMaterials: MaterialWithVendor[];
-  menus: MenuSummary[];
   menuCatalog: CategoryWithDishes[];
 };
 
-type OrderFormSection = "details" | "materials" | "menu";
+type OrderFormSection = "details" | "materials" | "dishes";
 
 const mealOptions: {
   value: MealType;
@@ -84,7 +83,6 @@ export function OrderForm({
   order,
   suggestedOrderId,
   rawMaterials,
-  menus,
   menuCatalog,
 }: OrderFormProps) {
   const router = useRouter();
@@ -108,8 +106,7 @@ export function OrderForm({
   const extraPlates = order?.extraPlates ?? 0;
   const totalPlateCount = plateCount + extraPlates;
   const calculatedTotal = calculateTotalWithExtraPlates(plateCount, extraPlates, perPlateAmount);
-  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(order?.menuId ?? null);
-  const [selectedMenuDishIds, setSelectedMenuDishIds] = useState<number[]>(order?.menuDishIds ?? []);
+  const [selectedDishIds, setSelectedDishIds] = useState<number[]>(order?.dishIds ?? []);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
@@ -205,11 +202,10 @@ export function OrderForm({
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
-      menuId: selectedMenuId,
-      menuDishIds: menuCatalog
+      dishIds: menuCatalog
         .flatMap((category) => category.dishes)
         .map((dish) => dish.id)
-        .filter((dishId) => selectedMenuDishIds.includes(dishId)),
+        .filter((dishId) => selectedDishIds.includes(dishId)),
     };
 
     startTransition(async () => {
@@ -256,7 +252,7 @@ export function OrderForm({
           {([
             { id: "details" as const, label: "Details", icon: UserRound },
             { id: "materials" as const, label: "Kitchen items", icon: Package },
-            { id: "menu" as const, label: "Menu", icon: UtensilsCrossed },
+            { id: "dishes" as const, label: "Dishes", icon: UtensilsCrossed },
           ]).map((section) => {
             const Icon = section.icon;
             const selected = activeTab === section.id;
@@ -544,19 +540,13 @@ export function OrderForm({
       </div>
 
       <div
-        hidden={activeTab !== "menu"}
-        className={activeTab === "menu" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
+        hidden={activeTab !== "dishes"}
+        className={activeTab === "dishes" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
       >
-        <OrderMenuPanel
-          menus={menus}
+        <OrderDishesPanel
           catalog={menuCatalog}
-          selectedMenuId={selectedMenuId}
-          selectedDishIds={selectedMenuDishIds}
-          onMenuChange={(menuId) => {
-            setSelectedMenuId(menuId);
-            setSelectedMenuDishIds([]);
-          }}
-          onDishChange={setSelectedMenuDishIds}
+          selectedDishIds={selectedDishIds}
+          onDishChange={setSelectedDishIds}
         />
       </div>
 
@@ -590,10 +580,10 @@ export function OrderForm({
               </button>
               <button
                 type="button"
-                onClick={() => switchTab("menu")}
+                onClick={() => switchTab("dishes")}
                 className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
               >
-                Continue to menu (optional)
+                Continue to dishes (optional)
                 <UtensilsCrossed className="ml-2 size-4" strokeWidth={1.75} aria-hidden />
               </button>
             </>
