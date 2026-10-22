@@ -5,6 +5,8 @@ import {
   Moon,
   Package,
   Sun,
+  UserRound,
+  UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,6 +19,8 @@ import {
   type OrderRecord,
 } from "@/app/orders/actions";
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
+import type { CategoryWithDishes, MenuSummary } from "@/app/menus/actions";
+import { OrderMenuPanel } from "@/components/orders/order-menu-panel";
 import {
   OrderMaterialsPanel,
   type OrderMaterialDraft,
@@ -28,7 +32,11 @@ type OrderFormProps = {
   order: OrderRecord | null;
   suggestedOrderId: string;
   rawMaterials: MaterialWithVendor[];
+  menus: MenuSummary[];
+  menuCatalog: CategoryWithDishes[];
 };
+
+type OrderFormSection = "details" | "materials" | "menu";
 
 const mealOptions: {
   value: MealType;
@@ -76,6 +84,8 @@ export function OrderForm({
   order,
   suggestedOrderId,
   rawMaterials,
+  menus,
+  menuCatalog,
 }: OrderFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -84,7 +94,7 @@ export function OrderForm({
   const isEditing = order !== null;
 
   const [mealType, setMealType] = useState<MealType>(order?.mealType ?? "lunch");
-  const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
+  const [activeTab, setActiveTab] = useState<OrderFormSection>("details");
   const initialPlateCount = order?.numberOfPersons ?? 1;
   const [plateCount, setPlateCount] = useState(initialPlateCount);
   const [perPlateAmountDisplay, setPerPlateAmountDisplay] = useState(() => {
@@ -98,6 +108,8 @@ export function OrderForm({
   const extraPlates = order?.extraPlates ?? 0;
   const totalPlateCount = plateCount + extraPlates;
   const calculatedTotal = calculateTotalWithExtraPlates(plateCount, extraPlates, perPlateAmount);
+  const [selectedMenuId, setSelectedMenuId] = useState<number | null>(order?.menuId ?? null);
+  const [selectedMenuDishIds, setSelectedMenuDishIds] = useState<number[]>(order?.menuDishIds ?? []);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
@@ -152,7 +164,7 @@ export function OrderForm({
       .filter((material): material is MaterialWithVendor => Boolean(material));
   }, [orderedMaterialIds, rawMaterials]);
 
-  function switchTab(tab: "details" | "materials") {
+  function switchTab(tab: OrderFormSection) {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -193,6 +205,11 @@ export function OrderForm({
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
+      menuId: selectedMenuId,
+      menuDishIds: menuCatalog
+        .flatMap((category) => category.dishes)
+        .map((dish) => dish.id)
+        .filter((dishId) => selectedMenuDishIds.includes(dishId)),
     };
 
     startTransition(async () => {
@@ -223,17 +240,42 @@ export function OrderForm({
     });
   }
 
-  const materialsMode = activeTab === "materials";
+  const fullScreenMode = activeTab !== "details";
 
   return (
     <form
       onSubmit={handleSubmit}
       className={
-        materialsMode
+        fullScreenMode
           ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-19 sm:px-6"
           : "flex flex-col gap-5 pb-28"
       }
     >
+      <nav aria-label="Order sections" className="shrink-0 rounded-xl border border-border bg-background p-1.5">
+        <div className="grid grid-cols-3 gap-1">
+          {([
+            { id: "details" as const, label: "Details", icon: UserRound },
+            { id: "materials" as const, label: "Kitchen items", icon: Package },
+            { id: "menu" as const, label: "Menu", icon: UtensilsCrossed },
+          ]).map((section) => {
+            const Icon = section.icon;
+            const selected = activeTab === section.id;
+            return (
+              <button
+                key={section.id}
+                type="button"
+                aria-current={selected ? "step" : undefined}
+                onClick={() => switchTab(section.id)}
+                className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "bg-primary text-primary-foreground" : "text-muted hover:bg-surface hover:text-foreground"}`}
+              >
+                <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+                <span className="truncate">{section.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
       {error ? (
         <div
           role="alert"
@@ -486,7 +528,7 @@ export function OrderForm({
       <div
         hidden={activeTab !== "materials"}
         className={
-          materialsMode
+          activeTab === "materials"
             ? "flex min-h-0 flex-1 flex-col"
             : "hidden"
         }
@@ -498,6 +540,23 @@ export function OrderForm({
           onUpdate={updateMaterial}
           onCommitOrder={refreshMaterialOrder}
           onReorder={reorderSelectedMaterials}
+        />
+      </div>
+
+      <div
+        hidden={activeTab !== "menu"}
+        className={activeTab === "menu" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
+      >
+        <OrderMenuPanel
+          menus={menus}
+          catalog={menuCatalog}
+          selectedMenuId={selectedMenuId}
+          selectedDishIds={selectedMenuDishIds}
+          onMenuChange={(menuId) => {
+            setSelectedMenuId(menuId);
+            setSelectedMenuDishIds([]);
+          }}
+          onDishChange={setSelectedMenuDishIds}
         />
       </div>
 
@@ -520,7 +579,7 @@ export function OrderForm({
               Continue to materials (optional)
               <Package className="size-4" strokeWidth={1.75} aria-hidden />
             </button>
-          ) : (
+          ) : activeTab === "materials" ? (
             <>
               <button
                 type="button"
@@ -530,15 +589,29 @@ export function OrderForm({
                 Back to details
               </button>
               <button
+                type="button"
+                onClick={() => switchTab("menu")}
+                className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
+              >
+                Continue to menu (optional)
+                <UtensilsCrossed className="ml-2 size-4" strokeWidth={1.75} aria-hidden />
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => switchTab("materials")}
+                className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Back to kitchen items
+              </button>
+              <button
                 type="submit"
                 disabled={isPending}
                 className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
               >
-                {isPending
-                  ? "Saving…"
-                  : isEditing
-                    ? "Save changes"
-                    : "Create order"}
+                {isPending ? "Saving…" : isEditing ? "Save changes" : "Create order"}
               </button>
             </>
           )}

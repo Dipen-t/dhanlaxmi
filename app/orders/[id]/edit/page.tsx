@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { getOrder, getSuggestedOrderId } from "@/app/orders/actions";
+import { getCatalogCategories, getMenus } from "@/app/menus/actions";
 import { getMaterials } from "@/app/raw-materials/actions";
 import { OrderForm } from "@/components/orders/order-form";
 
@@ -21,10 +22,12 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
     notFound();
   }
 
-  const [order, suggestedOrderId, rawMaterials] = await Promise.all([
+  const [order, suggestedOrderId, rawMaterials, menus, menuCatalog] = await Promise.all([
     getOrder(String(orderId)),
     getSuggestedOrderId(),
     getMaterials(),
+    getMenus(),
+    getCatalogCategories(),
   ]);
 
   if (!order) {
@@ -37,6 +40,8 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
         order={order}
         suggestedOrderId={suggestedOrderId}
         rawMaterials={rawMaterials}
+        menus={menus}
+        menuCatalog={menuCatalog}
       />
     </div>
   );

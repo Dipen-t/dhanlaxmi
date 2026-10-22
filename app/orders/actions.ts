@@ -4,7 +4,15 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { orders, orderRawMaterials, rawMaterials, vendors } from "@/db/schema";
+import {
+  menus,
+  orderMenuDishes,
+  orderMenuSelections,
+  orders,
+  orderRawMaterials,
+  rawMaterials,
+  vendors,
+} from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
@@ -35,6 +43,8 @@ export type OrderRecord = {
   customerPhone: string | null;
   isPaymentAmount: boolean;
   rawMaterials: OrderRawMaterialRecord[];
+  menuId: number | null;
+  menuDishIds: number[];
   vendors: string[];
 };
 
@@ -57,6 +67,8 @@ function serializeOrder(order: {
   customerPhone: string | null;
   isPaymentAmount: boolean;
   orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId: number | null; sortOrder: number; vendor?: { name: string } | null }[];
+  orderMenuSelection?: { menuId: number } | null;
+  orderMenuDishes?: { dishId: number; sortOrder: number }[];
 }): OrderRecord {
   const vendors = Array.from(new Set((order.orderRawMaterials || [])
     .map(rm => rm.vendor?.name)
@@ -80,6 +92,8 @@ function serializeOrder(order: {
       ...rm,
       vendorId: rm.vendorId
     })) ?? [],
+    menuId: order.orderMenuSelection?.menuId ?? null,
+    menuDishIds: order.orderMenuDishes?.map((row) => row.dishId) ?? [],
     vendors,
   };
 }
@@ -93,6 +107,10 @@ export async function getOrders(): Promise<OrderRecord[]> {
         with: {
           vendor: true,
         },
+      },
+      orderMenuSelection: true,
+      orderMenuDishes: {
+        orderBy: asc(orderMenuDishes.sortOrder),
       },
     },
   });
@@ -114,6 +132,10 @@ export async function getOrder(id: string): Promise<OrderRecord | null> {
         with: {
           vendor: true,
         },
+      },
+      orderMenuSelection: true,
+      orderMenuDishes: {
+        orderBy: asc(orderMenuDishes.sortOrder),
       },
     },
   });
@@ -197,7 +219,48 @@ export type OrderInput = {
   customerName?: string;
   customerPhone?: string;
   rawMaterials: OrderRawMaterialRecord[];
+  menuId?: number | null;
+  menuDishIds?: number[];
 };
+
+async function validateMenuSelection(menuId: number | null, dishIds: number[]) {
+  if (menuId === null) {
+    return dishIds.length === 0 ? null : "Choose a menu before selecting dishes.";
+  }
+  if (!Number.isSafeInteger(menuId) || menuId <= 0) {
+    return "Choose a valid menu.";
+  }
+
+  const menu = await db.query.menus.findFirst({
+    where: eq(menus.id, menuId),
+    with: {
+      menuCategories: {
+        with: {
+          category: { with: { dishes: true } },
+        },
+      },
+    },
+  });
+  if (!menu) return "The selected menu no longer exists.";
+
+  const allowedDishIds = new Set(
+    menu.menuCategories.flatMap((link) => link.category.dishes.map((dish) => dish.id)),
+  );
+  if (dishIds.some((dishId) => !Number.isSafeInteger(dishId) || !allowedDishIds.has(dishId))) {
+    return "One or more selected dishes do not belong to this menu.";
+  }
+  return null;
+}
+
+async function saveOrderMenuSelection(orderId: number, menuId: number | null, dishIds: number[]) {
+  if (menuId === null) return;
+  await db.insert(orderMenuSelections).values({ orderId, menuId });
+  if (dishIds.length > 0) {
+    await db.insert(orderMenuDishes).values(
+      dishIds.map((dishId, index) => ({ orderId, dishId, sortOrder: index })),
+    );
+  }
+}
 
 export async function createOrder(data: OrderInput) {
   const orderId = normalizeText(data.orderId || "");
@@ -212,6 +275,8 @@ export async function createOrder(data: OrderInput) {
   const customerPhone = data.customerPhone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = data.rawMaterials || [];
+  const menuId = data.menuId == null ? null : Number(data.menuId);
+  const menuDishIds = [...new Set((data.menuDishIds || []).map(Number))];
 
   const error = validateOrderFields(
     orderId,
@@ -228,6 +293,8 @@ export async function createOrder(data: OrderInput) {
   if (uniqueMaterialIds.size !== materials.length) {
     return { error: "Duplicate raw materials selected. Please remove the duplicates." };
   }
+  const menuError = await validateMenuSelection(menuId, menuDishIds);
+  if (menuError) return { error: menuError };
 
   try {
     const [newOrder] = await db.insert(orders).values({
@@ -257,6 +324,8 @@ export async function createOrder(data: OrderInput) {
         }))
       );
     }
+
+    await saveOrderMenuSelection(newOrder.id, menuId, menuDishIds);
 
     if (materials.length > 0) {
 
@@ -355,6 +424,8 @@ export async function updateOrder(data: OrderInput) {
   const customerPhone = data.customerPhone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = data.rawMaterials || [];
+  const menuId = data.menuId == null ? null : Number(data.menuId);
+  const menuDishIds = [...new Set((data.menuDishIds || []).map(Number))];
 
   if (!id || Number.isNaN(id)) {
     return { error: "Invalid order." };
@@ -382,6 +453,8 @@ export async function updateOrder(data: OrderInput) {
   if (uniqueMaterialIds.size !== materials.length) {
     return { error: "Duplicate raw materials selected. Please remove the duplicates." };
   }
+  const menuError = await validateMenuSelection(menuId, menuDishIds);
+  if (menuError) return { error: menuError };
 
   try {
     const [updated] = await db
@@ -421,6 +494,11 @@ export async function updateOrder(data: OrderInput) {
         }))
       );
     }
+
+
+    await db.delete(orderMenuDishes).where(eq(orderMenuDishes.orderId, id));
+    await db.delete(orderMenuSelections).where(eq(orderMenuSelections.orderId, id));
+    await saveOrderMenuSelection(id, menuId, menuDishIds);
 
     revalidatePath("/orders");
     return { success: true as const };

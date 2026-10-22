@@ -161,6 +161,29 @@ export const menuCategories = pgTable(
   (table) => [primaryKey({ columns: [table.menuId, table.categoryId] })],
 );
 
+export const orderMenuSelections = pgTable("order_menu_selections", {
+  orderId: integer("order_id")
+    .primaryKey()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  menuId: integer("menu_id")
+    .notNull()
+    .references(() => menus.id, { onDelete: "cascade" }),
+});
+
+export const orderMenuDishes = pgTable(
+  "order_menu_dishes",
+  {
+    orderId: integer("order_id")
+      .notNull()
+      .references(() => orderMenuSelections.orderId, { onDelete: "cascade" }),
+    dishId: integer("dish_id")
+      .notNull()
+      .references(() => dishes.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.orderId, table.dishId] })],
+);
+
 export const kitchenDishCategories = pgTable("kitchen_dish_categories", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
@@ -253,10 +276,34 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
   }),
 }));
 
-export const ordersRelations = relations(orders, ({ many }) => ({
+export const ordersRelations = relations(orders, ({ one, many }) => ({
   orderRawMaterials: many(orderRawMaterials),
+  orderMenuSelection: one(orderMenuSelections),
+  orderMenuDishes: many(orderMenuDishes),
   orderPayments: many(orderPayments),
   vendorPayments: many(vendorPayments),
+}));
+
+export const orderMenuSelectionsRelations = relations(orderMenuSelections, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderMenuSelections.orderId],
+    references: [orders.id],
+  }),
+  menu: one(menus, {
+    fields: [orderMenuSelections.menuId],
+    references: [menus.id],
+  }),
+}));
+
+export const orderMenuDishesRelations = relations(orderMenuDishes, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderMenuDishes.orderId],
+    references: [orders.id],
+  }),
+  dish: one(dishes, {
+    fields: [orderMenuDishes.dishId],
+    references: [dishes.id],
+  }),
 }));
 
 export const orderPaymentsRelations = relations(orderPayments, ({ one, many }) => ({

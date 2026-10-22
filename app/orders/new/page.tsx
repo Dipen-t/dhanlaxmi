@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import { getSuggestedOrderId } from "@/app/orders/actions";
+import { getCatalogCategories, getMenus } from "@/app/menus/actions";
 import { getMaterials } from "@/app/raw-materials/actions";
 import { OrderForm } from "@/components/orders/order-form";
 
@@ -12,9 +13,11 @@ export const metadata: Metadata = {
 };
 
 export default async function NewOrderPage() {
-  const [suggestedOrderId, rawMaterials] = await Promise.all([
+  const [suggestedOrderId, rawMaterials, menus, menuCatalog] = await Promise.all([
     getSuggestedOrderId(),
     getMaterials(),
+    getMenus(),
+    getCatalogCategories(),
   ]);
 
   return (
@@ -23,6 +26,8 @@ export default async function NewOrderPage() {
         order={null}
         suggestedOrderId={suggestedOrderId}
         rawMaterials={rawMaterials}
+        menus={menus}
+        menuCatalog={menuCatalog}
       />
     </div>
   );
