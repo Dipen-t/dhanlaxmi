@@ -25,7 +25,16 @@ export function MealBadge({ mealType }: { mealType: MealType }) {
 export function PersonsBadge({ count }: { count: number }) {
   return (
     <span className="inline-flex items-center rounded-md bg-surface px-2.5 py-1 text-sm font-medium text-muted">
-      {count} {count === 1 ? "person" : "persons"}
+      {count} {count === 1 ? "plate" : "plates"}
+    </span>
+  );
+}
+
+export function ExtraPlatesBadge({ count }: { count?: number }) {
+  if (!count) return null;
+  return (
+    <span className="inline-flex items-center rounded-md bg-info-soft px-2.5 py-1 text-sm font-medium text-info ring-1 ring-inset ring-info/20">
+      +{count} extra
     </span>
   );
 }

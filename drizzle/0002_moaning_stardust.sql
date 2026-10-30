@@ -1,0 +1,1 @@
+ALTER TABLE "kitchen_menus" ADD COLUMN "delivery_time" text;

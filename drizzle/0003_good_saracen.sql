@@ -1,0 +1,1 @@
+ALTER TABLE "orders" ADD COLUMN "extra_plates" integer DEFAULT 0 NOT NULL;

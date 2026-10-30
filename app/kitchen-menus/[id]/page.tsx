@@ -5,6 +5,7 @@ import { getKitchenMenuById } from "@/app/kitchen-menus/actions";
 import { KitchenMenuPdfDownload } from "@/components/kitchen-menus/kitchen-menu-pdf-download";
 import { KitchenMenuWhatsappShare } from "@/components/kitchen-menus/kitchen-menu-whatsapp-share";
 import { PageHeader } from "@/components/page-header";
+import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
 type KitchenMenuDetailPageProps = {
   params: Promise<{ id: string }>;
@@ -36,6 +37,7 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
     (sum, category) => sum + category.dishes.length,
     0,
   );
+  const deliveryTime = formatDeliveryTime(menu.deliveryTime);
 
   return (
     <div className="mx-auto w-full px-4 py-6 sm:px-6 sm:py-8">
@@ -47,6 +49,7 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
             {menu.categories.length}{" "}
             {menu.categories.length === 1 ? "category" : "categories"} ·{" "}
             {dishTotal} dishes · preview for printing
+            {deliveryTime ? ` · Deliver by ${deliveryTime}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2">
             <KitchenMenuWhatsappShare
@@ -64,9 +67,9 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
       </div>
 
       <div className="space-y-4">
-        {menu.categories.map((category) => (
+        {menu.categories.map((category, index) => (
           <section
-            key={category.id}
+            key={`${category.id}-${index}`}
             className="overflow-hidden rounded-xl border border-border bg-background"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-surface/60 px-4 py-3 sm:px-5">

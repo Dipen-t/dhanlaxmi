@@ -12,6 +12,7 @@ import {
   rawMaterials,
   vendors,
 } from "@/db/schema";
+import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 
@@ -23,6 +24,7 @@ export type OrderRawMaterialRecord = {
   unitName: string;
   notes?: string | null;
   vendorId?: number | null;
+  sortOrder?: number;
 };
 
 export type OrderMenuDishRecord = {
@@ -38,6 +40,8 @@ export type OrderRecord = {
   date: string;
   venue: string;
   numberOfPersons: number;
+  extraPlates: number;
+  perPlateAmount: number | null;
   mealType: MealType;
   totalAmount: number | null;
   discount: string | null;
@@ -48,6 +52,7 @@ export type OrderRecord = {
   menuName: string | null;
   menuDishes: OrderMenuDishRecord[];
   rawMaterials: OrderRawMaterialRecord[];
+  dishIds: number[];
   vendors: string[];
 };
 
@@ -61,6 +66,8 @@ function serializeOrder(order: {
   date: Date;
   venue: string;
   numberOfPersons: number;
+  extraPlates: number;
+  perPlateAmount: number | null;
   mealType: MealType;
   totalAmount: number | null;
   discount: string | null;
@@ -72,9 +79,22 @@ function serializeOrder(order: {
   orderMenuDishes?: {
     dishId: number;
     sortOrder: number;
-    dish?: { id: number; name: string; categoryId: number; category?: { id: number; name: string } | null } | null;
+    dish?: {
+      id: number;
+      name: string;
+      categoryId: number;
+      category?: { id: number; name: string } | null;
+    } | null;
   }[];
-  orderRawMaterials?: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId: number | null; vendor?: { name: string } | null }[];
+  orderRawMaterials?: {
+    rawMaterialId: number;
+    unitQty: string;
+    unitName: string;
+    notes?: string | null;
+    vendorId: number | null;
+    sortOrder?: number;
+    vendor?: { name: string } | null;
+  }[];
 }): OrderRecord {
   const vendors = Array.from(new Set((order.orderRawMaterials || [])
     .map(rm => rm.vendor?.name)
@@ -99,6 +119,8 @@ function serializeOrder(order: {
     date: toDateString(order.date),
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
+    extraPlates: order.extraPlates,
+    perPlateAmount: order.perPlateAmount,
     mealType: order.mealType,
     totalAmount: order.totalAmount,
     discount: order.discount,
@@ -112,6 +134,7 @@ function serializeOrder(order: {
       ...rm,
       vendorId: rm.vendorId
     })) ?? [],
+    dishIds: order.orderMenuDishes?.map((row) => row.dishId) ?? [],
     vendors,
   };
 }
@@ -119,6 +142,7 @@ function serializeOrder(order: {
 const orderDetailWith = {
   menu: true as const,
   orderMenuDishes: {
+    orderBy: [asc(orderMenuDishes.sortOrder)],
     with: {
       dish: {
         with: {
@@ -128,6 +152,7 @@ const orderDetailWith = {
     },
   },
   orderRawMaterials: {
+    orderBy: [asc(orderRawMaterials.sortOrder)],
     with: {
       vendor: true as const,
     },
@@ -223,6 +248,7 @@ function validateOrderFields(
   date: string,
   venue: string,
   numberOfPersons: number,
+  perPlateAmount: number,
   mealType: string,
 ) {
   if (!orderId) {
@@ -244,10 +270,13 @@ function validateOrderFields(
     return "Venue must be 200 characters or less.";
   }
   if (!Number.isInteger(numberOfPersons) || numberOfPersons < 1) {
-    return "Number of persons must be at least 1.";
+    return "Number of plates must be at least 1.";
   }
   if (numberOfPersons > 100000) {
-    return "Number of persons is too large.";
+    return "Number of plates is too large.";
+  }
+  if (calculatePlateTotal(numberOfPersons, perPlateAmount) === null) {
+    return "Enter a valid per-plate amount. The calculated total must be within ₹2,14,74,83,647.";
   }
   if (mealType !== "breakfast" && mealType !== "lunch" && mealType !== "dinner") {
     return "Select a meal type.";
@@ -261,15 +290,27 @@ export type OrderInput = {
   date: string;
   venue: string;
   numberOfPersons: number;
+  perPlateAmount: number;
   mealType: string;
-  totalAmount?: string;
   discount?: string;
   customerName?: string;
   customerPhone?: string;
-  menuId?: number | null;
-  menuDishIds?: number[];
   rawMaterials: OrderRawMaterialRecord[];
+  dishIds?: number[];
 };
+
+async function validateDishSelection(dishIds: number[]) {
+  if (dishIds.some((dishId) => !Number.isSafeInteger(dishId) || dishId <= 0)) {
+    return "One or more selected dishes are invalid.";
+  }
+  if (dishIds.length === 0) return null;
+  const found = await db.query.dishes.findMany({
+    where: inArray(dishes.id, dishIds),
+    columns: { id: true },
+  });
+  if (found.length !== dishIds.length) return "One or more selected dishes no longer exist.";
+  return null;
+}
 
 async function syncOrderMenuDishes(orderId: number, dishIds: number[]) {
   await db.delete(orderMenuDishes).where(eq(orderMenuDishes.orderId, orderId));
@@ -374,15 +415,15 @@ export async function createOrder(data: OrderInput) {
   const date = data.date || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
+  const perPlateAmount = Number(data.perPlateAmount);
   const mealType = data.mealType || "";
-  const totalAmount = data.totalAmount ? Number(String(data.totalAmount).replace(/,/g, "")) : null;
-  const discount = data.discount?.replace(/,/g, "").trim() || null;
+  const totalAmount = calculatePlateTotal(numberOfPersons, perPlateAmount);
+  const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = data.rawMaterials || [];
-  const menuId = data.menuId && Number.isFinite(data.menuId) ? Number(data.menuId) : null;
-  const menuDishIds = data.menuDishIds || [];
+  const dishIds = [...new Set((data.dishIds || []).map(Number))];
 
   const orderId = await allocateUniqueOrderId(preferredOrderId);
 
@@ -391,16 +432,21 @@ export async function createOrder(data: OrderInput) {
     date,
     venue,
     numberOfPersons,
+    perPlateAmount,
     mealType,
   );
   if (error) {
     return { error };
   }
-
+  if (totalAmount === null) {
+    return { error: "Enter a valid per-plate amount. The calculated total must be within ₹2,14,74,83,647." };
+  }
   const uniqueMaterialIds = new Set(materials.map((m) => m.rawMaterialId));
   if (uniqueMaterialIds.size !== materials.length) {
     return { error: "Duplicate raw materials selected. Please remove the duplicates." };
   }
+  const dishError = await validateDishSelection(dishIds);
+  if (dishError) return { error: dishError };
 
   for (const m of materials) {
     if (!String(m.unitQty || "").trim() || String(m.unitQty) === "0") {
@@ -421,30 +467,31 @@ export async function createOrder(data: OrderInput) {
       date: eventDate,
       venue,
       numberOfPersons,
+      perPlateAmount,
       mealType: mealType as MealType,
       totalAmount,
       discount,
       customerName,
       customerPhone,
       isPaymentAmount,
-      menuId,
       extraPlates: 0,
     }).returning({ id: orders.id });
 
     if (materials.length > 0) {
       await db.insert(orderRawMaterials).values(
-        materials.map((m) => ({
+        materials.map((m, index) => ({
           orderId: newOrder.id,
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
           notes: m.notes || null,
           vendorId: m.vendorId || null,
+          sortOrder: index,
         }))
       );
     }
 
-    await syncOrderMenuDishes(newOrder.id, menuDishIds);
+    await syncOrderMenuDishes(newOrder.id, dishIds);
 
     revalidatePath("/orders");
 
@@ -467,18 +514,28 @@ export async function updateOrder(data: OrderInput) {
   const date = data.date || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
+  const perPlateAmount = Number(data.perPlateAmount);
   const mealType = data.mealType || "";
-  const totalAmount = data.totalAmount ? Number(String(data.totalAmount).replace(/,/g, "")) : null;
-  const discount = data.discount?.replace(/,/g, "").trim() || null;
+  const existingOrder = Number.isSafeInteger(id) && id > 0
+    ? await db.query.orders.findFirst({
+        where: eq(orders.id, id),
+        columns: { extraPlates: true },
+      })
+    : null;
+  const extraPlates = existingOrder?.extraPlates ?? 0;
+  const totalAmount = calculateTotalWithExtraPlates(numberOfPersons, extraPlates, perPlateAmount);
+  const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = data.rawMaterials || [];
-  const menuId = data.menuId && Number.isFinite(data.menuId) ? Number(data.menuId) : null;
-  const menuDishIds = data.menuDishIds || [];
+  const dishIds = [...new Set((data.dishIds || []).map(Number))];
 
   if (!id || Number.isNaN(id)) {
     return { error: "Invalid order." };
+  }
+  if (!existingOrder) {
+    return { error: "Order not found." };
   }
 
   const error = validateOrderFields(
@@ -486,16 +543,22 @@ export async function updateOrder(data: OrderInput) {
     date,
     venue,
     numberOfPersons,
+    perPlateAmount,
     mealType,
   );
   if (error) {
     return { error };
+  }
+  if (totalAmount === null) {
+    return { error: "The combined original and extra plate count is too large." };
   }
 
   const uniqueMaterialIds = new Set(materials.map((m) => m.rawMaterialId));
   if (uniqueMaterialIds.size !== materials.length) {
     return { error: "Duplicate raw materials selected. Please remove the duplicates." };
   }
+  const dishError = await validateDishSelection(dishIds);
+  if (dishError) return { error: dishError };
 
   try {
     const [y, mo, d] = date.split("-").map(Number);
@@ -508,13 +571,13 @@ export async function updateOrder(data: OrderInput) {
         date: eventDate,
         venue,
         numberOfPersons,
+        perPlateAmount,
         mealType: mealType as MealType,
         totalAmount,
         discount,
         customerName,
         customerPhone,
         isPaymentAmount,
-        menuId,
         updatedAt: new Date(),
       })
       .where(eq(orders.id, id))
@@ -527,18 +590,19 @@ export async function updateOrder(data: OrderInput) {
     await db.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
     if (materials.length > 0) {
       await db.insert(orderRawMaterials).values(
-        materials.map((m) => ({
+        materials.map((m, index) => ({
           orderId: id,
           rawMaterialId: m.rawMaterialId,
           unitQty: String(m.unitQty),
           unitName: String(m.unitName),
           notes: m.notes || null,
           vendorId: m.vendorId || null,
+          sortOrder: index,
         }))
       );
     }
 
-    await syncOrderMenuDishes(id, menuDishIds);
+    await syncOrderMenuDishes(id, dishIds);
 
     revalidatePath("/orders");
     return { success: true as const };
@@ -572,4 +636,57 @@ export async function deleteOrder(formData: FormData) {
 
   revalidatePath("/orders");
   return { success: true as const };
+}
+
+export async function addExtraPlates(formData: FormData) {
+  const id = Number(formData.get("id"));
+  const additionalPlates = Number(formData.get("additionalPlates"));
+
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return { error: "Invalid order." };
+  }
+  if (!Number.isSafeInteger(additionalPlates) || additionalPlates < 1 || additionalPlates > 100000) {
+    return { error: "Enter between 1 and 100,000 extra plates." };
+  }
+
+  const order = await db.query.orders.findFirst({
+    where: eq(orders.id, id),
+    columns: {
+      numberOfPersons: true,
+      extraPlates: true,
+      perPlateAmount: true,
+    },
+  });
+
+  if (!order) return { error: "Order not found." };
+  if (!order.perPlateAmount) {
+    return { error: "Set the per-plate amount before adding extra plates." };
+  }
+
+  const newExtraPlates = order.extraPlates + additionalPlates;
+  const totalPlates = order.numberOfPersons + newExtraPlates;
+  const totalAmount = calculateTotalWithExtraPlates(
+    order.numberOfPersons,
+    newExtraPlates,
+    order.perPlateAmount,
+  );
+  if (totalAmount === null) {
+    return { error: "The updated plate count or total amount is too large." };
+  }
+
+  await db
+    .update(orders)
+    .set({
+      extraPlates: newExtraPlates,
+      totalAmount,
+      isPaymentAmount: true,
+      updatedAt: new Date(),
+    })
+    .where(eq(orders.id, id));
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${id}/edit`);
+  revalidatePath(`/orders/${id}/finance`);
+  revalidatePath("/reports");
+  return { success: true as const, extraPlates: newExtraPlates, totalPlates, totalAmount };
 }

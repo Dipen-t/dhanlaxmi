@@ -42,14 +42,14 @@ export const orders = pgTable("orders", {
   date: timestamp("date", { mode: "date" }).notNull(),
   venue: text("venue").notNull(),
   numberOfPersons: integer("number_of_persons").notNull(),
+  extraPlates: integer("extra_plates").notNull().default(0),
+  perPlateAmount: integer("per_plate_amount"),
   mealType: mealTypeEnum("meal_type").notNull(),
   totalAmount: integer("total_amount"),
   isPaymentAmount: boolean("is_payment_amount").notNull().default(false),
   discount: text("discount"),
   customerName: text("customer_name"),
   customerPhone: text("customer_phone"),
-  perPlateAmount: integer("per_plate_amount"),
-  extraPlates: integer("extra_plates").notNull().default(0),
   /** Client menu template used for dish selection (nullable). */
   menuId: integer("menu_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -122,6 +122,7 @@ export const orderRawMaterials = pgTable(
     unitQty: text("unit_qty").notNull(),
     unitName: text("unit_name").notNull(),
     notes: text("notes"),
+    sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.orderId, table.rawMaterialId] })]
 );
@@ -198,6 +199,7 @@ export const kitchenMenus = pgTable("kitchen_menus", {
   name: text("name").notNull(),
   venue: text("venue"),
   date: timestamp("date"),
+  deliveryTime: text("delivery_time"),
   numberOfPersons: integer("number_of_persons"),
   mealType: text("meal_type", { enum: ["Lunch", "Dinner"] }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -214,6 +216,7 @@ export const kitchenMenuDishes = pgTable(
       .notNull()
       .references(() => kitchenDishes.id, { onDelete: "cascade" }),
     quantity: text("quantity"),
+    sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.kitchenMenuId, table.kitchenDishId] })]
 );
@@ -269,9 +272,9 @@ export const rawMaterialVendorsRelations = relations(rawMaterialVendors, ({ one 
 
 export const ordersRelations = relations(orders, ({ many, one }) => ({
   orderRawMaterials: many(orderRawMaterials),
+  orderMenuDishes: many(orderMenuDishes),
   orderPayments: many(orderPayments),
   vendorPayments: many(vendorPayments),
-  orderMenuDishes: many(orderMenuDishes),
   menu: one(menus, {
     fields: [orders.menuId],
     references: [menus.id],

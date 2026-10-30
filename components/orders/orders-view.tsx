@@ -1,14 +1,14 @@
 "use client";
 
 import { CalendarDays, LayoutGrid, List, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { OrderRecord } from "@/app/orders/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
+import { OrderCalendar } from "@/components/orders/order-calendar";
 import { OrderGrid } from "@/components/orders/order-grid";
 import { OrderList } from "@/components/orders/order-list";
-import { OrdersCalendar } from "@/components/orders/orders-calendar";
 
 type ViewMode = "grid" | "list" | "calendar";
 
@@ -23,15 +23,8 @@ function orderNumber(orderId: string) {
 
 export function OrdersView({ orders }: OrdersViewProps) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>("list");
+  const [view, setView] = useState<ViewMode>("calendar");
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("orders-view");
-    if (stored === "grid" || stored === "list" || stored === "calendar") {
-      setView(stored);
-    }
-  }, []);
 
   const filteredOrders = useMemo(() => {
     let result = orders;
@@ -72,7 +65,6 @@ export function OrdersView({ orders }: OrdersViewProps) {
 
   function setViewMode(mode: ViewMode) {
     setView(mode);
-    localStorage.setItem("orders-view", mode);
   }
 
   function openCreate() {
@@ -127,6 +119,20 @@ export function OrdersView({ orders }: OrdersViewProps) {
           >
             <button
               type="button"
+              aria-pressed={view === "calendar"}
+              onClick={() => setViewMode("calendar")}
+              title="Calendar view"
+              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                view === "calendar"
+                  ? "bg-primary-soft text-primary"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <CalendarDays className="size-4" strokeWidth={1.75} aria-hidden />
+              <span className="sr-only">Calendar view</span>
+            </button>
+            <button
+              type="button"
               aria-pressed={view === "list"}
               onClick={() => setViewMode("list")}
               className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
@@ -150,19 +156,6 @@ export function OrdersView({ orders }: OrdersViewProps) {
             >
               <LayoutGrid className="size-4" strokeWidth={1.75} aria-hidden />
               <span className="sr-only">Grid view</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={view === "calendar"}
-              onClick={() => setViewMode("calendar")}
-              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                view === "calendar"
-                  ? "bg-primary-soft text-primary"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              <CalendarDays className="size-4" strokeWidth={1.75} aria-hidden />
-              <span className="sr-only">Calendar view</span>
             </button>
           </div>
         </div>
@@ -206,7 +199,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
           </button>
         </div>
       ) : view === "calendar" ? (
-        <OrdersCalendar orders={filteredOrders} onEdit={openEdit} />
+        <OrderCalendar orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
       ) : view === "grid" ? (
         <OrderGrid orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
       ) : (
