@@ -5,6 +5,7 @@ import { useRef, useTransition } from "react";
 
 import { deleteKitchenMenu, type KitchenMenuSummary } from "@/app/kitchen-menus/actions";
 import { KitchenMenuPdfDownload } from "@/components/kitchen-menus/kitchen-menu-pdf-download";
+import { KitchenMenuWhatsappShare } from "@/components/kitchen-menus/kitchen-menu-whatsapp-share";
 
 type KitchenMenuActionsProps = {
   menu: KitchenMenuSummary;
@@ -56,6 +57,12 @@ export function KitchenMenuActions({
             : "flex shrink-0 items-center gap-2"
         }
       >
+        <KitchenMenuWhatsappShare
+          menu={menu}
+          variant="icon"
+          className="contents"
+          buttonClassName={secondaryClass}
+        />
         <KitchenMenuPdfDownload
           menuId={menu.id}
           menuName={menu.name}

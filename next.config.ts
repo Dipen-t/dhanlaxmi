@@ -4,7 +4,12 @@ const nextConfig: NextConfig = {
   output: "standalone",
   experimental: {
     serverActions: {
-      allowedOrigins: ["dhanlaxmi.nnsolutions.co.in"],
+      // Host/proxy variants so Server Actions aren't rejected behind LiteSpeed/cPanel.
+      allowedOrigins: [
+        "dhanlaxmi.nnsolutions.co.in",
+        "www.dhanlaxmi.nnsolutions.co.in",
+        "localhost:3000",
+      ],
     },
   },
   // Allow iPad / phones on the LAN to load Next.js dev JS (touch + sound need this).

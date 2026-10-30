@@ -17,8 +17,23 @@ function isIpadOrIos() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   if (/iPad|iPhone|iPod/.test(ua)) return true;
-  // iPadOS 13+ reports as MacIntel with touch.
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+async function blobFromResponse(response: Response) {
+  const buffer = await response.arrayBuffer();
+  return new Blob([buffer], { type: "application/pdf" });
+}
+
+function triggerAnchorDownload(url: string, filename: string) {
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
 }
 
 export function KitchenMenuPdfDownload({
@@ -33,22 +48,22 @@ export function KitchenMenuPdfDownload({
   const [preferShare, setPreferShare] = useState(false);
 
   useEffect(() => {
-    setPreferShare(isIpadOrIos());
+    const frame = requestAnimationFrame(() => setPreferShare(isIpadOrIos()));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   async function handleDownload() {
     setIsLoading(true);
     setError(null);
 
-    const suffix = "-kitchen";
-    const filename = `${sanitizeFilename(menuName)}${suffix}.pdf`;
-    // Open synchronously so iPad Safari keeps the user gesture after fetch.
+    const filename = `${sanitizeFilename(menuName)}-kitchen.pdf`;
     const previewWindow =
       preferShare || isIpadOrIos() ? window.open("about:blank", "_blank") : null;
 
     try {
-      const endpoint = "pdf";
-      const response = await fetch(`/api/kitchen-menus/${menuId}/${endpoint}`);
+      const response = await fetch(`/api/kitchen-menus/${menuId}/pdf`, {
+        cache: "no-store",
+      });
 
       if (!response.ok) {
         previewWindow?.close();
@@ -57,11 +72,13 @@ export function KitchenMenuPdfDownload({
           details?: string;
         } | null;
         throw new Error(
-          payload?.details ? `${payload.error ?? "Could not generate PDF."} ${payload.details}` : payload?.error ?? `PDF request failed (${response.status}).`,
+          payload?.details
+            ? `${payload.error ?? "Could not generate PDF."} ${payload.details}`
+            : payload?.error ?? `PDF request failed (${response.status}).`,
         );
       }
 
-      const blob = await response.blob();
+      const blob = await blobFromResponse(response);
 
       if (blob.size === 0) {
         previewWindow?.close();
@@ -71,7 +88,6 @@ export function KitchenMenuPdfDownload({
       const file = new File([blob], filename, { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
-      // iPad Safari: share sheet is the reliable “save/upload” path.
       if (
         typeof navigator !== "undefined" &&
         typeof navigator.share === "function" &&
@@ -94,18 +110,16 @@ export function KitchenMenuPdfDownload({
             URL.revokeObjectURL(url);
             return;
           }
-          // Fall through to open/download.
         }
       }
 
       if (preferShare || isIpadOrIos()) {
-        // Safari often ignores <a download>; open PDF so user can share/save.
         if (previewWindow && !previewWindow.closed) {
           previewWindow.location.href = url;
         } else {
           const opened = window.open(url, "_blank");
           if (!opened) {
-            window.location.assign(url);
+            triggerAnchorDownload(url, filename);
           }
         }
         window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -113,12 +127,7 @@ export function KitchenMenuPdfDownload({
       }
 
       previewWindow?.close();
-      const anchor = document.createElement("a");
-      anchor.href = url;
-      anchor.download = filename;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
+      triggerAnchorDownload(url, filename);
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (downloadError) {
       previewWindow?.close();

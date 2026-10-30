@@ -29,6 +29,9 @@ export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
               <div className="min-w-0">
                 <p className="text-base font-semibold text-foreground md:text-lg">
                   {order.orderId}
+                  {order.customerName ? (
+                    <span className="font-medium text-muted"> · {order.customerName}</span>
+                  ) : null}
                 </p>
                 <p className="mt-0.5 text-sm text-muted text-pretty">
                   {formatOrderDate(order.date)} · {order.venue}
@@ -40,6 +43,15 @@ export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
                 <PaymentBadge totalAmount={order.totalAmount} isPaymentAmount={order.isPaymentAmount} />
                 <DiscountBadge discount={order.discount} />
               </div>
+              {order.menuName || order.menuDishes.length > 0 ? (
+                <div className="text-sm text-muted text-pretty">
+                  <span className="font-medium">Menu:</span>{" "}
+                  {order.menuName ?? "Custom selection"}
+                  {order.menuDishes.length > 0
+                    ? ` · ${order.menuDishes.length} dish${order.menuDishes.length === 1 ? "" : "es"}`
+                    : null}
+                </div>
+              ) : null}
               {order.vendors?.length > 0 && (
                 <div className="text-sm text-muted text-pretty">
                   <span className="font-medium">Vendors:</span> {order.vendors.join(", ")}

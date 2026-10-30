@@ -4,6 +4,8 @@ import { Pencil, Trash2, IndianRupee } from "lucide-react";
 import { useRef, useTransition } from "react";
 
 import { deleteOrder, type OrderRecord } from "@/app/orders/actions";
+import { WhatsappShareDialog } from "@/components/whatsapp/whatsapp-share-dialog";
+import { buildOrderShareText } from "@/lib/whatsapp-share";
 
 type OrderActionsProps = {
   order: OrderRecord;
@@ -39,6 +41,9 @@ export function OrderActions({
     });
   }
 
+  const secondaryClass =
+    "inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:border-primary/30 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+
   const editClass =
     "inline-flex min-h-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-primary/25 bg-primary-soft px-3 text-primary transition-colors hover:border-primary/40 hover:bg-primary hover:text-primary-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
@@ -53,10 +58,31 @@ export function OrderActions({
       <div
         className={
           layout === "stacked"
-            ? "flex w-full items-center gap-2"
+            ? "flex w-full flex-wrap items-center gap-2"
             : "flex shrink-0 items-center gap-2"
         }
       >
+        <WhatsappShareDialog
+          title="Share order details"
+          description="Opens WhatsApp with order and selected menu details prefilled."
+          variant="icon"
+          className="contents"
+          buttonClassName={secondaryClass}
+          ariaLabel={`Share ${order.orderId} via WhatsApp`}
+          buildMessage={() =>
+            buildOrderShareText({
+              orderId: order.orderId,
+              date: order.date,
+              venue: order.venue,
+              customerName: order.customerName,
+              customerPhone: order.customerPhone,
+              mealType: order.mealType,
+              numberOfPersons: order.numberOfPersons,
+              menuName: order.menuName,
+              menuDishes: order.menuDishes,
+            })
+          }
+        />
         <button
           type="button"
           onClick={() => onEdit(order)}

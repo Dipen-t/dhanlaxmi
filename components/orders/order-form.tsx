@@ -5,10 +5,11 @@ import {
   Moon,
   Package,
   Sun,
+  UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
   createOrder,
@@ -16,18 +17,28 @@ import {
   type MealType,
   type OrderRecord,
 } from "@/app/orders/actions";
+import {
+  getMenuById,
+  type MenuDetail,
+  type MenuSummary,
+} from "@/app/menus/actions";
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import {
   OrderMaterialsPanel,
   type OrderMaterialDraft,
 } from "@/components/orders/order-materials-panel";
+import { OrderMenuPanel } from "@/components/orders/order-menu-panel";
 import { PersonsStepper } from "@/components/orders/persons-stepper";
 
 type OrderFormProps = {
   order: OrderRecord | null;
   suggestedOrderId: string;
   rawMaterials: MaterialWithVendor[];
+  menus: MenuSummary[];
+  initialMenu?: MenuDetail | null;
 };
+
+type FormTab = "details" | "menu" | "materials";
 
 const mealOptions: {
   value: MealType;
@@ -69,6 +80,8 @@ export function OrderForm({
   order,
   suggestedOrderId,
   rawMaterials,
+  menus,
+  initialMenu = null,
 }: OrderFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -77,7 +90,7 @@ export function OrderForm({
   const isEditing = order !== null;
 
   const [mealType, setMealType] = useState<MealType>(order?.mealType ?? "lunch");
-  const [activeTab, setActiveTab] = useState<"details" | "materials">("details");
+  const [activeTab, setActiveTab] = useState<FormTab>("details");
   const [totalAmountDisplay, setTotalAmountDisplay] = useState(() => {
     if (order?.totalAmount) {
       return Number(order.totalAmount).toLocaleString("en-IN");
@@ -108,11 +121,16 @@ export function OrderForm({
   );
 
   const selectedMaterialsRef = useRef(selectedMaterials);
-  selectedMaterialsRef.current = selectedMaterials;
 
   const [orderedMaterialIds, setOrderedMaterialIds] = useState<number[]>(() =>
     orderMaterialsByCompletion(rawMaterials, selectedMaterials),
   );
+
+  const [selectedMenu, setSelectedMenu] = useState<MenuDetail | null>(initialMenu);
+  const [selectedDishIds, setSelectedDishIds] = useState<number[]>(
+    () => order?.menuDishes.map((d) => d.dishId) ?? [],
+  );
+  const [loadingMenu, setLoadingMenu] = useState(false);
 
   function refreshMaterialOrder(next = selectedMaterialsRef.current) {
     setOrderedMaterialIds(orderMaterialsByCompletion(rawMaterials, next));
@@ -127,7 +145,42 @@ export function OrderForm({
       .filter((material): material is MaterialWithVendor => Boolean(material));
   }, [orderedMaterialIds, rawMaterials]);
 
-  function switchTab(tab: "details" | "materials") {
+  async function handleSelectMenu(menuId: number | null) {
+    if (!menuId) {
+      setSelectedMenu(null);
+      setSelectedDishIds([]);
+      return;
+    }
+
+    setLoadingMenu(true);
+    setError(null);
+    try {
+      const detail = await getMenuById(menuId);
+      setSelectedMenu(detail);
+      if (!detail) {
+        setSelectedDishIds([]);
+        setError("Could not load that menu.");
+        return;
+      }
+      // Keep previously selected dishes that still exist on the new menu.
+      const available = new Set(
+        detail.categories.flatMap((c) => c.dishes.map((d) => d.id)),
+      );
+      setSelectedDishIds((prev) => prev.filter((id) => available.has(id)));
+    } catch {
+      setError("Could not load that menu.");
+    } finally {
+      setLoadingMenu(false);
+    }
+  }
+
+  function toggleDish(dishId: number) {
+    setSelectedDishIds((prev) =>
+      prev.includes(dishId) ? prev.filter((id) => id !== dishId) : [...prev, dishId],
+    );
+  }
+
+  function switchTab(tab: FormTab) {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -143,12 +196,6 @@ export function OrderForm({
       (item) => item.unitQty.trim() !== "" && item.unitQty !== "0",
     );
 
-    if (itemsToSubmit.length === 0) {
-      setError("Please specify a quantity for at least one raw material.");
-      switchTab("materials");
-      return;
-    }
-
     if (itemsToSubmit.some((item) => item.unitName.trim() === "")) {
       setError("Please specify a unit for all selected materials.");
       switchTab("materials");
@@ -156,9 +203,13 @@ export function OrderForm({
     }
 
     const formData = new FormData(event.currentTarget);
-    const rawDiscount = String(formData.get("discount") || "").trim();
+    const rawDiscount = String(formData.get("discount") || "").replace(/,/g, "").trim();
     const discountType = String(formData.get("discountType") || "rupees");
-    const finalDiscount = rawDiscount ? (discountType === "percentage" ? `${rawDiscount}%` : rawDiscount) : "";
+    const finalDiscount = rawDiscount
+      ? discountType === "percentage"
+        ? `${rawDiscount}%`
+        : rawDiscount
+      : "";
 
     const data = {
       id: order?.id,
@@ -171,6 +222,8 @@ export function OrderForm({
       discount: finalDiscount,
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
+      menuId: selectedMenu?.id ?? null,
+      menuDishIds: selectedDishIds,
       rawMaterials: itemsToSubmit,
     };
 
@@ -202,14 +255,19 @@ export function OrderForm({
     });
   }
 
-  const materialsMode = activeTab === "materials";
+  // Keep ref in sync for blur/commit handlers without reading it during render.
+  useEffect(() => {
+    selectedMaterialsRef.current = selectedMaterials;
+  }, [selectedMaterials]);
+
+  const fullscreenTab = activeTab === "materials" || activeTab === "menu";
 
   return (
     <form
       onSubmit={handleSubmit}
       className={
-        materialsMode
-          ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-19 sm:px-6"
+        fullscreenTab
+          ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-24 sm:px-6"
           : "flex flex-col gap-5 pb-28"
       }
     >
@@ -264,6 +322,7 @@ export function OrderForm({
                 id="order-date"
                 name="date"
                 type="date"
+                required
                 defaultValue={order?.date ?? ""}
                 className="w-full min-w-0 max-w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
               />
@@ -319,6 +378,7 @@ export function OrderForm({
                 id="order-venue"
                 name="venue"
                 type="text"
+                required
                 maxLength={200}
                 defaultValue={order?.venue ?? ""}
                 autoComplete="off"
@@ -381,7 +441,7 @@ export function OrderForm({
                     inputMode="numeric"
                     defaultValue={order?.discount ? (order.discount.includes("%") ? order.discount.replace(/\D/g, "") : Number(order.discount.replace(/\D/g, "")).toLocaleString("en-IN")) : ""}
                     onChange={(e) => {
-                      const typeSelect = e.target.closest('.flex')?.querySelector('select[name="discountType"]') as HTMLSelectElement;
+                      const typeSelect = e.target.closest(".flex")?.querySelector('select[name="discountType"]') as HTMLSelectElement;
                       if (typeSelect?.value === "rupees") {
                         const raw = e.target.value.replace(/\D/g, "");
                         e.target.value = raw ? Number(raw).toLocaleString("en-IN") : "";
@@ -391,8 +451,8 @@ export function OrderForm({
                     placeholder="Amount"
                   />
                   <div className="w-px h-6 bg-border shrink-0" />
-                  <select 
-                    name="discountType" 
+                  <select
+                    name="discountType"
                     defaultValue={order?.discount?.trim().endsWith("%") ? "percentage" : "rupees"}
                     className="h-full bg-transparent pl-3 pr-2 py-2.5 text-base font-medium text-foreground outline-none border-none focus:ring-0 cursor-pointer"
                   >
@@ -441,9 +501,23 @@ export function OrderForm({
       </div>
 
       <div
+        hidden={activeTab !== "menu"}
+        className={activeTab === "menu" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
+      >
+        <OrderMenuPanel
+          menus={menus}
+          selectedMenu={selectedMenu}
+          selectedDishIds={selectedDishIds}
+          onSelectMenu={handleSelectMenu}
+          onToggleDish={toggleDish}
+          loadingMenu={loadingMenu}
+        />
+      </div>
+
+      <div
         hidden={activeTab !== "materials"}
         className={
-          materialsMode
+          activeTab === "materials"
             ? "flex min-h-0 flex-1 flex-col"
             : "hidden"
         }
@@ -457,7 +531,8 @@ export function OrderForm({
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl sm:border sm:px-3 sm:py-3 sm:shadow-lg">
+      {/* Leave room on the left for the global Back FAB so Cancel never overlaps it. */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm pl-[calc(4.5rem+env(safe-area-inset-left))] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl sm:border sm:px-3 sm:py-3 sm:pl-3 sm:shadow-lg">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-end gap-2 sm:mx-0">
           <button
             type="button"
@@ -470,20 +545,42 @@ export function OrderForm({
           {activeTab === "details" ? (
             <button
               type="button"
-              onClick={() => switchTab("materials")}
+              onClick={() => switchTab("menu")}
               className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
             >
-              Continue to materials
-              <Package className="size-4" strokeWidth={1.75} aria-hidden />
+              Continue to menu
+              <UtensilsCrossed className="size-4" strokeWidth={1.75} aria-hidden />
             </button>
-          ) : (
+          ) : null}
+
+          {activeTab === "menu" ? (
             <>
               <button
                 type="button"
                 onClick={() => switchTab("details")}
                 className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
-                Back to details
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab("materials")}
+                className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
+              >
+                Continue to materials
+                <Package className="size-4" strokeWidth={1.75} aria-hidden />
+              </button>
+            </>
+          ) : null}
+
+          {activeTab === "materials" ? (
+            <>
+              <button
+                type="button"
+                onClick={() => switchTab("menu")}
+                className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Back
               </button>
               <button
                 type="submit"
@@ -497,7 +594,7 @@ export function OrderForm({
                     : "Create order"}
               </button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </form>

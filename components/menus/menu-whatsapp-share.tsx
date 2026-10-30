@@ -5,6 +5,7 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { shareMenuViaWhatsApp } from "@/app/menus/actions";
+import { openWhatsAppShare } from "@/lib/whatsapp-share";
 
 type MenuWhatsappShareProps = {
   menuId: number;
@@ -182,7 +183,7 @@ export function MenuWhatsappShare({
                     </p>
                   ) : null}
 
-                  <div className="mt-1 flex justify-end gap-2">
+                  <div className="mt-1 flex flex-wrap justify-end gap-2">
                     <button
                       type="button"
                       onClick={handleClose}
@@ -192,11 +193,24 @@ export function MenuWhatsappShare({
                       Cancel
                     </button>
                     <button
+                      type="button"
+                      onClick={() =>
+                        openWhatsAppShare(
+                          phone || null,
+                          `Here is the menu for ${menuName}. Download the PDF from the app if needed.`,
+                        )
+                      }
+                      disabled={isLoading || success}
+                      className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    >
+                      Open WhatsApp
+                    </button>
+                    <button
                       type="submit"
                       disabled={isLoading || success}
                       className="inline-flex min-h-11 touch-manipulation items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                     >
-                      {isLoading ? "Sending…" : "Send"}
+                      {isLoading ? "Sending…" : "Send PDF"}
                     </button>
                   </div>
                 </form>

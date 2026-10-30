@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { getMenuById } from "@/app/menus/actions";
+import { MenuCategoryWhatsappShare } from "@/components/menus/menu-category-whatsapp-share";
 import { MenuPdfDownload } from "@/components/menus/menu-pdf-download";
 import { MenuWhatsappShare } from "@/components/menus/menu-whatsapp-share";
 import { PageHeader } from "@/components/page-header";
@@ -61,6 +62,10 @@ export default async function MenuDetailPage({ params }: MenuDetailPageProps) {
             />
           </div>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <MenuCategoryWhatsappShare menu={menu} />
       </div>
 
       <div className="space-y-4">

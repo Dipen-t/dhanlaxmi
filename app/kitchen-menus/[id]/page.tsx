@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { getKitchenMenuById } from "@/app/kitchen-menus/actions";
 import { KitchenMenuPdfDownload } from "@/components/kitchen-menus/kitchen-menu-pdf-download";
+import { KitchenMenuWhatsappShare } from "@/components/kitchen-menus/kitchen-menu-whatsapp-share";
 import { PageHeader } from "@/components/page-header";
 
 type KitchenMenuDetailPageProps = {
@@ -48,6 +49,11 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
             {dishTotal} dishes · preview for printing
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <KitchenMenuWhatsappShare
+              menu={menu}
+              categories={menu.categories}
+              variant="button"
+            />
             <KitchenMenuPdfDownload
               menuId={menu.id}
               menuName={menu.name}

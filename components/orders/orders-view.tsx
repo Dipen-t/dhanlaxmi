@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutGrid, List, Search, X } from "lucide-react";
+import { CalendarDays, LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -8,12 +8,18 @@ import type { OrderRecord } from "@/app/orders/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
 import { OrderGrid } from "@/components/orders/order-grid";
 import { OrderList } from "@/components/orders/order-list";
+import { OrdersCalendar } from "@/components/orders/orders-calendar";
 
-type ViewMode = "grid" | "list";
+type ViewMode = "grid" | "list" | "calendar";
 
 type OrdersViewProps = {
   orders: OrderRecord[];
 };
+
+function orderNumber(orderId: string) {
+  const match = orderId.match(/^ORD-(\d+)$/i);
+  return match ? Number(match[1]) : Number.POSITIVE_INFINITY;
+}
 
 export function OrdersView({ orders }: OrdersViewProps) {
   const router = useRouter();
@@ -22,7 +28,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
 
   useEffect(() => {
     const stored = localStorage.getItem("orders-view");
-    if (stored === "grid" || stored === "list") {
+    if (stored === "grid" || stored === "list" || stored === "calendar") {
       setView(stored);
     }
   }, []);
@@ -30,7 +36,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
   const filteredOrders = useMemo(() => {
     let result = orders;
     const normalized = query.trim().toLowerCase();
-    
+
     if (normalized) {
       result = orders.filter((order) => {
         const haystack = [
@@ -38,7 +44,10 @@ export function OrdersView({ orders }: OrdersViewProps) {
           order.venue,
           order.mealType,
           order.date,
+          order.customerName,
+          order.menuName,
           String(order.numberOfPersons),
+          ...order.menuDishes.map((d) => `${d.categoryName} ${d.name}`),
         ]
           .join(" ")
           .toLowerCase();
@@ -47,9 +56,17 @@ export function OrdersView({ orders }: OrdersViewProps) {
       });
     }
 
+    // Ascending by event date, then order number (1, 2, 3, 4 within a day).
+    // Unpaid still float slightly ahead within the same day/number group.
     return [...result].sort((a, b) => {
-      if (a.isPaymentAmount === b.isPaymentAmount) return 0;
-      return a.isPaymentAmount ? 1 : -1;
+      if (a.date !== b.date) return a.date.localeCompare(b.date);
+      const aNum = orderNumber(a.orderId);
+      const bNum = orderNumber(b.orderId);
+      if (aNum !== bNum) return aNum - bNum;
+      if (a.isPaymentAmount !== b.isPaymentAmount) {
+        return a.isPaymentAmount ? 1 : -1;
+      }
+      return a.id - b.id;
     });
   }, [orders, query]);
 
@@ -134,6 +151,19 @@ export function OrdersView({ orders }: OrdersViewProps) {
               <LayoutGrid className="size-4" strokeWidth={1.75} aria-hidden />
               <span className="sr-only">Grid view</span>
             </button>
+            <button
+              type="button"
+              aria-pressed={view === "calendar"}
+              onClick={() => setViewMode("calendar")}
+              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                view === "calendar"
+                  ? "bg-primary-soft text-primary"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              <CalendarDays className="size-4" strokeWidth={1.75} aria-hidden />
+              <span className="sr-only">Calendar view</span>
+            </button>
           </div>
         </div>
 
@@ -175,6 +205,8 @@ export function OrdersView({ orders }: OrdersViewProps) {
             Clear search
           </button>
         </div>
+      ) : view === "calendar" ? (
+        <OrdersCalendar orders={filteredOrders} onEdit={openEdit} />
       ) : view === "grid" ? (
         <OrderGrid orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
       ) : (

@@ -44,7 +44,8 @@ export async function GET(_request: Request, context: RouteContext) {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Length": String(pdfBuffer.length),
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        // inline so fetch()+blob download clients aren't blocked by attachment sniffing
+        "Content-Disposition": `inline; filename="${filename}"`,
         "Cache-Control": "no-store",
       },
     });
