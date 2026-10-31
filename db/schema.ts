@@ -84,6 +84,10 @@ export const vendorPayments = pgTable("vendor_payments", {
     .references(() => vendors.id, { onDelete: "cascade" }),
   orderId: integer("order_id")
     .references(() => orders.id, { onDelete: "set null" }),
+  /** Optional link to the client payment-in this spend is allocated against. */
+  orderPaymentId: integer("order_payment_id").references(() => orderPayments.id, {
+    onDelete: "set null",
+  }),
   amount: integer("amount").notNull(),
   date: timestamp("date", { mode: "date" }).notNull(),
   notes: text("notes"),
@@ -306,6 +310,7 @@ export const orderPaymentsRelations = relations(orderPayments, ({ one, many }) =
     references: [orders.id],
   }),
   expenses: many(orderPaymentExpenses),
+  vendorPayments: many(vendorPayments),
 }));
 
 export const orderPaymentExpensesRelations = relations(orderPaymentExpenses, ({ one }) => ({
@@ -319,6 +324,10 @@ export const vendorPaymentsRelations = relations(vendorPayments, ({ one }) => ({
   order: one(orders, {
     fields: [vendorPayments.orderId],
     references: [orders.id],
+  }),
+  orderPayment: one(orderPayments, {
+    fields: [vendorPayments.orderPaymentId],
+    references: [orderPayments.id],
   }),
   vendor: one(vendors, {
     fields: [vendorPayments.vendorId],

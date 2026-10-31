@@ -158,6 +158,8 @@ import { vendorPayments } from "@/db/schema";
 export async function createVendorPaymentForOrderFinance(data: FormData) {
   const vendorId = Number(data.get("vendorId"));
   const orderId = Number(data.get("orderId"));
+  const orderPaymentIdRaw = data.get("orderPaymentId");
+  const orderPaymentId = orderPaymentIdRaw ? Number(orderPaymentIdRaw) : null;
   const amount = Number(data.get("amount"));
   const dateStr = data.get("date") as string;
   const notes = data.get("notes") as string || null;
@@ -169,9 +171,24 @@ export async function createVendorPaymentForOrderFinance(data: FormData) {
   const date = dateStr ? new Date(dateStr) : new Date();
 
   try {
+    if (orderPaymentId) {
+      const receipt = await db.query.orderPayments.findFirst({
+        where: and(
+          eq(orderPayments.id, orderPaymentId),
+          eq(orderPayments.orderId, orderId),
+          eq(orderPayments.isWaived, false),
+        ),
+        columns: { id: true },
+      });
+      if (!receipt) {
+        return { error: "That client payment is no longer available for this order." };
+      }
+    }
+
     await db.insert(vendorPayments).values({
       vendorId,
       orderId,
+      orderPaymentId: orderPaymentId || null,
       amount,
       date,
       notes,

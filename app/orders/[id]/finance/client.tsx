@@ -118,6 +118,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
         }
       });
     } else {
+      formData.append("orderPaymentId", String(selectedPaymentId));
       startTransition(async () => {
         const res = await createVendorPaymentForOrderFinance(formData);
         if (res.error) {

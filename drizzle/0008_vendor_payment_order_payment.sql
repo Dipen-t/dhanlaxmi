@@ -1,0 +1,2 @@
+ALTER TABLE "vendor_payments" ADD COLUMN "order_payment_id" integer;--> statement-breakpoint
+ALTER TABLE "vendor_payments" ADD CONSTRAINT "vendor_payments_order_payment_id_order_payments_id_fk" FOREIGN KEY ("order_payment_id") REFERENCES "public"."order_payments"("id") ON DELETE set null ON UPDATE no action;

@@ -57,6 +57,13 @@
       "when": 1793403980209,
       "tag": "0007_app_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793487306002,
+      "tag": "0008_vendor_payment_order_payment",
+      "breakpoints": true
     }
   ]
 }

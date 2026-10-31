@@ -1,10 +1,13 @@
 import type { OrderRecord } from "@/app/orders/actions";
 
+import { isMenuPending } from "@/lib/orders/menu-status";
+
 import {
   DiscountBadge,
   ExtraPlatesBadge,
   formatOrderDate,
   MealBadge,
+  MenuPendingBadge,
   PaymentBadge,
   PersonsBadge,
 } from "./order-badges";
@@ -19,8 +22,10 @@ type OrderListProps = {
 export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
-      {orders.map((order) => (
-        <li key={order.id}>
+      {orders.map((order) => {
+        const pending = isMenuPending(order);
+        return (
+        <li key={order.id} className={pending ? "bg-warning-soft/25" : undefined}>
           <div className="flex items-stretch gap-2 p-2 sm:gap-3 sm:p-2.5">
             <button
               type="button"
@@ -42,10 +47,15 @@ export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
                 <MealBadge mealType={order.mealType} />
                 <PersonsBadge count={order.numberOfPersons + order.extraPlates} />
                 <ExtraPlatesBadge count={order.extraPlates} />
+                <MenuPendingBadge order={order} />
                 <PaymentBadge totalAmount={order.totalAmount} isPaymentAmount={order.isPaymentAmount} />
                 <DiscountBadge discount={order.discount} />
               </div>
-              {order.menuName || order.menuDishes.length > 0 ? (
+              {pending ? (
+                <div className="text-sm font-medium text-warning text-pretty">
+                  Menu not selected yet
+                </div>
+              ) : order.menuName || order.menuDishes.length > 0 ? (
                 <div className="text-sm text-muted text-pretty">
                   <span className="font-medium">Menu:</span>{" "}
                   {order.menuName ?? "Custom selection"}
@@ -66,7 +76,8 @@ export function OrderList({ orders, onEdit, onFinance }: OrderListProps) {
             </div>
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

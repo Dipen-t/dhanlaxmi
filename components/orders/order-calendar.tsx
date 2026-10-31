@@ -4,9 +4,10 @@ import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
+import { isMenuPending } from "@/lib/orders/menu-status";
 import { formatCurrency } from "@/lib/utils";
 
-import { ExtraPlatesBadge, MealBadge, PersonsBadge } from "./order-badges";
+import { ExtraPlatesBadge, MealBadge, MenuPendingBadge, PersonsBadge } from "./order-badges";
 import { OrderActions } from "./order-actions";
 
 type OrderCalendarProps = {
@@ -91,30 +92,39 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
           <h2 className="text-lg font-semibold text-foreground" aria-live="polite">
             {monthLabel}
           </h2>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => changeMonth(-1)}
-              aria-label="Previous month"
-              className="inline-flex size-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <p
+              className="inline-flex items-center gap-1.5 rounded-md bg-warning-soft px-2 py-1 text-xs font-medium text-warning ring-1 ring-inset ring-warning/30"
+              title="Orders with no dishes selected yet"
             >
-              <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden />
-            </button>
-            <button
-              type="button"
-              onClick={goToToday}
-              className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Today
-            </button>
-            <button
-              type="button"
-              onClick={() => changeMonth(1)}
-              aria-label="Next month"
-              className="inline-flex size-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ChevronRight className="size-5" strokeWidth={1.75} aria-hidden />
-            </button>
+              <span className="size-1.5 shrink-0 rounded-full bg-warning" aria-hidden />
+              Menu pending = menu not selected
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => changeMonth(-1)}
+                aria-label="Previous month"
+                className="inline-flex size-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ChevronLeft className="size-5" strokeWidth={1.75} aria-hidden />
+              </button>
+              <button
+                type="button"
+                onClick={goToToday}
+                className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-lg border border-border px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => changeMonth(1)}
+                aria-label="Next month"
+                className="inline-flex size-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <ChevronRight className="size-5" strokeWidth={1.75} aria-hidden />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -130,10 +140,15 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
           {calendarDays.map((date) => {
             const dateKey = toDateKey(date);
             const dayOrders = ordersByDate.get(dateKey) ?? [];
+            const pendingCount = dayOrders.filter(isMenuPending).length;
             const isCurrentMonth = date.getMonth() === anchor.getMonth();
             const isToday = dateKey === todayKey;
             const isSelected = dateKey === selectedDate;
             const accessibleDate = formatSelectedDate(dateKey);
+            const pendingLabel =
+              pendingCount > 0
+                ? `, ${pendingCount} with menu pending`
+                : "";
 
             return (
               <button
@@ -141,28 +156,56 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                 type="button"
                 role="gridcell"
                 aria-selected={isSelected}
-                aria-label={`${accessibleDate}, ${dayOrders.length} order${dayOrders.length === 1 ? "" : "s"}`}
+                aria-label={`${accessibleDate}, ${dayOrders.length} order${dayOrders.length === 1 ? "" : "s"}${pendingLabel}`}
                 onClick={() => setSelectedDate(dateKey)}
                 className={`min-h-20 min-w-0 touch-manipulation border-r border-b border-border p-1.5 text-left transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:min-h-24 sm:p-2 ${
                   isSelected ? "bg-primary-soft" : "hover:bg-surface"
-                } ${isCurrentMonth ? "text-foreground" : "bg-surface/35 text-muted/70"}`}
+                } ${isCurrentMonth ? "text-foreground" : "bg-surface/35 text-muted/70"} ${
+                  pendingCount > 0 && !isSelected ? "bg-warning-soft/40" : ""
+                }`}
               >
-                <span
-                  className={`inline-flex size-7 items-center justify-center rounded-full text-sm font-medium ${
-                    isToday ? "bg-primary text-primary-foreground" : ""
-                  }`}
-                >
-                  {date.getDate()}
+                <span className="flex items-center justify-between gap-0.5">
+                  <span
+                    className={`inline-flex size-7 items-center justify-center rounded-full text-sm font-medium ${
+                      isToday ? "bg-primary text-primary-foreground" : ""
+                    }`}
+                  >
+                    {date.getDate()}
+                  </span>
+                  {pendingCount > 0 ? (
+                    <span
+                      className="inline-flex size-2 shrink-0 rounded-full bg-warning ring-2 ring-warning/30"
+                      title={`${pendingCount} menu pending`}
+                      aria-hidden
+                    />
+                  ) : null}
                 </span>
                 <span className="mt-1 block space-y-1">
-                  {dayOrders.slice(0, 2).map((order) => (
-                    <span key={order.id} className="block truncate rounded bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium leading-4 text-primary sm:text-xs">
-                      {order.orderId}
-                    </span>
-                  ))}
+                  {dayOrders.slice(0, 2).map((order) => {
+                    const pending = isMenuPending(order);
+                    return (
+                      <span
+                        key={order.id}
+                        className={`flex items-center gap-1 truncate rounded px-1.5 py-0.5 text-[11px] font-medium leading-4 sm:text-xs ${
+                          pending
+                            ? "bg-warning-soft text-warning ring-1 ring-inset ring-warning/40"
+                            : "bg-primary/10 text-primary"
+                        }`}
+                      >
+                        {pending ? (
+                          <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide" aria-hidden>
+                            !
+                          </span>
+                        ) : null}
+                        <span className="truncate">{order.orderId}</span>
+                        {pending ? <span className="sr-only"> — menu pending</span> : null}
+                      </span>
+                    );
+                  })}
                   {dayOrders.length > 2 ? (
                     <span className="block px-1 text-[11px] font-medium text-muted sm:text-xs">
                       +{dayOrders.length - 2} more
+                      {pendingCount > 0 ? ` · ${pendingCount} menu pending` : null}
                     </span>
                   ) : null}
                 </span>
@@ -190,14 +233,26 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
           </div>
         ) : (
           <ul className="mt-3 space-y-3">
-            {selectedOrders.map((order) => (
-              <li key={order.id} className="rounded-lg border border-border p-3">
+            {selectedOrders.map((order) => {
+              const pending = isMenuPending(order);
+              return (
+              <li
+                key={order.id}
+                className={`rounded-lg border p-3 ${
+                  pending
+                    ? "border-warning/50 bg-warning-soft/30 ring-1 ring-warning/25"
+                    : "border-border"
+                }`}
+              >
                 <button
                   type="button"
                   onClick={() => onEdit(order)}
                   className="w-full touch-manipulation rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="block font-semibold text-foreground">{order.orderId}</span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-foreground">{order.orderId}</span>
+                    <MenuPendingBadge order={order} />
+                  </span>
                   <span className="mt-1 flex items-start gap-1.5 text-sm text-muted">
                     <MapPin className="mt-0.5 size-4 shrink-0" strokeWidth={1.75} aria-hidden />
                     <span className="text-pretty">{order.venue}</span>
@@ -215,7 +270,13 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                       {formatCurrency(order.totalAmount)}
                     </span>
                   ) : null}
-                  {order.menuDishes.length > 0 ? (
+                  {pending ? (
+                    <div className="mt-3 border-t border-warning/30 pt-3">
+                      <p className="text-sm font-medium text-warning">
+                        Menu not selected — add dishes before notifying vendors.
+                      </p>
+                    </div>
+                  ) : order.menuDishes.length > 0 ? (
                     <div className="mt-3 border-t border-border pt-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-muted">
                         Menu
@@ -243,7 +304,8 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                   <OrderActions order={order} onEdit={onEdit} onFinance={onFinance} layout="stacked" />
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </aside>

@@ -1,10 +1,13 @@
 import type { OrderRecord } from "@/app/orders/actions";
 
+import { isMenuPending } from "@/lib/orders/menu-status";
+
 import {
   DiscountBadge,
   ExtraPlatesBadge,
   formatOrderDate,
   MealBadge,
+  MenuPendingBadge,
   PaymentBadge,
   PersonsBadge,
 } from "./order-badges";
@@ -19,9 +22,17 @@ type OrderGridProps = {
 export function OrderGrid({ orders, onEdit, onFinance }: OrderGridProps) {
   return (
     <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-      {orders.map((order) => (
+      {orders.map((order) => {
+        const pending = isMenuPending(order);
+        return (
         <li key={order.id}>
-          <article className="flex h-full flex-col rounded-xl border border-border bg-background p-4 sm:p-5">
+          <article
+            className={`flex h-full flex-col rounded-xl border bg-background p-4 sm:p-5 ${
+              pending
+                ? "border-warning/50 bg-warning-soft/20 ring-1 ring-warning/20"
+                : "border-border"
+            }`}
+          >
             <button
               type="button"
               onClick={() => onEdit(order)}
@@ -40,9 +51,15 @@ export function OrderGrid({ orders, onEdit, onFinance }: OrderGridProps) {
                 <MealBadge mealType={order.mealType} />
                 <PersonsBadge count={order.numberOfPersons + order.extraPlates} />
                 <ExtraPlatesBadge count={order.extraPlates} />
+                <MenuPendingBadge order={order} />
                 <PaymentBadge totalAmount={order.totalAmount} isPaymentAmount={order.isPaymentAmount} />
                 <DiscountBadge discount={order.discount} />
               </div>
+              {pending ? (
+                <div className="mt-3 text-sm font-medium text-warning text-pretty">
+                  Menu not selected yet
+                </div>
+              ) : null}
               {order.vendors?.length > 0 && (
                 <div className="mt-3 text-sm text-muted text-pretty">
                   <span className="font-medium">Vendors:</span> {order.vendors.join(", ")}
@@ -55,7 +72,8 @@ export function OrderGrid({ orders, onEdit, onFinance }: OrderGridProps) {
             </div>
           </article>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }

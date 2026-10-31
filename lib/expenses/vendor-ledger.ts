@@ -1,6 +1,12 @@
 type Vendor = { id: number; name: string };
 export type VendorPayment = {
-  id: number; vendorId: number; vendorName: string; amount: number; date: string; notes: string | null;
+  id: number;
+  vendorId: number;
+  vendorName: string;
+  amount: number;
+  date: string;
+  notes: string | null;
+  orderPaymentId?: number | null;
 };
 
 export function buildVendorLedger(linkedVendors: Vendor[], payments: VendorPayment[]) {
