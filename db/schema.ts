@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 import { boolean } from "drizzle-orm/pg-core";
 import {
+  date,
   integer,
   pgEnum,
   pgTable,
@@ -9,6 +10,13 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
+
+/** Singleton app config (id = 1). null expiresOn = unlimited access. */
+export const appSettings = pgTable("app_settings", {
+  id: integer("id").primaryKey(),
+  expiresOn: date("expires_on", { mode: "string" }),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 
 export const deliveryLocationEnum = pgEnum("delivery_location", [
   "venue",

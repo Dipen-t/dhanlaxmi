@@ -11,7 +11,8 @@ type AppShellProps = {
 
 export function AppShell({ children }: AppShellProps) {
   const pathname = usePathname();
-  const showFloatingActions = pathname !== "/";
+  const hideChrome = pathname === "/" || pathname === "/expired";
+  const showFloatingActions = !hideChrome;
 
   return (
     <div
@@ -19,7 +20,7 @@ export function AppShell({ children }: AppShellProps) {
     >
       <ClickSoundProvider />
       {children}
-      <BackButton />
+      {pathname !== "/expired" ? <BackButton /> : null}
     </div>
   );
 }

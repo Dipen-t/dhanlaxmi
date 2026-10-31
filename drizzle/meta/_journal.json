@@ -50,6 +50,13 @@
       "when": 1792684252335,
       "tag": "0006_boring_freak",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793403980209,
+      "tag": "0007_app_settings",
+      "breakpoints": true
     }
   ]
 }
