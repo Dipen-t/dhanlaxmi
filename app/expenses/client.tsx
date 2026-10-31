@@ -85,7 +85,9 @@ export function ExpensesClient({
 }: ExpensesClientProps) {
   const router = useRouter();
   const searchTitleId = useId();
+  const entryTitleId = useId();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const entryDialogRef = useRef<HTMLDialogElement>(null);
 
   const [selectedOrderId, setSelectedOrderId] = useState<number | "">(
     initialOrderId ?? "",
@@ -127,6 +129,12 @@ export function ExpensesClient({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- closeOrderPicker is stable enough for open lifecycle
   }, [pickerOpen]);
+
+  useEffect(() => {
+    const dialog = entryDialogRef.current;
+    if (!dialog || !activeForm || dialog.open) return;
+    dialog.showModal();
+  }, [activeForm]);
 
   const filteredOrders = useMemo(
     () => orders.filter((order) => orderMatchesQuery(order, orderQuery)),
@@ -195,11 +203,10 @@ export function ExpensesClient({
     setLedger(null);
     setAwaitingLedger(true);
     setLoadError(null);
-    setEntryError(null);
-    setActiveForm(null);
     setExpenseToRemove(null);
     syncUrl(id);
     closeOrderPicker();
+    closeForm();
   }
 
   function clearOrder() {
@@ -209,10 +216,9 @@ export function ExpensesClient({
     setLedger(null);
     setAwaitingLedger(false);
     setLoadError(null);
-    setEntryError(null);
-    setActiveForm(null);
     setExpenseToRemove(null);
     syncUrl("");
+    closeForm();
   }
 
   function openForm(paymentId: number, kind: EntryFormKind) {
@@ -222,6 +228,15 @@ export function ExpensesClient({
   }
 
   function closeForm() {
+    if (entryDialogRef.current?.open) {
+      entryDialogRef.current.close();
+      return;
+    }
+    setActiveForm(null);
+    setEntryError(null);
+  }
+
+  function handleEntryDialogClose() {
     setActiveForm(null);
     setEntryError(null);
   }
@@ -288,6 +303,12 @@ export function ExpensesClient({
     ledger?.order ??
     orders.find((order) => order.id === selectedOrderId) ??
     null;
+  const activeReceipt = activeForm
+    ? (receipts.find((receipt) => receipt.id === activeForm.paymentId) ?? null)
+    : null;
+  const activeReceiptLabel = activeReceipt
+    ? `${formatCurrency(activeReceipt.amount)} received · ${displayDate(activeReceipt.date)}`
+    : null;
 
   return (
     <div className="w-full space-y-8">
@@ -459,8 +480,6 @@ export function ExpensesClient({
                     vendorSpend.reduce((sum, item) => sum + item.amount, 0) +
                     otherSpend.reduce((sum, item) => sum + item.amount, 0);
                   const remaining = receipt.amount - allocated;
-                  const formOpen =
-                    activeForm?.paymentId === receipt.id ? activeForm.kind : null;
 
                   return (
                     <li
@@ -514,7 +533,7 @@ export function ExpensesClient({
                             <h4 className="text-sm font-semibold text-foreground">
                               Vendor payments
                             </h4>
-                            {!formOpen && vendors.length > 0 ? (
+                            {vendors.length > 0 ? (
                               <button
                                 type="button"
                                 className={quietButton}
@@ -526,18 +545,6 @@ export function ExpensesClient({
                               </button>
                             ) : null}
                           </div>
-
-                          {formOpen === "vendor" ? (
-                            <EntryForm
-                              kind="vendor"
-                              linkedVendors={ledger.linkedVendors}
-                              otherVendors={otherVendors}
-                              entryError={entryError}
-                              isSaving={isSaving}
-                              onCancel={closeForm}
-                              onSubmit={addEntry}
-                            />
-                          ) : null}
 
                           {vendors.length === 0 ? (
                             <p className="mt-3 text-sm text-muted">
@@ -576,11 +583,11 @@ export function ExpensesClient({
                                 </li>
                               ))}
                             </ul>
-                          ) : !formOpen || formOpen !== "vendor" ? (
+                          ) : (
                             <p className="mt-3 text-sm text-muted">
                               No vendor payments from this receipt yet.
                             </p>
-                          ) : null}
+                          )}
                         </div>
 
                         <div className="px-4 py-4 sm:px-5">
@@ -588,30 +595,16 @@ export function ExpensesClient({
                             <h4 className="text-sm font-semibold text-foreground">
                               Other expenses
                             </h4>
-                            {!formOpen ? (
-                              <button
-                                type="button"
-                                className={quietButton}
-                                disabled={isSaving}
-                                onClick={() => openForm(receipt.id, "expense")}
-                              >
-                                <Plus className="size-4" aria-hidden />
-                                Add
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              className={quietButton}
+                              disabled={isSaving}
+                              onClick={() => openForm(receipt.id, "expense")}
+                            >
+                              <Plus className="size-4" aria-hidden />
+                              Add
+                            </button>
                           </div>
-
-                          {formOpen === "expense" ? (
-                            <EntryForm
-                              kind="expense"
-                              linkedVendors={ledger.linkedVendors}
-                              otherVendors={otherVendors}
-                              entryError={entryError}
-                              isSaving={isSaving}
-                              onCancel={closeForm}
-                              onSubmit={addEntry}
-                            />
-                          ) : null}
 
                           {otherSpend.length ? (
                             <ul className="mt-3 divide-y divide-border">
@@ -676,11 +669,11 @@ export function ExpensesClient({
                                 </li>
                               ))}
                             </ul>
-                          ) : !formOpen || formOpen !== "expense" ? (
+                          ) : (
                             <p className="mt-3 text-sm text-muted">
                               No other expenses from this receipt yet.
                             </p>
-                          ) : null}
+                          )}
                         </div>
                       </div>
                     </li>
@@ -729,6 +722,33 @@ export function ExpensesClient({
           ) : null}
         </div>
       ) : null}
+
+      <dialog
+        ref={entryDialogRef}
+        className="app-dialog"
+        aria-labelledby={entryTitleId}
+        onClose={handleEntryDialogClose}
+        onCancel={(event) => {
+          if (isSaving) {
+            event.preventDefault();
+          }
+        }}
+      >
+        {activeForm ? (
+          <EntryForm
+            key={`${activeForm.kind}-${activeForm.paymentId}`}
+            kind={activeForm.kind}
+            titleId={entryTitleId}
+            receiptLabel={activeReceiptLabel}
+            linkedVendors={ledger?.linkedVendors ?? []}
+            otherVendors={otherVendors}
+            entryError={entryError}
+            isSaving={isSaving}
+            onCancel={closeForm}
+            onSubmit={addEntry}
+          />
+        ) : null}
+      </dialog>
 
       {mounted && pickerOpen
         ? createPortal(
@@ -853,6 +873,8 @@ export function ExpensesClient({
 
 function EntryForm({
   kind,
+  titleId,
+  receiptLabel,
   linkedVendors,
   otherVendors,
   entryError,
@@ -861,6 +883,8 @@ function EntryForm({
   onSubmit,
 }: {
   kind: EntryFormKind;
+  titleId: string;
+  receiptLabel: string | null;
   linkedVendors: VendorDropdownItem[];
   otherVendors: VendorDropdownItem[];
   entryError: string | null;
@@ -871,97 +895,123 @@ function EntryForm({
   const isVendor = kind === "vendor";
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mt-3 rounded-lg border border-border bg-background p-3 sm:p-4"
-    >
-      <fieldset
-        disabled={isSaving}
-        className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2"
-      >
-        {isVendor ? (
-          <>
-            <label className="block min-w-0 sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-medium">Vendor</span>
-              <select name="vendorId" required defaultValue="" className={fieldClass}>
-                <option value="" disabled>
-                  Choose a vendor
-                </option>
-                {linkedVendors.length ? (
-                  <optgroup label="Order vendors">
-                    {linkedVendors.map((vendor) => (
-                      <option key={vendor.id} value={vendor.id}>
-                        {vendor.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-                {otherVendors.length ? (
-                  <optgroup label="Other vendors">
-                    {otherVendors.map((vendor) => (
-                      <option key={vendor.id} value={vendor.id}>
-                        {vendor.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ) : null}
-              </select>
-            </label>
-            <label className="block min-w-0 sm:col-span-2">
-              <span className="mb-1.5 block text-sm font-medium">
-                Notes (optional)
+    <form onSubmit={onSubmit} className="flex flex-col">
+      <div className="px-5 pt-5 pb-4">
+        <h2
+          id={titleId}
+          className="text-lg font-semibold text-foreground"
+        >
+          {isVendor ? "Add vendor payment" : "Add other expense"}
+        </h2>
+        {receiptLabel ? (
+          <p className="mt-1 text-sm text-muted">
+            Allocated against {receiptLabel}
+          </p>
+        ) : null}
+
+        <fieldset
+          disabled={isSaving}
+          className="mt-5 grid min-w-0 grid-cols-1 gap-4"
+        >
+          {isVendor ? (
+            <>
+              <label className="block min-w-0">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">
+                  Vendor
+                </span>
+                <select
+                  name="vendorId"
+                  required
+                  defaultValue=""
+                  className={fieldClass}
+                >
+                  <option value="" disabled>
+                    Choose a vendor
+                  </option>
+                  {linkedVendors.length ? (
+                    <optgroup label="Order vendors">
+                      {linkedVendors.map((vendor) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                  {otherVendors.length ? (
+                    <optgroup label="Other vendors">
+                      {otherVendors.map((vendor) => (
+                        <option key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null}
+                </select>
+              </label>
+              <label className="block min-w-0">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">
+                  Notes (optional)
+                </span>
+                <input
+                  name="notes"
+                  maxLength={240}
+                  placeholder="e.g. Advance for vegetables"
+                  className={fieldClass}
+                />
+              </label>
+            </>
+          ) : (
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-sm font-medium text-foreground">
+                Description
               </span>
               <input
-                name="notes"
+                name="description"
+                required
                 maxLength={240}
-                placeholder="e.g. Advance for vegetables"
+                placeholder="e.g. Transport or labour"
                 className={fieldClass}
               />
             </label>
-          </>
-        ) : (
-          <label className="block min-w-0 sm:col-span-2">
-            <span className="mb-1.5 block text-sm font-medium">Description</span>
+          )}
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-sm font-medium text-foreground">
+              Amount (₹)
+            </span>
             <input
-              name="description"
+              name="amount"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              max="2147483647"
+              step="1"
               required
-              maxLength={240}
-              placeholder="e.g. Transport or labour"
+              placeholder="0"
+              className={`${fieldClass} tabular-nums`}
+            />
+          </label>
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-sm font-medium text-foreground">
+              Date
+            </span>
+            <input
+              name="date"
+              type="date"
+              defaultValue={today()}
+              required
               className={fieldClass}
             />
           </label>
-        )}
-        <label className="block min-w-0">
-          <span className="mb-1.5 block text-sm font-medium">Amount (₹)</span>
-          <input
-            name="amount"
-            type="number"
-            inputMode="numeric"
-            min="1"
-            max="2147483647"
-            step="1"
-            required
-            placeholder="0"
-            className={`${fieldClass} tabular-nums`}
-          />
-        </label>
-        <label className="block min-w-0">
-          <span className="mb-1.5 block text-sm font-medium">Date</span>
-          <input
-            name="date"
-            type="date"
-            defaultValue={today()}
-            required
-            className={fieldClass}
-          />
-        </label>
-      </fieldset>
-      {entryError ? (
-        <p role="alert" className="mt-3 text-sm text-error">
-          {entryError}
-        </p>
-      ) : null}
-      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        </fieldset>
+
+        {entryError ? (
+          <p role="alert" className="mt-4 text-sm text-error">
+            {entryError}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap justify-end gap-2 border-t border-border bg-surface/50 px-5 py-4">
         <button
           type="button"
           className={secondaryButton}
