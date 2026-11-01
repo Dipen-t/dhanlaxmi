@@ -1,5 +1,4 @@
 import Image from "next/image";
-import logo from "@/app/logo.png";
 import { SoundMuteButton } from "@/components/sound-mute-button";
 
 type PageHeaderProps = {
@@ -10,11 +9,14 @@ export function PageHeader({ title }: PageHeaderProps) {
   return (
     <header className="relative flex w-full items-center justify-center">
       <div className="flex flex-col items-center gap-2 md:gap-3">
-        <Image 
-          src={logo} 
-          alt="Dhan Laxmi Catering Service" 
-          className="h-24 w-auto object-contain md:h-32 shrink-0" 
+        <Image
+          src="/logo.png"
+          alt="Dhan Laxmi Catering Service"
+          width={320}
+          height={160}
+          className="h-24 w-auto object-contain md:h-32 shrink-0"
           priority
+          unoptimized
         />
         {title ? (
           <h1 className="text-lg font-semibold text-muted uppercase tracking-widest">

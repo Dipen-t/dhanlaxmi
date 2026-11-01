@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 
-import logo from "@/app/logo.png";
 import { getAppLicenseStatus } from "@/lib/app-license";
 
 export const metadata = {
@@ -17,10 +16,13 @@ export default async function ExpiredPage() {
     <div className="flex min-h-dvh w-full flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-md text-center">
         <Image
-          src={logo}
+          src="/logo.png"
           alt="Dhan Laxmi Catering Service"
+          width={240}
+          height={120}
           className="mx-auto h-20 w-auto object-contain opacity-90"
           priority
+          unoptimized
         />
         <h1 className="mt-8 text-2xl font-bold tracking-tight text-foreground">
           App access expired

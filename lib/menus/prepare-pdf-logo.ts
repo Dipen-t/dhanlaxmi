@@ -28,8 +28,23 @@ function readPngDimensions(buffer: Buffer): { width: number; height: number } {
 }
 
 export async function getPdfLogoAssets(): Promise<PdfLogoAssets> {
-  const logoPath = path.join(process.cwd(), "app", "logo.png");
-  const file = await readFile(logoPath);
+  // Prefer public/logo.png so Termux / deployments without app/logo.png still work.
+  const candidates = [
+    path.join(process.cwd(), "public", "logo.png"),
+    path.join(process.cwd(), "app", "logo.png"),
+  ];
+  let file: Buffer | null = null;
+  for (const logoPath of candidates) {
+    try {
+      file = await readFile(logoPath);
+      break;
+    } catch {
+      // try next
+    }
+  }
+  if (!file) {
+    throw new Error("logo.png not found in public/ or app/");
+  }
   const { width: nativeWidth, height: nativeHeight } = readPngDimensions(file);
 
   const aspectRatio = nativeWidth / nativeHeight;
