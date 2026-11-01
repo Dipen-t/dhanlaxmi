@@ -10,7 +10,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 import {
   createOrder,
@@ -88,6 +88,10 @@ export function OrderForm({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  /** Blocks accidental submits when a footer button swaps under the same tap (common on Android). */
+  const ignoreSubmitUntilRef = useRef(0);
+  const [footerLocked, setFooterLocked] = useState(false);
+  const footerUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isEditing = order !== null;
 
@@ -162,9 +166,34 @@ export function OrderForm({
   }, [orderedMaterialIds, rawMaterials]);
 
   function switchTab(tab: OrderFormSection) {
+    // Ignore submit / residual clicks while the footer primary action swaps roles.
+    ignoreSubmitUntilRef.current = Date.now() + 500;
+    setFooterLocked(true);
+    if (footerUnlockTimerRef.current) {
+      clearTimeout(footerUnlockTimerRef.current);
+    }
+    footerUnlockTimerRef.current = setTimeout(() => {
+      setFooterLocked(false);
+      footerUnlockTimerRef.current = null;
+    }, 450);
+
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+
+  function requestTabSwitch(tab: OrderFormSection) {
+    // Defer the swap until after the current click/touch fully settles so the
+    // new footer button (often type=submit) is not hit by the same gesture.
+    window.setTimeout(() => switchTab(tab), 0);
+  }
+
+  useEffect(() => {
+    return () => {
+      if (footerUnlockTimerRef.current) {
+        clearTimeout(footerUnlockTimerRef.current);
+      }
+    };
+  }, []);
 
   function handleCancel() {
     router.push("/orders");
@@ -172,6 +201,10 @@ export function OrderForm({
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (Date.now() < ignoreSubmitUntilRef.current || footerLocked) {
+      return;
+    }
 
     const selectedById = new Map(selectedMaterials.map((item) => [item.rawMaterialId, item]));
     const itemsToSubmit = orderedMaterialIds
@@ -261,7 +294,10 @@ export function OrderForm({
                 key={section.id}
                 type="button"
                 aria-current={selected ? "step" : undefined}
-                onClick={() => switchTab(section.id)}
+                onClick={(event) => {
+                  event.preventDefault();
+                  requestTabSwitch(section.id);
+                }}
                 className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selected ? "bg-primary text-primary-foreground" : "text-muted hover:bg-surface hover:text-foreground"}`}
               >
                 <Icon className="size-4" strokeWidth={1.75} aria-hidden />
@@ -551,11 +587,21 @@ export function OrderForm({
       </div>
 
       {/* Leave room on the left for the global Back FAB so Cancel never overlaps it. */}
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm pl-[calc(4.5rem+env(safe-area-inset-left))] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl sm:border sm:px-3 sm:py-3 sm:pl-3 sm:shadow-lg">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-end gap-2 sm:mx-0">
+      <div
+        className={`fixed inset-x-0 bottom-0 z-50 border-t border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm pl-[calc(4.5rem+env(safe-area-inset-left))] sm:inset-x-auto sm:right-6 sm:bottom-6 sm:rounded-2xl sm:border sm:px-3 sm:py-3 sm:pl-3 sm:shadow-lg ${
+          footerLocked ? "pointer-events-none" : ""
+        }`}
+      >
+        <div
+          key={activeTab}
+          className="mx-auto flex max-w-5xl flex-wrap items-center justify-end gap-2 sm:mx-0"
+        >
           <button
             type="button"
-            onClick={handleCancel}
+            onClick={(event) => {
+              event.preventDefault();
+              handleCancel();
+            }}
             className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             Cancel
@@ -564,7 +610,10 @@ export function OrderForm({
           {activeTab === "details" ? (
             <button
               type="button"
-              onClick={() => switchTab("materials")}
+              onClick={(event) => {
+                event.preventDefault();
+                requestTabSwitch("materials");
+              }}
               className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center gap-2 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:flex-none"
             >
               Continue to materials (optional)
@@ -574,14 +623,20 @@ export function OrderForm({
             <>
               <button
                 type="button"
-                onClick={() => switchTab("details")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  requestTabSwitch("details");
+                }}
                 className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Back to details
               </button>
               <button
                 type="button"
-                onClick={() => switchTab("dishes")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  requestTabSwitch("dishes");
+                }}
                 className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
               >
                 Continue to dishes (optional)
@@ -592,14 +647,17 @@ export function OrderForm({
             <>
               <button
                 type="button"
-                onClick={() => switchTab("materials")}
+                onClick={(event) => {
+                  event.preventDefault();
+                  requestTabSwitch("materials");
+                }}
                 className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Back to kitchen items
               </button>
               <button
                 type="submit"
-                disabled={isPending}
+                disabled={isPending || footerLocked}
                 className="inline-flex min-h-11 flex-1 touch-manipulation items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 sm:flex-none"
               >
                 {isPending ? "Saving…" : isEditing ? "Save changes" : "Create order"}
