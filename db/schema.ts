@@ -171,6 +171,7 @@ export const menuCategories = pgTable(
     categoryId: integer("category_id")
       .notNull()
       .references(() => dishCategories.id, { onDelete: "cascade" }),
+    sortOrder: integer("sort_order").notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.menuId, table.categoryId] })],
 );

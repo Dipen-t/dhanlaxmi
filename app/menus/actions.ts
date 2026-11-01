@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -108,17 +108,24 @@ export async function getMenuById(id: number): Promise<MenuDetail | null> {
   }
 
   const categories = menu.menuCategories
-    .map((link) => link.category)
-    .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((category) => ({
-      id: category.id,
-      name: category.name,
-      selectionRule: category.selectionRule,
-      imageKey: categoryImageKeyById(category.id),
-      dishes: category.dishes
-        .sort((a, b) => a.sortOrder - b.sortOrder)
-        .map((dish) => ({ id: dish.id, name: dish.name })),
-    }));
+    .slice()
+    .sort((a, b) => {
+      const orderDiff = a.sortOrder - b.sortOrder;
+      if (orderDiff !== 0) return orderDiff;
+      return a.category.sortOrder - b.category.sortOrder;
+    })
+    .map((link) => {
+      const category = link.category;
+      return {
+        id: category.id,
+        name: category.name,
+        selectionRule: category.selectionRule,
+        imageKey: categoryImageKeyById(category.id),
+        dishes: category.dishes
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((dish) => ({ id: dish.id, name: dish.name })),
+      };
+    });
 
   return {
     id: menu.id,
@@ -151,17 +158,80 @@ async function syncMenuCategories(menuId: number, categoryIds: number[]) {
     }
   }
 
+  const existing = await db.query.menuCategories.findMany({
+    where: eq(menuCategories.menuId, menuId),
+  });
+  const existingOrder = new Map(
+    existing.map((row) => [row.categoryId, row.sortOrder] as const),
+  );
+
+  const keptIds = uniqueIds
+    .filter((id) => existingOrder.has(id))
+    .sort((a, b) => (existingOrder.get(a) ?? 0) - (existingOrder.get(b) ?? 0));
+  const addedIds = uniqueIds.filter((id) => !existingOrder.has(id));
+  const orderedIds = [...keptIds, ...addedIds];
+
   await db.delete(menuCategories).where(eq(menuCategories.menuId, menuId));
 
-  if (uniqueIds.length > 0) {
+  if (orderedIds.length > 0) {
     await db.insert(menuCategories).values(
-      uniqueIds.map((categoryId) => ({
+      orderedIds.map((categoryId, index) => ({
         menuId,
         categoryId,
+        sortOrder: index,
       })),
     );
   }
 
+  return { success: true as const };
+}
+
+export async function reorderMenuCategories(
+  menuId: number,
+  categoryIds: number[],
+) {
+  if (!menuId || Number.isNaN(menuId)) {
+    return { error: "Invalid menu." };
+  }
+
+  const uniqueIds = [...new Set(categoryIds.filter((id) => Number.isFinite(id)))];
+  if (uniqueIds.length === 0) {
+    return { error: "No categories to reorder." };
+  }
+
+  const existing = await db.query.menuCategories.findMany({
+    where: eq(menuCategories.menuId, menuId),
+  });
+  const existingIds = new Set(existing.map((row) => row.categoryId));
+
+  if (
+    uniqueIds.length !== existing.length ||
+    uniqueIds.some((id) => !existingIds.has(id))
+  ) {
+    return { error: "Category list does not match this menu." };
+  }
+
+  try {
+    await Promise.all(
+      uniqueIds.map((categoryId, index) =>
+        db
+          .update(menuCategories)
+          .set({ sortOrder: index })
+          .where(
+            and(
+              eq(menuCategories.menuId, menuId),
+              eq(menuCategories.categoryId, categoryId),
+            ),
+          ),
+      ),
+    );
+  } catch (error) {
+    console.error("reorderMenuCategories failed:", error);
+    return { error: "Could not save category order." };
+  }
+
+  revalidatePath("/menus");
+  revalidatePath(`/menus/${menuId}`);
   return { success: true as const };
 }
 

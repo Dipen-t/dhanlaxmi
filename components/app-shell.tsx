@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 
 import { BackButton } from "@/components/back-button";
 import { ClickSoundProvider } from "@/components/click-sound-provider";
+import { ScrollToTopButton } from "@/components/scroll-to-top-button";
 
 type AppShellProps = {
   children: React.ReactNode;
@@ -21,6 +22,7 @@ export function AppShell({ children }: AppShellProps) {
       <ClickSoundProvider />
       {children}
       {pathname !== "/expired" ? <BackButton /> : null}
+      {showFloatingActions ? <ScrollToTopButton /> : null}
     </div>
   );
 }

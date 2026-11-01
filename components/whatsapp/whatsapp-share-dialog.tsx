@@ -17,6 +17,7 @@ type WhatsappShareDialogProps = {
   className?: string;
   buttonClassName?: string;
   ariaLabel?: string;
+  disabled?: boolean;
 };
 
 export function WhatsappShareDialog({
@@ -29,6 +30,7 @@ export function WhatsappShareDialog({
   className = "",
   buttonClassName,
   ariaLabel,
+  disabled = false,
 }: WhatsappShareDialogProps) {
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
@@ -107,6 +109,7 @@ export function WhatsappShareDialog({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
+          disabled={disabled}
           className={`${baseClass} gap-2 px-4 text-sm font-semibold text-foreground`}
         >
           <MessageCircle className="size-4" strokeWidth={1.75} aria-hidden />
@@ -116,6 +119,7 @@ export function WhatsappShareDialog({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
+          disabled={disabled}
           aria-label={ariaLabel ?? buttonLabel}
           className={`${baseClass} min-w-11 px-2`}
         >

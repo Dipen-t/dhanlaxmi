@@ -2,7 +2,6 @@
 
 import { Check, FileDown, X } from "lucide-react";
 import { useEffect, useState, useRef, useId } from "react";
-import Image from "next/image";
 import { menuPdfThemes } from "@/lib/menus/pdf-themes";
 
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
@@ -204,8 +203,25 @@ export function MenuPdfDownload({
                   <input type="radio" name={`${uid}-theme`} value={item.id} checked={theme === item.id} onChange={() => setTheme(item.id)} className="peer sr-only" />
                   <div className="h-full overflow-hidden rounded-xl border-2 border-border transition-colors peer-checked:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 hover:border-primary/50">
                     <div className="flex h-64 items-center justify-center gap-2 bg-surface p-3">
-                      <Image unoptimized src={item.coverPreview} alt={`${item.name} ${item.menuPreview ? "cover" : "menu page"}`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />
-                      {item.menuPreview && <Image unoptimized src={item.menuPreview} alt={`${item.name} menu page`} width={200} height={400} className="h-full w-auto min-w-0 object-contain shadow-sm" />}
+                      {/* Plain img + bundled StaticImageData avoids /public path 404s on Termux/standalone. */}
+                      <img
+                        src={item.coverPreview.src}
+                        alt={`${item.name} ${item.menuPreview ? "cover" : "menu page"}`}
+                        width={item.coverPreview.width}
+                        height={item.coverPreview.height}
+                        decoding="async"
+                        className="h-full w-auto min-w-0 object-contain shadow-sm"
+                      />
+                      {item.menuPreview ? (
+                        <img
+                          src={item.menuPreview.src}
+                          alt={`${item.name} menu page`}
+                          width={item.menuPreview.width}
+                          height={item.menuPreview.height}
+                          decoding="async"
+                          className="h-full w-auto min-w-0 object-contain shadow-sm"
+                        />
+                      ) : null}
                     </div>
                     <div className="p-3"><div className="flex items-center justify-between"><span className="font-semibold">{item.name}</span>{theme === item.id && <Check className="size-5 text-primary" aria-hidden />}</div><p className="mt-1 text-xs text-muted">{item.description}</p></div>
                   </div>

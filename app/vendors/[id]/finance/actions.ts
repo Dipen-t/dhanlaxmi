@@ -1,10 +1,21 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { vendorPayments, vendors, orders } from "@/db/schema";
+import { vendorPayments, orderMenuDishes } from "@/db/schema";
+
+export type VendorPaymentOrderSummary = {
+  id: number;
+  orderNumber: string;
+  date: string;
+  venue: string;
+  customerName: string | null;
+  mealType: string;
+  menuName: string | null;
+  dishNames: string[];
+};
 
 export type VendorPaymentRecord = {
   id: number;
@@ -13,6 +24,7 @@ export type VendorPaymentRecord = {
   amount: number;
   date: string;
   notes: string | null;
+  order: VendorPaymentOrderSummary | null;
 };
 
 function toDateString(date: Date) {
@@ -24,6 +36,7 @@ export type OrderDropdownItem = {
   orderId: string;
   date: string;
   venue: string;
+  customerName: string | null;
 };
 
 export async function getOrdersForDropdown(): Promise<OrderDropdownItem[]> {
@@ -34,9 +47,10 @@ export async function getOrdersForDropdown(): Promise<OrderDropdownItem[]> {
       orderId: true,
       date: true,
       venue: true,
-    }
+      customerName: true,
+    },
   });
-  return allOrders.map(o => ({
+  return allOrders.map((o) => ({
     ...o,
     date: toDateString(o.date),
   }));
@@ -51,12 +65,46 @@ export async function getVendorFinances(vendorId: string): Promise<VendorPayment
   const payments = await db.query.vendorPayments.findMany({
     where: eq(vendorPayments.vendorId, numericId),
     orderBy: (vendorPayments, { desc }) => [desc(vendorPayments.date)],
+    with: {
+      order: {
+        with: {
+          menu: true,
+          orderMenuDishes: {
+            orderBy: [asc(orderMenuDishes.sortOrder)],
+            with: {
+              dish: true,
+            },
+          },
+        },
+      },
+    },
   });
 
-  return payments.map(p => ({
-    ...p,
-    date: toDateString(p.date),
-  }));
+  return payments.map((p) => {
+    const linked = p.order;
+    return {
+      id: p.id,
+      vendorId: p.vendorId,
+      orderId: p.orderId,
+      amount: p.amount,
+      date: toDateString(p.date),
+      notes: p.notes,
+      order: linked
+        ? {
+            id: linked.id,
+            orderNumber: linked.orderId,
+            date: toDateString(linked.date),
+            venue: linked.venue,
+            customerName: linked.customerName,
+            mealType: linked.mealType,
+            menuName: linked.menu?.name ?? null,
+            dishNames: (linked.orderMenuDishes ?? [])
+              .map((entry) => entry.dish?.name)
+              .filter((name): name is string => Boolean(name)),
+          }
+        : null,
+    };
+  });
 }
 
 export async function createVendorPayment(data: FormData) {

@@ -64,6 +64,13 @@
       "when": 1793487306002,
       "tag": "0008_vendor_payment_order_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793520000000,
+      "tag": "0009_menu_categories_sort_order",
+      "breakpoints": true
     }
   ]
 }
