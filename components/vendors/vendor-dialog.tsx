@@ -136,7 +136,7 @@ export function VendorDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex h-[min(92dvh,calc(100dvh-0.5rem))] max-h-[calc(100dvh-0.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:h-[min(40rem,calc(100dvh-2rem))] sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl"
+        className="relative z-10 flex h-[min(92dvh,calc(100dvh-0.5rem))] max-h-[calc(100dvh-0.5rem)] w-full max-w-5xl flex-col overflow-clip rounded-t-2xl border border-border bg-background text-foreground sm:h-[min(40rem,calc(100dvh-2rem))] sm:max-h-[calc(100dvh-2rem)] sm:rounded-xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
         }}
@@ -144,14 +144,16 @@ export function VendorDialog({
         <form
           key={formKey}
           onSubmit={handleSubmit}
-          className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          className="flex min-h-0 flex-1 flex-col overflow-clip"
         >
           {/*
             Body must NOT scroll. Previously overflow-y-auto here wrapped both
             columns, so touch/wheel scrolling in materials chained into this
             parent and dragged Vendor Name / Phone / Deliver to out of view.
+            Use overflow-clip (not hidden): hidden still creates a scroll
+            container that focus scrollIntoView can write scrollTop onto.
           */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-5 pt-5 pb-4 sm:px-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-clip px-5 pt-5 pb-4 sm:px-6">
             {/*
               Mobile: column flex so materials can flex-1 + scroll.
               Desktop: 12-col grid with an explicit 1fr row so columns stretch to
@@ -237,7 +239,7 @@ export function VendorDialog({
                       ).map((option) => (
                         <label
                           key={option.value}
-                          className={`inline-flex min-h-11 flex-1 touch-manipulation cursor-pointer items-center justify-center rounded-lg border px-5 text-sm font-medium transition-colors ${
+                          className={`relative inline-flex min-h-11 flex-1 touch-manipulation cursor-pointer items-center justify-center rounded-lg border px-5 text-sm font-medium transition-colors ${
                             deliveryLocation === option.value
                               ? "border-primary bg-primary-soft text-primary"
                               : "border-border text-muted hover:bg-surface/50 hover:text-foreground"
@@ -261,7 +263,7 @@ export function VendorDialog({
 
               {/* Right Column - Materials (header fixed, list independently scrollable) */}
               <div className="flex min-h-0 min-w-0 flex-1 flex-col md:col-span-7">
-                <fieldset className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <fieldset className="flex min-h-0 flex-1 flex-col overflow-clip">
                   <div className="mb-2 flex shrink-0 items-center justify-between">
                     <legend className="text-sm font-medium text-foreground">
                       Raw materials
@@ -271,7 +273,7 @@ export function VendorDialog({
                     </span>
                   </div>
 
-                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain touch-pan-y rounded-xl border border-border bg-surface/30 p-3 md:p-4">
+                  <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain overscroll-y-contain touch-pan-y rounded-xl border border-border bg-surface/30 p-3 md:p-4">
                     {selectableMaterials.length === 0 ? (
                       <div className="flex h-full items-center justify-center p-6 text-center">
                         <p className="text-sm text-muted">
@@ -292,13 +294,22 @@ export function VendorDialog({
 
                           return (
                             <li key={material.id}>
-                              <label
+                              {/*
+                                Buttons avoid sr-only checkbox focus scrollIntoView,
+                                which was scrolling the dialog and leaving white space
+                                when selecting materials near the bottom of the list.
+                              */}
+                              <button
+                                type="button"
+                                role="checkbox"
+                                aria-checked={checked}
                                 title={
                                   isAssignedToOther
                                     ? `${material.name} (Assigned to other vendors)`
                                     : material.name
                                 }
-                                className={`flex h-14 w-full cursor-pointer items-center justify-center rounded-xl px-3 py-2 text-center text-sm font-medium transition-colors touch-manipulation focus-within:ring-2 focus-within:ring-ring ${
+                                onClick={() => toggleMaterial(material.id)}
+                                className={`flex h-14 w-full touch-manipulation items-center justify-center rounded-xl px-3 py-2 text-center text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                                   checked
                                     ? "bg-primary text-primary-foreground shadow-sm"
                                     : isAssignedToOther
@@ -306,16 +317,10 @@ export function VendorDialog({
                                       : "border border-border bg-background text-muted hover:border-primary/40 hover:text-foreground"
                                 }`}
                               >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  onChange={() => toggleMaterial(material.id)}
-                                  className="sr-only"
-                                />
                                 <span className="line-clamp-2 leading-tight">
                                   {material.name}
                                 </span>
-                              </label>
+                              </button>
                             </li>
                           );
                         })}
