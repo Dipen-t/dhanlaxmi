@@ -1,62 +1,51 @@
-import type { StaticImageData } from "next/image";
-
-import artDecoCover from "@/public/menu-themes/art-deco-gold/preview-cover.jpg";
-import artDecoMenu from "@/public/menu-themes/art-deco-gold/preview-menu.jpg";
-import burgundyCover from "@/public/menu-themes/burgundy-gold/preview-cover.jpg";
-import burgundyMenu from "@/public/menu-themes/burgundy-gold/preview-menu.jpg";
-import emeraldCover from "@/public/menu-themes/emerald-gold/preview-cover.jpg";
-import emeraldMenu from "@/public/menu-themes/emerald-gold/preview-menu.jpg";
-import ivoryCover from "@/public/menu-themes/ivory-botanical/preview-cover.jpg";
-import ivoryMenu from "@/public/menu-themes/ivory-botanical/preview-menu.jpg";
-import standardCover from "@/public/menu-themes/standard/preview-cover.jpg";
-
 export type MenuPdfTheme = {
   id: string;
   name: string;
   description: string;
-  coverPreview: StaticImageData;
-  menuPreview: StaticImageData | null;
+  coverPreview: string;
+  menuPreview: string | null;
 };
 
 /**
- * Preview thumbnails are imported (not `/public/...` URLs) so Webpack/Turbopack
- * emit them under `/_next/static/media/*`. That keeps Termux, standalone, and
- * LAN builds working even when the raw `public/menu-themes` folder isn't served.
+ * Use public URL strings (not static JPG imports).
+ * Next's webpack image loader runs Sharp on imported images, and Sharp breaks
+ * Termux/Android builds (`Cannot read properties of undefined (reading 'output')`).
+ * Serving from `/menu-themes/...` works with `public/` present for next dev/start.
  */
 export const menuPdfThemes: MenuPdfTheme[] = [
   {
     id: "standard",
     name: "Standard",
     description: "Clean, simple menu layout",
-    coverPreview: standardCover,
+    coverPreview: "/menu-themes/standard/preview-cover.jpg",
     menuPreview: null,
   },
   {
     id: "ivory-botanical",
     name: "Ivory Botanical",
     description: "Ivory, foliage and classic lettering",
-    coverPreview: ivoryCover,
-    menuPreview: ivoryMenu,
+    coverPreview: "/menu-themes/ivory-botanical/preview-cover.jpg",
+    menuPreview: "/menu-themes/ivory-botanical/preview-menu.jpg",
   },
   {
     id: "burgundy-gold",
     name: "Burgundy Gold",
     description: "Rich burgundy with gold details",
-    coverPreview: burgundyCover,
-    menuPreview: burgundyMenu,
+    coverPreview: "/menu-themes/burgundy-gold/preview-cover.jpg",
+    menuPreview: "/menu-themes/burgundy-gold/preview-menu.jpg",
   },
   {
     id: "emerald-gold",
     name: "Emerald Gold",
     description: "Deep green with botanical gold details",
-    coverPreview: emeraldCover,
-    menuPreview: emeraldMenu,
+    coverPreview: "/menu-themes/emerald-gold/preview-cover.jpg",
+    menuPreview: "/menu-themes/emerald-gold/preview-menu.jpg",
   },
   {
     id: "art-deco-gold",
     name: "Art Deco Gold",
     description: "Black and gold with geometric borders",
-    coverPreview: artDecoCover,
-    menuPreview: artDecoMenu,
+    coverPreview: "/menu-themes/art-deco-gold/preview-cover.jpg",
+    menuPreview: "/menu-themes/art-deco-gold/preview-menu.jpg",
   },
 ];

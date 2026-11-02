@@ -14,9 +14,19 @@ const nextConfig: NextConfig = {
   },
   // Allow iPad / phones on the LAN to load Next.js dev JS (touch + sound need this).
   allowedDevOrigins: ["192.168.1.100", "192.168.1.*", "*.local"],
+  // Sharp is unreliable on Termux/Android; skip optimization for any next/image usage.
+  images: {
+    unoptimized: true,
+  },
   outputFileTracingIncludes: {
     "/api/**/*": ["./app/logo.png", "./public/logo.png"],
-    "/api/menus/*/pdf": ["./public/menu-themes/*/background-*pdf.jpg", "./public/menu-themes/logo-*.png", "./public/fonts/menu/*.ttf", "./public/menu-category-images/pdf/*.png"],
+    "/api/menus/*/pdf": [
+      "./public/menu-themes/*/background-*pdf.jpg",
+      "./public/menu-themes/*/preview-*.jpg",
+      "./public/menu-themes/logo-*.png",
+      "./public/fonts/menu/*.ttf",
+      "./public/menu-category-images/pdf/*.png",
+    ],
     "/api/kitchen-menus/*/pdf": ["./public/fonts/menu/*.ttf"],
   },
   async headers() {

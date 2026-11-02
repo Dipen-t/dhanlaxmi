@@ -203,21 +203,21 @@ export function MenuPdfDownload({
                   <input type="radio" name={`${uid}-theme`} value={item.id} checked={theme === item.id} onChange={() => setTheme(item.id)} className="peer sr-only" />
                   <div className="h-full overflow-hidden rounded-xl border-2 border-border transition-colors peer-checked:border-primary peer-focus-visible:ring-2 peer-focus-visible:ring-ring peer-focus-visible:ring-offset-2 hover:border-primary/50">
                     <div className="flex h-64 items-center justify-center gap-2 bg-surface p-3">
-                      {/* Plain img + bundled StaticImageData avoids /public path 404s on Termux/standalone. */}
+                      {/* Public URLs — avoid static JPG imports (Sharp breaks Termux webpack builds). */}
                       <img
-                        src={item.coverPreview.src}
+                        src={item.coverPreview}
                         alt={`${item.name} ${item.menuPreview ? "cover" : "menu page"}`}
-                        width={item.coverPreview.width}
-                        height={item.coverPreview.height}
+                        width={200}
+                        height={400}
                         decoding="async"
                         className="h-full w-auto min-w-0 object-contain shadow-sm"
                       />
                       {item.menuPreview ? (
                         <img
-                          src={item.menuPreview.src}
+                          src={item.menuPreview}
                           alt={`${item.name} menu page`}
-                          width={item.menuPreview.width}
-                          height={item.menuPreview.height}
+                          width={200}
+                          height={400}
                           decoding="async"
                           className="h-full w-auto min-w-0 object-contain shadow-sm"
                         />
