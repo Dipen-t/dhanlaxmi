@@ -13,7 +13,7 @@ import {
   vendors,
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendNewOrderVendorAlert } from "@/lib/whatsapp";
 
 
 export type MealType = "breakfast" | "lunch" | "dinner";
@@ -390,20 +390,37 @@ async function notifyVendorsForOrder(params: {
       const [yyyy, mm, dd] = date.split("-");
       const formattedDate = `${dd}/${mm}/${yyyy}`;
 
-      let message = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n`;
+      const itemsWithNotes = group.items.filter(
+        (i) => i.notes && i.notes.trim().length > 0,
+      );
+      // Template {{4}} — optional line between venue and materials list.
+      const notesLine =
+        itemsWithNotes.length > 0
+          ? `Hi tea details: ${itemsWithNotes
+              .map((i) => `${i.name} (${i.notes})`)
+              .join("; ")}`
+          : "";
 
-      const itemsWithNotes = group.items.filter((i) => i.notes && i.notes.trim().length > 0);
-      if (itemsWithNotes.length > 0) {
-        message += `Hi tea details: ${itemsWithNotes.map((i) => `${i.name} (${i.notes})`).join(", ")}\n`;
+      // Template {{5}} — raw materials list (newlines flattened for Params CSV).
+      const materialsLine = group.items
+        .map((item) => `- ${item.name}: ${item.qty} ${item.unit}`)
+        .join("\n");
+
+      let fallbackMessage = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n`;
+      if (notesLine) {
+        fallbackMessage += `${notesLine}\n`;
       }
+      fallbackMessage += `\nPlease provide the following raw materials:\n${materialsLine}\n\nThankyou.`;
 
-      message += `\nPlease provide the following raw materials:\n`;
-
-      for (const item of group.items) {
-        message += `- ${item.name}: ${item.qty} ${item.unit}\n`;
-      }
-
-      await sendWhatsAppMessage(group.vendor.phone, message);
+      await sendNewOrderVendorAlert({
+        phone: group.vendor.phone,
+        orderId,
+        dateLabel: formattedDate,
+        venue: displayVenue,
+        notesLine,
+        materialsLine,
+        fallbackMessage,
+      });
     }
   } catch (error) {
     console.error("Vendor WhatsApp notify failed (order already saved):", error);
