@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { orderPayments, orderPaymentExpenses, orders } from "@/db/schema";
+import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 
 export type OrderPaymentExpenseRecord = {
   id: number;
@@ -25,7 +26,7 @@ export type OrderPaymentRecord = {
 };
 
 function toDateString(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return toCalendarDateString(date);
 }
 
 export async function getOrderFinances(orderId: string): Promise<OrderPaymentRecord[]> {
@@ -67,7 +68,7 @@ export async function createOrderPayment(data: FormData) {
     await db.insert(orderPayments).values({
       orderId,
       amount,
-      date: new Date(date),
+      date: parseCalendarDate(date),
       isWaived,
       notes,
     });
@@ -95,7 +96,7 @@ export async function createOrderPaymentExpense(data: FormData) {
     await db.insert(orderPaymentExpenses).values({
       orderPaymentId,
       amount,
-      date: new Date(date),
+      date: parseCalendarDate(date),
       description,
     });
     revalidatePath(`/orders/${orderId}/finance`);
@@ -121,7 +122,7 @@ export async function updateOrderPayment(data: FormData) {
   try {
     await db.update(orderPayments).set({
       amount,
-      date: new Date(date),
+      date: parseCalendarDate(date),
       notes,
     }).where(and(eq(orderPayments.id, id), eq(orderPayments.orderId, orderId)));
     
@@ -168,7 +169,7 @@ export async function createVendorPaymentForOrderFinance(data: FormData) {
     return { error: "Missing required fields" };
   }
   
-  const date = dateStr ? new Date(dateStr) : new Date();
+  const date = dateStr ? parseCalendarDate(dateStr) : new Date();
 
   try {
     if (orderPaymentId) {

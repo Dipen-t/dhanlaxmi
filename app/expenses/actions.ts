@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { orders, orderPayments, orderPaymentExpenses, vendors, vendorPayments } from "@/db/schema";
 import { calculateCashPosition } from "@/lib/reports/cash-position";
 import type { VendorPayment } from "@/lib/expenses/vendor-ledger";
+import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 
 export type VendorDropdownItem = { id: number; name: string };
 export type OrderSelectionItem = {
@@ -52,7 +53,7 @@ export async function getOrdersForSelection(): Promise<OrderSelectionItem[]> {
   });
   return rows.map((order) => ({
     ...order,
-    date: order.date.toISOString().slice(0, 10),
+    date: toCalendarDateString(order.date),
   }));
 }
 
@@ -97,7 +98,7 @@ export async function getOrderExpenseLedger(
     order: {
       id: order.id,
       orderId: order.orderId,
-      date: order.date.toISOString().slice(0, 10),
+      date: toCalendarDateString(order.date),
       venue: order.venue,
       customerName: order.customerName,
     },
@@ -105,10 +106,10 @@ export async function getOrderExpenseLedger(
     linkedVendors: [...linkedVendors.values()],
     payments: order.orderPayments.map((payment) => ({
       ...payment,
-      date: payment.date.toISOString().slice(0, 10),
+      date: toCalendarDateString(payment.date),
       expenses: payment.expenses.map((expense) => ({
         ...expense,
-        date: expense.date.toISOString().slice(0, 10),
+        date: toCalendarDateString(expense.date),
       })),
     })),
     vendorPayments: order.vendorPayments.map((payment) => ({
@@ -116,7 +117,7 @@ export async function getOrderExpenseLedger(
       vendorId: payment.vendorId,
       vendorName: payment.vendor.name,
       amount: payment.amount,
-      date: payment.date.toISOString().slice(0, 10),
+      date: toCalendarDateString(payment.date),
       notes: payment.notes,
       orderPaymentId: payment.orderPaymentId,
     })),
@@ -132,10 +133,9 @@ function validAmount(amount: number) {
 function entryDate(data: FormData): Date | null {
   const value = String(data.get("date") || "");
   if (!value) return new Date();
-  const date = new Date(value);
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) &&
-    !Number.isNaN(date.getTime()) &&
-    date.toISOString().slice(0, 10) === value
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = parseCalendarDate(value);
+  return !Number.isNaN(date.getTime()) && toCalendarDateString(date) === value
     ? date
     : null;
 }

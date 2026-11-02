@@ -10,7 +10,11 @@ import type { OrderPaymentRecord } from "./actions";
 import { createOrderPayment, createOrderPaymentExpense, updateOrderPayment, deleteOrderPayment, createVendorPaymentForOrderFinance } from "./actions";
 import type { VendorDropdownItem } from "@/app/expenses/actions";
 import { toast } from "sonner";
-import { calculateEffectiveTotal } from "@/lib/utils";
+import { calculateEffectiveTotal, todayCalendarDateString } from "@/lib/utils";
+
+function displayPaymentDate(date: string) {
+  return dateFormatter.format(new Date(`${date}T12:00:00`));
+}
 
 type OrderFinanceClientProps = {
   order: OrderRecord;
@@ -161,7 +165,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
     });
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayCalendarDateString();
 
   const rawOrderAmount = order.totalAmount || 0;
   const totalOrderAmount = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
@@ -470,7 +474,7 @@ function PaymentRow({
             <p className="font-semibold text-foreground text-base">₹{payment.amount}</p>
             {payment.isWaived && <span className="inline-block rounded border border-border bg-surface px-1.5 py-0.5 text-xs font-bold uppercase tracking-wider text-muted">Waived</span>}
           </div>
-          <p className="text-sm text-muted">{dateFormatter.format(new Date(payment.date))}</p>
+          <p className="text-sm text-muted">{displayPaymentDate(payment.date)}</p>
           {payment.notes && <p className="mt-1 text-sm text-muted max-w-prose text-pretty">{payment.notes}</p>}
         </div>
       </div>
@@ -525,7 +529,7 @@ function PaymentRow({
                <li key={expense.id} className="flex justify-between items-start text-sm">
                  <div>
                    <p className="font-medium text-foreground">{expense.description}</p>
-                   <p className="text-xs text-muted">{dateFormatter.format(new Date(expense.date))}</p>
+                   <p className="text-xs text-muted">{displayPaymentDate(expense.date)}</p>
                  </div>
                  <span className="font-semibold text-error">-₹{expense.amount}</span>
                </li>

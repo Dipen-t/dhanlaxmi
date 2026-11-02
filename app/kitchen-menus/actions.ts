@@ -10,6 +10,7 @@ import {
   kitchenMenuDishes,
   kitchenMenus,
 } from "@/db/schema";
+import { parseCalendarDate } from "@/lib/utils";
 
 export type KitchenDishItem = {
   id: number;
@@ -211,7 +212,7 @@ export async function createKitchenMenu(formData: FormData) {
   const name = normalizeName(String(formData.get("name") ?? ""));
   const venue = String(formData.get("venue") ?? "").trim() || null;
   const dateStr = String(formData.get("date") ?? "").trim();
-  const date = dateStr ? new Date(dateStr) : null;
+  const date = dateStr ? parseCalendarDate(dateStr) : null;
   const deliveryTime = String(formData.get("deliveryTime") ?? "").trim() || null;
   const numberOfPersonsStr = String(formData.get("numberOfPersons") ?? "").trim();
   const numberOfPersons = numberOfPersonsStr ? parseInt(numberOfPersonsStr, 10) : null;
@@ -254,7 +255,7 @@ export async function updateKitchenMenu(formData: FormData) {
   const name = normalizeName(String(formData.get("name") ?? ""));
   const venue = String(formData.get("venue") ?? "").trim() || null;
   const dateStr = String(formData.get("date") ?? "").trim();
-  const date = dateStr ? new Date(dateStr) : null;
+  const date = dateStr ? parseCalendarDate(dateStr) : null;
   const deliveryTime = String(formData.get("deliveryTime") ?? "").trim() || null;
   const numberOfPersonsStr = String(formData.get("numberOfPersons") ?? "").trim();
   const numberOfPersons = numberOfPersonsStr ? parseInt(numberOfPersonsStr, 10) : null;

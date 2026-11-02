@@ -17,7 +17,7 @@ import {
 import { toast } from "sonner";
 
 import type { VendorWithMaterials } from "@/app/vendors/actions";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, todayCalendarDateString } from "@/lib/utils";
 import {
   createVendorPayment,
   deleteVendorPayment,
@@ -145,7 +145,7 @@ export function VendorFinanceClient({
     });
   }
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = todayCalendarDateString();
   const totalPaid = payments.reduce((acc, p) => acc + p.amount, 0);
   const linkedCount = payments.filter((p) => p.orderId != null).length;
   const unlinkedCount = payments.length - linkedCount;

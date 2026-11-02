@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { vendorPayments, orderMenuDishes } from "@/db/schema";
+import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 
 export type VendorPaymentOrderSummary = {
   id: number;
@@ -28,7 +29,7 @@ export type VendorPaymentRecord = {
 };
 
 function toDateString(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return toCalendarDateString(date);
 }
 
 export type OrderDropdownItem = {
@@ -124,7 +125,7 @@ export async function createVendorPayment(data: FormData) {
       vendorId,
       orderId,
       amount,
-      date: new Date(date),
+      date: parseCalendarDate(date),
       notes,
     });
     revalidatePath(`/vendors/${vendorId}/finance`);
@@ -153,7 +154,7 @@ export async function updateVendorPayment(data: FormData) {
     await db.update(vendorPayments).set({
       orderId,
       amount,
-      date: new Date(date),
+      date: parseCalendarDate(date),
       notes,
     }).where(and(eq(vendorPayments.id, id), eq(vendorPayments.vendorId, vendorId)));
     

@@ -13,6 +13,7 @@ import {
   vendors,
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
+import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 import { sendNewOrderVendorAlert } from "@/lib/whatsapp";
 
 
@@ -57,7 +58,7 @@ export type OrderRecord = {
 };
 
 function toDateString(date: Date) {
-  return date.toISOString().slice(0, 10);
+  return toCalendarDateString(date);
 }
 
 function serializeOrder(order: {
@@ -475,9 +476,7 @@ export async function createOrder(data: OrderInput) {
   }
 
   try {
-    // Parse as local calendar date to avoid UTC day-shift.
-    const [y, mo, d] = date.split("-").map(Number);
-    const eventDate = new Date(y, (mo || 1) - 1, d || 1);
+    const eventDate = parseCalendarDate(date);
 
     const [newOrder] = await db.insert(orders).values({
       orderId,
@@ -578,8 +577,7 @@ export async function updateOrder(data: OrderInput) {
   if (dishError) return { error: dishError };
 
   try {
-    const [y, mo, d] = date.split("-").map(Number);
-    const eventDate = new Date(y, (mo || 1) - 1, d || 1);
+    const eventDate = parseCalendarDate(date);
 
     const [updated] = await db
       .update(orders)
