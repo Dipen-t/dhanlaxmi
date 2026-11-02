@@ -342,9 +342,16 @@ async function notifyVendorsForOrder(params: {
   materials: OrderRawMaterialRecord[];
 }) {
   const { orderId, date, venue, materials } = params;
-  if (materials.length === 0) return;
+  if (materials.length === 0) {
+    console.log(`[WA-notify] order ${orderId}: no materials — skipping WhatsApp`);
+    return;
+  }
 
   try {
+    console.log(
+      `[WA-notify] order ${orderId}: preparing vendor alerts (${materials.length} material rows)`,
+    );
+
     const materialIds = materials.map((m) => m.rawMaterialId);
     const dbMaterials = await db.query.rawMaterials.findMany({
       where: inArray(rawMaterials.id, materialIds),
@@ -386,7 +393,19 @@ async function notifyVendorsForOrder(params: {
       }
     }
 
+    console.log(
+      `[WA-notify] order ${orderId}: ${vendorGroups.size} vendor group(s) to notify`,
+      [...vendorGroups.values()].map((g) => ({
+        vendorId: g.vendor.id,
+        name: g.vendor.name,
+        phone: g.vendor.phone,
+        items: g.items.length,
+      })),
+    );
+
+    let index = 0;
     for (const group of vendorGroups.values()) {
+      index += 1;
       const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
       const [yyyy, mm, dd] = date.split("-");
       const formattedDate = `${dd}/${mm}/${yyyy}`;
@@ -413,7 +432,11 @@ async function notifyVendorsForOrder(params: {
       }
       fallbackMessage += `\nPlease provide the following raw materials:\n${materialsLine}\n\nThankyou.`;
 
-      await sendNewOrderVendorAlert({
+      console.log(
+        `[WA-notify] order ${orderId}: sending ${index}/${vendorGroups.size} → ${group.vendor.name} (${group.vendor.phone})`,
+      );
+
+      const result = await sendNewOrderVendorAlert({
         phone: group.vendor.phone,
         orderId,
         dateLabel: formattedDate,
@@ -422,6 +445,11 @@ async function notifyVendorsForOrder(params: {
         materialsLine,
         fallbackMessage,
       });
+
+      console.log(
+        `[WA-notify] order ${orderId}: vendor ${group.vendor.name} result:`,
+        result,
+      );
     }
   } catch (error) {
     console.error("Vendor WhatsApp notify failed (order already saved):", error);
