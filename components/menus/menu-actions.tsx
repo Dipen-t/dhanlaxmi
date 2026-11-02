@@ -1,11 +1,27 @@
 "use client";
 
-import { FileDown, MessageCircle, Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useRef, useTransition } from "react";
 
 import { deleteMenu, type MenuSummary } from "@/app/menus/actions";
-import { MenuPdfDownload } from "@/components/menus/menu-pdf-download";
-import { MenuWhatsappShare } from "@/components/menus/menu-whatsapp-share";
+
+// Lazy-load PDF/WhatsApp controls so /menus doesn't pull that stack into the
+// first Termux compile of the list page (Sharp/image tooling is fragile there).
+const MenuPdfDownload = dynamic(
+  () =>
+    import("@/components/menus/menu-pdf-download").then(
+      (mod) => mod.MenuPdfDownload,
+    ),
+  { ssr: false },
+);
+const MenuWhatsappShare = dynamic(
+  () =>
+    import("@/components/menus/menu-whatsapp-share").then(
+      (mod) => mod.MenuWhatsappShare,
+    ),
+  { ssr: false },
+);
 
 type MenuActionsProps = {
   menu: MenuSummary;
@@ -149,7 +165,3 @@ export function MenuStats({
     </div>
   );
 }
-
-// Keep icons available for typecheck if tree-shaken oddly in older builds
-void FileDown;
-void MessageCircle;

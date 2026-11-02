@@ -25,6 +25,20 @@ npm run dev:webpack
 npm run build:webpack
 ```
 
+If `/menus` fails with `column ... sort_order does not exist`:
+
+```bash
+# Fix the DB your Termux .env points at (often different from Mac/Neon)
+node scripts/ensure-menu-category-sort-order.mjs
+# or: npm run db:push
+
+rm -rf .next
+npm run build:webpack   # or: npm run dev:webpack
+npm start
+```
+
+Theme previews must use public URL strings (not JPG imports) — Sharp breaks Termux Webpack builds.
+
 Menu and Kitchen PDFs use bundled fonts and prepared logo assets. They require no font downloads or native Sharp processing during generation. Deploy the `public/fonts/menu`, `public/menu-category-images`, `public/menu-themes` and `public/logo.png` assets along with the app. Standalone tracing includes the PDF assets; cPanel packing also copies `public`.
 
 `node --import tsx scripts/check-menu-pdfs.ts` verifies generation with network access and Sharp deliberately disabled. `node --import tsx --test lib/reports/cash-position.test.ts` checks the cash-profit calculation. Refresh fonts/logos with `node scripts/prepare-pdf-assets.cjs` only on a development machine; the generated assets are already committed for deployments.

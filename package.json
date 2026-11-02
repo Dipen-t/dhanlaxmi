@@ -15,7 +15,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx db/seed.ts",
-    "db:seed-menu": "tsx db/seed-menu.ts"
+    "db:seed-menu": "tsx db/seed-menu.ts",
+    "db:ensure-menu-sort": "node scripts/ensure-menu-category-sort-order.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -12,6 +12,53 @@ import {
   menuCategories,
   menus,
 } from "@/db/schema";
+
+let menuCategorySortOrderReady: Promise<void> | null = null;
+
+function isMissingSortOrderError(error: unknown) {
+  const parts: string[] = [];
+  let current: unknown = error;
+  for (let i = 0; i < 4 && current; i += 1) {
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = "cause" in current ? current.cause : null;
+      continue;
+    }
+    parts.push(String(current));
+    break;
+  }
+  const text = parts.join("\n").toLowerCase();
+  return text.includes("sort_order") && text.includes("does not exist");
+}
+
+/** Termux / older DBs may lack this column until migrate/push — create it on demand. */
+function ensureMenuCategorySortOrder() {
+  if (!menuCategorySortOrderReady) {
+    menuCategorySortOrderReady = db
+      .execute(
+        sql`ALTER TABLE menu_categories ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0`,
+      )
+      .then(() => undefined)
+      .catch((error) => {
+        menuCategorySortOrderReady = null;
+        throw error;
+      });
+  }
+  return menuCategorySortOrderReady;
+}
+
+async function withMenuCategorySortOrder<T>(run: () => Promise<T>): Promise<T> {
+  await ensureMenuCategorySortOrder();
+  try {
+    return await run();
+  } catch (error) {
+    if (!isMissingSortOrderError(error)) throw error;
+    // Column missing on this DB (common when Termux uses a different DATABASE_URL).
+    menuCategorySortOrderReady = null;
+    await ensureMenuCategorySortOrder();
+    return run();
+  }
+}
 
 export type DishItem = {
   id: number;
@@ -41,97 +88,103 @@ export type MenuDetail = {
 };
 
 export async function getCatalogCategories(): Promise<CategoryWithDishes[]> {
-  const rows = await db.query.dishCategories.findMany({
-    with: { dishes: true },
-    orderBy: asc(dishCategories.sortOrder),
-  });
+  return withMenuCategorySortOrder(async () => {
+    const rows = await db.query.dishCategories.findMany({
+      with: { dishes: true },
+      orderBy: asc(dishCategories.sortOrder),
+    });
 
-  return rows.map((category) => ({
-    id: category.id,
-    name: category.name,
-    selectionRule: category.selectionRule,
-    imageKey: categoryImageKeyById(category.id),
-    dishes: category.dishes
-      .sort((a, b) => a.sortOrder - b.sortOrder)
-      .map((dish) => ({ id: dish.id, name: dish.name })),
-  }));
+    return rows.map((category) => ({
+      id: category.id,
+      name: category.name,
+      selectionRule: category.selectionRule,
+      imageKey: categoryImageKeyById(category.id),
+      dishes: category.dishes
+        .sort((a, b) => a.sortOrder - b.sortOrder)
+        .map((dish) => ({ id: dish.id, name: dish.name })),
+    }));
+  });
 }
 
 export async function getMenus(): Promise<MenuSummary[]> {
-  const rows = await db.query.menus.findMany({
-    with: {
-      menuCategories: {
-        with: {
-          category: {
-            with: { dishes: true },
+  return withMenuCategorySortOrder(async () => {
+    const rows = await db.query.menus.findMany({
+      with: {
+        menuCategories: {
+          with: {
+            category: {
+              with: { dishes: true },
+            },
           },
         },
       },
-    },
-    orderBy: asc(menus.name),
-  });
+      orderBy: asc(menus.name),
+    });
 
-  return rows.map((menu) => {
-    const categories = menu.menuCategories.map((link) => link.category);
-    const categoryIds = categories.map((category) => category.id);
-    const dishCount = categories.reduce(
-      (sum, category) => sum + category.dishes.length,
-      0,
-    );
+    return rows.map((menu) => {
+      const categories = menu.menuCategories.map((link) => link.category);
+      const categoryIds = categories.map((category) => category.id);
+      const dishCount = categories.reduce(
+        (sum, category) => sum + category.dishes.length,
+        0,
+      );
 
-    return {
-      id: menu.id,
-      name: menu.name,
-      categoryCount: categories.length,
-      dishCount,
-      categoryIds,
-    };
+      return {
+        id: menu.id,
+        name: menu.name,
+        categoryCount: categories.length,
+        dishCount,
+        categoryIds,
+      };
+    });
   });
 }
 
 export async function getMenuById(id: number): Promise<MenuDetail | null> {
-  const menu = await db.query.menus.findFirst({
-    where: eq(menus.id, id),
-    with: {
-      menuCategories: {
-        with: {
-          category: {
-            with: { dishes: true },
+  return withMenuCategorySortOrder(async () => {
+    const menu = await db.query.menus.findFirst({
+      where: eq(menus.id, id),
+      with: {
+        menuCategories: {
+          with: {
+            category: {
+              with: { dishes: true },
+            },
           },
         },
       },
-    },
-  });
-
-  if (!menu) {
-    return null;
-  }
-
-  const categories = menu.menuCategories
-    .slice()
-    .sort((a, b) => {
-      const orderDiff = a.sortOrder - b.sortOrder;
-      if (orderDiff !== 0) return orderDiff;
-      return a.category.sortOrder - b.category.sortOrder;
-    })
-    .map((link) => {
-      const category = link.category;
-      return {
-        id: category.id,
-        name: category.name,
-        selectionRule: category.selectionRule,
-        imageKey: categoryImageKeyById(category.id),
-        dishes: category.dishes
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((dish) => ({ id: dish.id, name: dish.name })),
-      };
     });
 
-  return {
-    id: menu.id,
-    name: menu.name,
-    categories,
-  };
+    if (!menu) {
+      return null;
+    }
+
+    const categories = menu.menuCategories
+      .slice()
+      .sort((a, b) => {
+        const orderDiff = a.sortOrder - b.sortOrder;
+        if (orderDiff !== 0) return orderDiff;
+        return a.category.sortOrder - b.category.sortOrder;
+      })
+      .map((link) => {
+        const category = link.category;
+        return {
+          id: category.id,
+          name: category.name,
+          selectionRule: category.selectionRule,
+          imageKey: categoryImageKeyById(category.id),
+          dishes: category.dishes
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((dish) => ({ id: dish.id, name: dish.name })),
+        };
+      });
+
+    return {
+      id: menu.id,
+      name: menu.name,
+      categories,
+    };
+  });
 }
 
 function normalizeName(name: string) {
