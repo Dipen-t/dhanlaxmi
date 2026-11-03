@@ -39,6 +39,7 @@ export type OrderRecord = {
   id: number;
   orderId: string;
   date: string;
+  eventTime: string | null;
   venue: string;
   numberOfPersons: number;
   extraPlates: number;
@@ -65,6 +66,7 @@ function serializeOrder(order: {
   id: number;
   orderId: string;
   date: Date;
+  eventTime: string | null;
   venue: string;
   numberOfPersons: number;
   extraPlates: number;
@@ -118,6 +120,7 @@ function serializeOrder(order: {
     id: order.id,
     orderId: order.orderId,
     date: toDateString(order.date),
+    eventTime: order.eventTime,
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
     extraPlates: order.extraPlates,
@@ -247,6 +250,7 @@ function normalizeText(value: string) {
 function validateOrderFields(
   orderId: string,
   date: string,
+  eventTime: string,
   venue: string,
   numberOfPersons: number,
   perPlateAmount: number,
@@ -263,6 +267,12 @@ function validateOrderFields(
   }
   if (Number.isNaN(Date.parse(date))) {
     return "Enter a valid date.";
+  }
+  if (!eventTime) {
+    return "Event time is required.";
+  }
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(eventTime)) {
+    return "Enter a valid event time.";
   }
   if (!venue) {
     return "Venue is required.";
@@ -289,6 +299,7 @@ export type OrderInput = {
   id?: number;
   orderId: string;
   date: string;
+  eventTime: string;
   venue: string;
   numberOfPersons: number;
   perPlateAmount: number;
@@ -338,10 +349,11 @@ async function syncOrderMenuDishes(orderId: number, dishIds: number[]) {
 async function notifyVendorsForOrder(params: {
   orderId: string;
   date: string;
+  eventTime: string;
   venue: string;
   materials: OrderRawMaterialRecord[];
 }) {
-  const { orderId, date, venue, materials } = params;
+  const { orderId, date, eventTime, venue, materials } = params;
   if (materials.length === 0) {
     console.log(`[WA-notify] order ${orderId}: no materials — skipping WhatsApp`);
     return;
@@ -409,6 +421,13 @@ async function notifyVendorsForOrder(params: {
       const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
       const [yyyy, mm, dd] = date.split("-");
       const formattedDate = `${dd}/${mm}/${yyyy}`;
+      const formattedEventTime = new Intl.DateTimeFormat("en-IN", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "UTC",
+      }).format(new Date(`1970-01-01T${eventTime}:00Z`));
+      const eventSchedule = `${formattedDate} at ${formattedEventTime}`;
 
       const itemsWithNotes = group.items.filter(
         (i) => i.notes && i.notes.trim().length > 0,
@@ -426,7 +445,7 @@ async function notifyVendorsForOrder(params: {
         .map((item) => `- ${item.name}: ${item.qty} ${item.unit}`)
         .join("\n");
 
-      let fallbackMessage = `New Order Alert!\nOrder ID: ${orderId}\nDate: ${formattedDate}\nVenue: ${displayVenue}\n`;
+      let fallbackMessage = `New Order Alert!\nOrder ID: ${orderId}\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\n`;
       if (notesLine) {
         fallbackMessage += `${notesLine}\n`;
       }
@@ -439,7 +458,7 @@ async function notifyVendorsForOrder(params: {
       const result = await sendNewOrderVendorAlert({
         phone: group.vendor.phone,
         orderId,
-        dateLabel: formattedDate,
+        dateLabel: eventSchedule,
         venue: displayVenue,
         notesLine,
         materialsLine,
@@ -459,6 +478,7 @@ async function notifyVendorsForOrder(params: {
 export async function createOrder(data: OrderInput) {
   const preferredOrderId = normalizeText(data.orderId || "");
   const date = data.date || "";
+  const eventTime = data.eventTime?.trim() || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
   const perPlateAmount = Number(data.perPlateAmount);
@@ -476,6 +496,7 @@ export async function createOrder(data: OrderInput) {
   const error = validateOrderFields(
     orderId,
     date,
+    eventTime,
     venue,
     numberOfPersons,
     perPlateAmount,
@@ -509,6 +530,7 @@ export async function createOrder(data: OrderInput) {
     const [newOrder] = await db.insert(orders).values({
       orderId,
       date: eventDate,
+      eventTime,
       venue,
       numberOfPersons,
       perPlateAmount,
@@ -540,7 +562,7 @@ export async function createOrder(data: OrderInput) {
     revalidatePath("/orders");
 
     // Never block order creation on WhatsApp (shared hosting timeouts).
-    void notifyVendorsForOrder({ orderId, date, venue, materials });
+    void notifyVendorsForOrder({ orderId, date, eventTime, venue, materials });
 
     return { success: true as const, id: newOrder.id, orderId };
   } catch (e: any) {
@@ -556,6 +578,7 @@ export async function updateOrder(data: OrderInput) {
   const id = Number(data.id);
   const orderId = normalizeText(data.orderId || "");
   const date = data.date || "";
+  const eventTime = data.eventTime?.trim() || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
   const perPlateAmount = Number(data.perPlateAmount);
@@ -585,6 +608,7 @@ export async function updateOrder(data: OrderInput) {
   const error = validateOrderFields(
     orderId,
     date,
+    eventTime,
     venue,
     numberOfPersons,
     perPlateAmount,
@@ -612,6 +636,7 @@ export async function updateOrder(data: OrderInput) {
       .set({
         orderId,
         date: eventDate,
+        eventTime,
         venue,
         numberOfPersons,
         perPlateAmount,

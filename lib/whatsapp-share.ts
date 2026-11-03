@@ -73,6 +73,7 @@ export function buildCategoryStallShareText(input: {
 export function buildOrderShareText(input: {
   orderId: string;
   date: string;
+  eventTime?: string | null;
   venue: string;
   customerName?: string | null;
   customerPhone?: string | null;
@@ -83,9 +84,17 @@ export function buildOrderShareText(input: {
 }) {
   const [y, m, d] = input.date.split("-");
   const dateLabel = d && m && y ? `${d}/${m}/${y}` : input.date;
+  const eventTimeLabel = input.eventTime
+    ? (() => {
+        const [hours, minutes] = input.eventTime!.split(":").map(Number);
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return input.eventTime;
+        return `${hours % 12 || 12}:${String(minutes).padStart(2, "0")} ${hours >= 12 ? "PM" : "AM"}`;
+      })()
+    : null;
   const lines = [
     `Order ${input.orderId}`,
     `Date: ${dateLabel}`,
+    eventTimeLabel ? `Event time: ${eventTimeLabel}` : null,
     `Venue: ${input.venue}`,
     input.customerName ? `Customer: ${input.customerName}` : null,
     input.customerPhone ? `Phone: ${input.customerPhone}` : null,

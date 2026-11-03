@@ -1,9 +1,12 @@
 "use client";
 
+import { Clock3 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
+import { formatEventTime } from "@/lib/orders/event-time";
 import { formatOrderDate, MealBadge, PersonsBadge } from "./order-badges";
+import { SelectedMenuDialog } from "./selected-menu-dialog";
 
 type OrdersCalendarProps = {
   orders: OrderRecord[];
@@ -12,16 +15,6 @@ type OrdersCalendarProps = {
 
 function startOfDayKey(date: string) {
   return date;
-}
-
-function groupMenuByCategory(order: OrderRecord) {
-  const map = new Map<string, string[]>();
-  for (const dish of order.menuDishes) {
-    const list = map.get(dish.categoryName) ?? [];
-    list.push(dish.name);
-    map.set(dish.categoryName, list);
-  }
-  return [...map.entries()];
 }
 
 export function OrdersCalendar({ orders, onEdit }: OrdersCalendarProps) {
@@ -100,60 +93,48 @@ export function OrdersCalendar({ orders, onEdit }: OrdersCalendarProps) {
 
         <ul className="space-y-3">
           {dayOrders.map((order, index) => {
-            const menuGroups = groupMenuByCategory(order);
             return (
               <li key={order.id}>
-                <button
-                  type="button"
-                  onClick={() => onEdit(order)}
-                  className="w-full rounded-xl border border-border bg-background p-4 text-left transition-colors hover:border-primary/40 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                        #{index + 1} · {order.orderId}
-                      </p>
-                      <p className="mt-1 text-base font-semibold text-foreground">
-                        {order.customerName || "Unnamed customer"}
-                      </p>
-                      <p className="mt-0.5 text-sm text-muted">{order.venue}</p>
+                <article className="rounded-xl border border-border bg-background p-4">
+                  <button
+                    type="button"
+                    onClick={() => onEdit(order)}
+                    className="w-full rounded-lg text-left transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                          #{index + 1} · {order.orderId}
+                        </p>
+                        <p className="mt-1 text-base font-semibold text-foreground">
+                          {order.customerName || "Unnamed customer"}
+                        </p>
+                        <p className="mt-0.5 text-sm text-muted">{order.venue}</p>
+                        {order.eventTime ? (
+                          <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                            <Clock3 className="size-4" strokeWidth={1.75} aria-hidden />
+                            {formatEventTime(order.eventTime)}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <MealBadge mealType={order.mealType} />
+                        <PersonsBadge count={order.numberOfPersons} />
+                      </div>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      <MealBadge mealType={order.mealType} />
-                      <PersonsBadge count={order.numberOfPersons} />
-                    </div>
-                  </div>
 
-                  {order.customerPhone ? (
-                    <p className="mt-2 text-sm text-muted">{order.customerPhone}</p>
-                  ) : null}
-
-                  {/* Menu under customer info — mirrors Mila booking detail */}
-                  <div className="mt-3 border-t border-border pt-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                      Menu
-                    </p>
-                    {order.menuName ? (
-                      <p className="mt-1 text-sm font-medium text-foreground">
-                        {order.menuName}
-                      </p>
+                    {order.customerPhone ? (
+                      <p className="mt-2 text-sm text-muted">{order.customerPhone}</p>
                     ) : null}
-                    {menuGroups.length === 0 ? (
-                      <p className="mt-1 text-sm text-muted">No menu items selected yet.</p>
+                  </button>
+                  <div className="mt-3 border-t border-border pt-3">
+                    {order.menuDishes.length > 0 ? (
+                      <SelectedMenuDialog order={order} />
                     ) : (
-                      <ul className="mt-2 space-y-2">
-                        {menuGroups.map(([category, dishes]) => (
-                          <li key={category}>
-                            <p className="text-sm font-medium text-foreground">{category}</p>
-                            <p className="text-sm text-muted text-pretty">
-                              {dishes.join(", ")}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
+                      <p className="text-sm text-muted">No menu items selected yet.</p>
                     )}
                   </div>
-                </button>
+                </article>
               </li>
             );
           })}

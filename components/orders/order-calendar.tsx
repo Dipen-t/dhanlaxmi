@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock3, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
+import { formatEventTime } from "@/lib/orders/event-time";
 import { isMenuPending } from "@/lib/orders/menu-status";
 import { formatCurrency } from "@/lib/utils";
 
 import { ExtraPlatesBadge, MealBadge, MenuPendingBadge, PersonsBadge } from "./order-badges";
 import { OrderActions } from "./order-actions";
+import { SelectedMenuDialog } from "./selected-menu-dialog";
 
 type OrderCalendarProps = {
   orders: OrderRecord[];
@@ -260,6 +262,12 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                   {order.customerName ? (
                     <span className="mt-1 block text-sm text-muted">{order.customerName}</span>
                   ) : null}
+                  {order.eventTime ? (
+                    <span className="mt-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                      <Clock3 className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
+                      {formatEventTime(order.eventTime)}
+                    </span>
+                  ) : null}
                   <span className="mt-2 flex flex-wrap gap-2">
                     <MealBadge mealType={order.mealType} />
                     <PersonsBadge count={order.numberOfPersons + order.extraPlates} />
@@ -276,30 +284,13 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                         Menu not selected — add dishes before notifying vendors.
                       </p>
                     </div>
-                  ) : order.menuDishes.length > 0 ? (
-                    <div className="mt-3 border-t border-border pt-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                        Menu
-                      </p>
-                      {order.menuName ? (
-                        <p className="mt-1 text-sm font-medium text-foreground">{order.menuName}</p>
-                      ) : null}
-                      <ul className="mt-2 space-y-1.5">
-                        {[...order.menuDishes.reduce((map, dish) => {
-                          const list = map.get(dish.categoryName) ?? [];
-                          list.push(dish.name);
-                          map.set(dish.categoryName, list);
-                          return map;
-                        }, new Map<string, string[]>())].map(([category, dishes]) => (
-                          <li key={category}>
-                            <p className="text-sm font-medium text-foreground">{category}</p>
-                            <p className="text-sm text-muted text-pretty">{dishes.join(", ")}</p>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
                   ) : null}
                 </button>
+                {!pending && order.menuDishes.length > 0 ? (
+                  <div className="mt-3 border-t border-border pt-3">
+                    <SelectedMenuDialog order={order} className="w-full" />
+                  </div>
+                ) : null}
                 <div className="mt-3 border-t border-border pt-3">
                   <OrderActions order={order} onEdit={onEdit} onFinance={onFinance} layout="stacked" />
                 </div>

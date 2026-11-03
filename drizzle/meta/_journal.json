@@ -71,6 +71,13 @@
       "when": 1793520000000,
       "tag": "0009_menu_categories_sort_order",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793705822264,
+      "tag": "0010_outgoing_vargas",
+      "breakpoints": true
     }
   ]
 }

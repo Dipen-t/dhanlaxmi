@@ -12,7 +12,7 @@ import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
 const PAGE_HORIZONTAL_PADDING = 36;
-const HEADER_CLEARANCE = 58;
+const HEADER_CLEARANCE = 50;
 
 const colors = {
   white: "#FFFFFF",
@@ -29,7 +29,7 @@ const styles = StyleSheet.create({
   page: {
     backgroundColor: colors.cream,
     paddingTop: HEADER_CLEARANCE,
-    paddingBottom: 44,
+    paddingBottom: 36,
     paddingHorizontal: PAGE_HORIZONTAL_PADDING,
     fontFamily: "SourceSans",
     fontSize: 10,
@@ -45,7 +45,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   coverSection: {
-    marginBottom: 12,
+    marginBottom: 8,
     alignItems: "center",
   },
   coverBody: {
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     fontFamily: "SourceSans",
     fontSize: 12,
     color: colors.ink,
-    marginBottom: 16,
+    marginBottom: 10,
     textAlign: "center",
   },
   fieldsCard: {
@@ -73,8 +73,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: colors.rule,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     marginBottom: 4,
     width: "100%",
   },
@@ -112,10 +112,10 @@ const styles = StyleSheet.create({
     display: "none",
   },
   categoryBlock: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   categoryHeader: {
-    marginBottom: 7,
+    marginBottom: 4,
   },
   categoryTitleRow: {
     flexDirection: "row",
@@ -138,19 +138,24 @@ const styles = StyleSheet.create({
     display: "none",
   },
   dishGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
     paddingTop: 2,
+  },
+  dishRow: {
+    flexDirection: "row",
+    width: "100%",
   },
   dishItem: {
     width: "33.33%",
     flexDirection: "row",
     alignItems: "center",
     paddingRight: 8,
-    paddingVertical: 5,
+    paddingVertical: 3,
   },
   dishItemSingleColumn: {
     width: "100%",
+  },
+  dishItemTwoColumns: {
+    width: "50%",
   },
   dishQuantity: {
     fontSize: 10,
@@ -158,12 +163,15 @@ const styles = StyleSheet.create({
     color: colors.tealDeep,
     marginLeft: 4,
     fontWeight: 600,
+    flexShrink: 0,
   },
   dishName: {
     fontSize: 10.5,
     fontFamily: "SourceSans",
     color: colors.ink,
     lineHeight: 1.2,
+    flexGrow: 1,
+    flexShrink: 1,
   },
   counterGrid: {
     flexDirection: "row",
@@ -227,33 +235,45 @@ function CategorySection({
 }: {
   category: KitchenMenuDetail["categories"][number];
 }) {
-  const useSingleColumn = category.dishes.length <= 3;
+  const columns = category.dishes.length <= 3 ? 1 : category.isQtyField ? 2 : 3;
+  const rows = Array.from(
+    { length: Math.ceil(category.dishes.length / columns) },
+    (_, index) => category.dishes.slice(index * columns, (index + 1) * columns),
+  );
+
   return (
-    <View style={styles.categoryBlock} wrap={false}>
-      <View style={styles.categoryHeader}>
+    <View style={styles.categoryBlock}>
+      <View style={styles.categoryHeader} minPresenceAhead={32}>
         <View style={styles.categoryTitleRow}>
           <Text style={styles.categoryName}>{category.name}</Text>
         </View>
       </View>
 
       <View style={styles.dishGrid}>
-        {category.dishes.map((dish) => (
-          <View
-            key={dish.id}
-            style={
-              useSingleColumn
-                ? [styles.dishItem, styles.dishItemSingleColumn]
-                : styles.dishItem
-            }
-          >
-            {dish.quantity ? (
-              <>
-                <Text style={styles.dishName}>{dish.name}</Text>
-                <Text style={styles.dishQuantity}>- {dish.quantity}</Text>
-              </>
-            ) : (
-              <Text style={styles.dishName}>{dish.name}</Text>
-            )}
+        {rows.map((row, rowIndex) => (
+          <View key={`${category.id}-row-${rowIndex}`} style={styles.dishRow} wrap={false}>
+            {row.map((dish) => (
+              <View
+                key={dish.id}
+                style={[
+                  styles.dishItem,
+                  columns === 1
+                    ? styles.dishItemSingleColumn
+                    : columns === 2
+                      ? styles.dishItemTwoColumns
+                      : {},
+                ]}
+              >
+                {dish.quantity ? (
+                  <>
+                    <Text style={styles.dishName}>{dish.name}</Text>
+                    <Text style={styles.dishQuantity}>- {dish.quantity}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.dishName}>{dish.name}</Text>
+                )}
+              </View>
+            ))}
           </View>
         ))}
       </View>

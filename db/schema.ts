@@ -48,6 +48,7 @@ export const orders = pgTable("orders", {
   id: serial("id").primaryKey(),
   orderId: text("order_id").notNull().unique(),
   date: timestamp("date", { mode: "date" }).notNull(),
+  eventTime: text("event_time"),
   venue: text("venue").notNull(),
   numberOfPersons: integer("number_of_persons").notNull(),
   extraPlates: integer("extra_plates").notNull().default(0),

@@ -21,6 +21,7 @@ import {
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import type { CategoryWithDishes } from "@/app/menus/actions";
 import { OrderDishesPanel } from "@/components/orders/order-menu-panel";
+import { EventTimePicker } from "@/components/orders/event-time-picker";
 import {
   OrderMaterialsPanel,
   type OrderMaterialDraft,
@@ -227,6 +228,7 @@ export function OrderForm({
       id: order?.id,
       orderId: String(formData.get("orderId") || ""),
       date: String(formData.get("date") || ""),
+      eventTime: String(formData.get("eventTime") || ""),
       venue: String(formData.get("venue") || ""),
       numberOfPersons: Number(formData.get("numberOfPersons")),
       perPlateAmount,
@@ -359,9 +361,14 @@ export function OrderForm({
                 id="order-date"
                 name="date"
                 type="date"
+                required
                 defaultValue={order?.date ?? ""}
                 className="w-full min-w-0 max-w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
               />
+            </div>
+
+            <div className="min-w-0">
+              <EventTimePicker defaultValue={order?.eventTime} />
             </div>
 
             <div className="min-w-0">
