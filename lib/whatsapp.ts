@@ -405,7 +405,7 @@ export async function sendWhatsAppTemplateMessage(options: {
   }
 }
 
-/** Prefer Hub template API when configured; otherwise fall back to free-text JSON API. */
+/** Vendor alerts use free text so the current layout does not depend on an old approved template. */
 export async function sendNewOrderVendorAlert(options: {
   phone: string;
   orderId: string;
@@ -421,7 +421,9 @@ export async function sendNewOrderVendorAlert(options: {
 
   const template =
     process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "New Order Alert";
-  const useHub = isWhatsAppHubConfigured();
+  // The old approved Hub template prints an order ID and places High Tea
+  // before the materials. Use free text for the current vendor layout.
+  const useHub = false;
 
   logSection(callId, "ROUTING", {
     orderId: options.orderId,

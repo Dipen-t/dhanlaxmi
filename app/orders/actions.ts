@@ -2,6 +2,7 @@
 
 import { asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 
 import { db } from "@/db";
 import {
@@ -14,7 +15,8 @@ import {
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
-import { sendNewOrderVendorAlert } from "@/lib/whatsapp";
+import { sendNewOrderVendorAlert, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { formatEventTime } from "@/lib/orders/event-time";
 
 
 export type MealType = "breakfast" | "lunch" | "dinner";
@@ -351,9 +353,11 @@ async function notifyVendorsForOrder(params: {
   date: string;
   eventTime: string;
   venue: string;
+  numberOfPersons: number;
+  mealType: string;
   materials: OrderRawMaterialRecord[];
 }) {
-  const { orderId, date, eventTime, venue, materials } = params;
+  const { orderId, date, eventTime, venue, numberOfPersons, mealType, materials } = params;
   if (materials.length === 0) {
     console.log(`[WA-notify] order ${orderId}: no materials — skipping WhatsApp`);
     return;
@@ -435,7 +439,7 @@ async function notifyVendorsForOrder(params: {
       // Template {{4}} — optional line between venue and materials list.
       const notesLine =
         itemsWithNotes.length > 0
-          ? `Hi tea details: ${itemsWithNotes
+          ? `High Tea details: ${itemsWithNotes
               .map((i) => `${i.name} (${i.notes})`)
               .join("; ")}`
           : "";
@@ -445,11 +449,9 @@ async function notifyVendorsForOrder(params: {
         .map((item) => `- ${item.name}: ${item.qty} ${item.unit}`)
         .join("\n");
 
-      let fallbackMessage = `New Order Alert!\nOrder ID: ${orderId}\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\n`;
-      if (notesLine) {
-        fallbackMessage += `${notesLine}\n`;
-      }
-      fallbackMessage += `\nPlease provide the following raw materials:\n${materialsLine}\n\nThankyou.`;
+      let fallbackMessage = `*Dhanlaxmi Caterer*\n*New booking*\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\n*Main order*\n${materialsLine}`;
+      if (notesLine) fallbackMessage += `\n\n*High Tea details*\n${itemsWithNotes.map((item) => `${item.name}: ${item.notes}`).join("\n")}`;
+      fallbackMessage += "\n\nThank you.";
 
       console.log(
         `[WA-notify] order ${orderId}: sending ${index}/${vendorGroups.size} → ${group.vendor.name} (${group.vendor.phone})`,
@@ -561,8 +563,18 @@ export async function createOrder(data: OrderInput) {
 
     revalidatePath("/orders");
 
-    // Never block order creation on WhatsApp (shared hosting timeouts).
-    void notifyVendorsForOrder({ orderId, date, eventTime, venue, materials });
+    // Keep notifications alive after the booking response has been sent.
+    after(async () => {
+      await Promise.allSettled([
+        notifyVendorsForOrder({ orderId, date, eventTime, venue, numberOfPersons, mealType, materials }),
+        ...(customerPhone ? [sendWhatsAppMessage(
+          customerPhone,
+          `*Dhanlaxmi Caterer*\n\nDear ${customerName || "Customer"},\nYour booking is confirmed.\n\nDate: ${date.split("-").reverse().join("/")}\nEvent time: ${formatEventTime(eventTime)}\nVenue: ${venue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\nThank you for choosing Dhanlaxmi Caterer.`,
+        ).then((result) => {
+          if ("error" in result) console.error("Customer booking confirmation failed:", result.error);
+        })] : []),
+      ]);
+    });
 
     return { success: true as const, id: newOrder.id, orderId };
   } catch (e: any) {

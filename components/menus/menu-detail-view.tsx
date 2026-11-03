@@ -30,6 +30,7 @@ import { MenuPdfDownload } from "@/components/menus/menu-pdf-download";
 import { MenuWhatsappShare } from "@/components/menus/menu-whatsapp-share";
 import { WhatsappShareDialog } from "@/components/whatsapp/whatsapp-share-dialog";
 import { buildCategoryStallShareText } from "@/lib/whatsapp-share";
+import { sendCategoryWhatsApp } from "@/app/menus/whatsapp-actions";
 
 type MenuDetailViewProps = {
   menu: MenuDetail;
@@ -260,6 +261,8 @@ export function MenuDetailView({ menu }: MenuDetailViewProps) {
                 variant="button"
               />
               <WhatsappShareDialog
+                directOnly
+                onServerSend={sendCategoryWhatsApp}
                 title="Share categories via WhatsApp"
                 description="Sends only the selected categories, in the order below, so the manager can arrange stalls at the venue."
                 variant="button"

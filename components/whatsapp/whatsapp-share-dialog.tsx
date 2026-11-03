@@ -18,6 +18,7 @@ type WhatsappShareDialogProps = {
   buttonClassName?: string;
   ariaLabel?: string;
   disabled?: boolean;
+  directOnly?: boolean;
 };
 
 export function WhatsappShareDialog({
@@ -31,6 +32,7 @@ export function WhatsappShareDialog({
   buttonClassName,
   ariaLabel,
   disabled = false,
+  directOnly = false,
 }: WhatsappShareDialogProps) {
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
@@ -77,7 +79,7 @@ export function WhatsappShareDialog({
       return;
     }
     if (!phone.trim()) {
-      setError("Enter a phone number, or use Open WhatsApp.");
+      setError("Enter a recipient phone number.");
       return;
     }
     setIsLoading(true);
@@ -87,13 +89,13 @@ export function WhatsappShareDialog({
       const text = buildMessage();
       const result = await onServerSend(phone.trim(), text);
       if ("error" in result && result.error) {
-        setError(`${result.error} You can still use Open WhatsApp below.`);
+        setError(directOnly ? result.error : `${result.error} You can still use Open WhatsApp below.`);
       } else {
         setSuccess(true);
         window.setTimeout(() => handleClose(), 1600);
       }
     } catch {
-      setError("Send failed. Use Open WhatsApp instead.");
+      setError(directOnly ? "Send failed. Please try again." : "Send failed. Use Open WhatsApp instead.");
     } finally {
       setIsLoading(false);
     }
@@ -161,11 +163,12 @@ export function WhatsappShareDialog({
                   <p className="text-sm text-muted text-pretty">{description}</p>
                   <div className="space-y-1.5">
                     <label htmlFor={`${titleId}-phone`} className="text-sm font-medium">
-                      Phone number (optional for Open WhatsApp)
+                      {directOnly ? "Recipient phone number" : "Phone number (optional for Open WhatsApp)"}
                     </label>
                     <input
                       id={`${titleId}-phone`}
                       type="tel"
+                      required={directOnly}
                       placeholder="e.g. 9876543210"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -189,21 +192,21 @@ export function WhatsappShareDialog({
                     >
                       Cancel
                     </button>
-                    <button
+                    {!directOnly ? <button
                       type="button"
                       onClick={handleOpenWhatsApp}
                       disabled={isLoading || success}
                       className="inline-flex min-h-11 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface disabled:opacity-50"
                     >
                       Open WhatsApp
-                    </button>
+                    </button> : null}
                     {onServerSend ? (
                       <button
                         type="submit"
                         disabled={isLoading || success}
                         className="inline-flex min-h-11 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50"
                       >
-                        {isLoading ? "Sending…" : "Send via API"}
+                        {isLoading ? "Sending…" : directOnly ? "Send on WhatsApp" : "Send via API"}
                       </button>
                     ) : null}
                   </div>

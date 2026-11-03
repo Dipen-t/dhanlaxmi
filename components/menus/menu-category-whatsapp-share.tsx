@@ -7,6 +7,7 @@
 import type { MenuDetail } from "@/app/menus/actions";
 import { WhatsappShareDialog } from "@/components/whatsapp/whatsapp-share-dialog";
 import { buildCategoryStallShareText } from "@/lib/whatsapp-share";
+import { sendCategoryWhatsApp } from "@/app/menus/whatsapp-actions";
 
 type MenuCategoryWhatsappShareProps = {
   menu: MenuDetail;
@@ -23,6 +24,8 @@ export function MenuCategoryWhatsappShare({
 }: MenuCategoryWhatsappShareProps) {
   return (
     <WhatsappShareDialog
+      directOnly
+      onServerSend={sendCategoryWhatsApp}
       className={className}
       title="Share categories via WhatsApp"
       description="Sends the menu categories so the manager can arrange stalls at the venue."
