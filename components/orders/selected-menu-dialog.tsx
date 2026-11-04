@@ -37,9 +37,9 @@ export function SelectedMenuDialog({ order, className = "" }: SelectedMenuDialog
         </span>
       </button>
 
-      <dialog ref={dialogRef} className="app-dialog" aria-labelledby={titleId}>
-        <div className="flex max-h-[min(80vh,44rem)] w-[min(92vw,36rem)] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+      <dialog ref={dialogRef} className="app-dialog app-dialog-wide" aria-labelledby={titleId}>
+        <div className="flex min-h-0 w-full min-w-0 flex-col overflow-hidden">
+          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border px-5 py-4">
             <div className="min-w-0">
               <h2 id={titleId} className="text-lg font-semibold text-foreground">
                 Selected Menu
@@ -58,7 +58,7 @@ export function SelectedMenuDialog({ order, className = "" }: SelectedMenuDialog
             </button>
           </div>
 
-          <div className="overflow-y-auto px-5 py-4">
+          <div className="app-dialog-body min-h-0 min-w-0 overflow-y-auto overscroll-contain px-5 py-4">
             {order.menuName ? (
               <p className="mb-4 text-sm font-semibold text-foreground">{order.menuName}</p>
             ) : null}
@@ -66,14 +66,14 @@ export function SelectedMenuDialog({ order, className = "" }: SelectedMenuDialog
               {groups.map(([category, dishes]) => (
                 <li key={category}>
                   <div className="flex items-baseline justify-between gap-3 border-b border-border pb-1.5">
-                    <h3 className="text-sm font-semibold text-foreground">{category}</h3>
-                    <span className="text-xs tabular-nums text-muted">{dishes.length}</span>
+                    <h3 className="min-w-0 break-words text-sm font-semibold text-foreground">{category}</h3>
+                    <span className="shrink-0 text-xs tabular-nums text-muted">{dishes.length}</span>
                   </div>
                   <ul className="mt-2 grid gap-x-5 gap-y-1.5 sm:grid-cols-2">
                     {dishes.map((dish) => (
-                      <li key={dish} className="flex items-start gap-2 text-sm text-muted">
+                      <li key={dish} className="flex min-w-0 items-start gap-2 text-sm text-foreground">
                         <span className="mt-2 size-1 shrink-0 rounded-full bg-primary" aria-hidden />
-                        <span className="text-pretty">{dish}</span>
+                        <span className="min-w-0 break-words text-pretty">{dish}</span>
                       </li>
                     ))}
                   </ul>
@@ -82,7 +82,7 @@ export function SelectedMenuDialog({ order, className = "" }: SelectedMenuDialog
             </ul>
           </div>
 
-          <div className="flex justify-end border-t border-border px-5 py-4">
+          <div className="flex shrink-0 justify-end border-t border-border px-5 py-4">
             <button
               type="button"
               onClick={() => dialogRef.current?.close()}
