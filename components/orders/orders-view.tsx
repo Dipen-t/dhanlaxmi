@@ -50,15 +50,11 @@ export function OrdersView({ orders }: OrdersViewProps) {
     }
 
     // Ascending by event date, then order number (1, 2, 3, 4 within a day).
-    // Unpaid still float slightly ahead within the same day/number group.
     return [...result].sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
       const aNum = orderNumber(a.orderId);
       const bNum = orderNumber(b.orderId);
       if (aNum !== bNum) return aNum - bNum;
-      if (a.isPaymentAmount !== b.isPaymentAmount) {
-        return a.isPaymentAmount ? 1 : -1;
-      }
       return a.id - b.id;
     });
   }, [orders, query]);

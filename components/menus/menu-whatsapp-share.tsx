@@ -5,7 +5,6 @@ import { useEffect, useId, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { shareMenuViaWhatsApp } from "@/app/menus/actions";
-import { openWhatsAppShare } from "@/lib/whatsapp-share";
 
 type MenuWhatsappShareProps = {
   menuId: number;
@@ -191,19 +190,6 @@ export function MenuWhatsappShare({
                       className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
                     >
                       Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        openWhatsAppShare(
-                          phone || null,
-                          `Here is the menu for ${menuName}. Download the PDF from the app if needed.`,
-                        )
-                      }
-                      disabled={isLoading || success}
-                      className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-                    >
-                      Open WhatsApp
                     </button>
                     <button
                       type="submit"

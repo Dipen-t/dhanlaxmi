@@ -7,6 +7,7 @@ import { addExtraPlates, deleteOrder, type OrderRecord } from "@/app/orders/acti
 import { WhatsappShareDialog } from "@/components/whatsapp/whatsapp-share-dialog";
 import { formatCurrency } from "@/lib/utils";
 import { buildOrderShareText } from "@/lib/whatsapp-share";
+import { shareOrderViaWhatsApp } from "@/app/orders/whatsapp-actions";
 
 type OrderActionsProps = {
   order: OrderRecord;
@@ -109,8 +110,10 @@ export function OrderActions({
         }
       >
         <WhatsappShareDialog
+          directOnly
+          onServerSend={shareOrderViaWhatsApp}
           title="Share order details"
-          description="Opens WhatsApp with order and selected menu details prefilled."
+          description="Send order and selected menu details directly to the recipient."
           variant="icon"
           className="contents"
           buttonClassName={secondaryClass}

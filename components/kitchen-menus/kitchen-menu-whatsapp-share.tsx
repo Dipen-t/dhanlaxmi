@@ -32,8 +32,9 @@ export function KitchenMenuWhatsappShare({
 }: KitchenMenuWhatsappShareProps) {
   return (
     <WhatsappShareDialog
+      directOnly
       title="Share kitchen menu"
-      description="Opens WhatsApp with the kitchen menu text. Optionally send the PDF via API when WhatsApp is configured."
+      description="Send the kitchen menu and PDF directly to the recipient."
       variant={variant}
       buttonLabel="Share via WhatsApp"
       className={className}
