@@ -1,17 +1,14 @@
 "use client";
 
-import { LayoutGrid, List, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Search, X } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import type { VendorWithMaterials } from "@/app/vendors/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
 import { VendorDialog } from "@/components/vendors/vendor-dialog";
-import { VendorGrid } from "@/components/vendors/vendor-grid";
-import { VendorList } from "@/components/vendors/vendor-list";
-
-type ViewMode = "grid" | "list";
+import { VendorTable } from "@/components/vendors/vendor-table";
 
 type VendorsViewProps = {
   vendors: VendorWithMaterials[];
@@ -20,20 +17,11 @@ type VendorsViewProps = {
 
 export function VendorsView({ vendors, materials }: VendorsViewProps) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<VendorWithMaterials | null>(
     null,
   );
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const stored = localStorage.getItem("vendors-view");
-    if (stored === "grid" || stored === "list") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setView(stored);
-    }
-  }, []);
 
   const filteredVendors = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -52,11 +40,6 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
       return haystack.includes(normalized);
     });
   }, [query, vendors]);
-
-  function setViewMode(mode: ViewMode) {
-    setView(mode);
-    localStorage.setItem("vendors-view", mode);
-  }
 
   function openCreate() {
     setEditingVendor(null);
@@ -110,39 +93,6 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
               </button>
             ) : null}
           </label>
-
-          <div
-            className="inline-flex shrink-0 rounded-lg border border-border p-1"
-            role="group"
-            aria-label="View mode"
-          >
-            <button
-              type="button"
-              aria-pressed={view === "list"}
-              onClick={() => setViewMode("list")}
-              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                view === "list"
-                  ? "bg-primary-soft text-primary"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              <List className="size-4" strokeWidth={1.75} aria-hidden />
-              <span className="sr-only">List view</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={view === "grid"}
-              onClick={() => setViewMode("grid")}
-              className={`inline-flex min-h-10 min-w-10 items-center justify-center rounded-md px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
-                view === "grid"
-                  ? "bg-primary-soft text-primary"
-                  : "text-muted hover:text-foreground"
-              }`}
-            >
-              <LayoutGrid className="size-4" strokeWidth={1.75} aria-hidden />
-              <span className="sr-only">Grid view</span>
-            </button>
-          </div>
         </div>
 
         {vendors.length > 0 ? (
@@ -183,10 +133,8 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
             Clear search
           </button>
         </div>
-      ) : view === "grid" ? (
-        <VendorGrid vendors={filteredVendors} onEdit={openEdit} onFinance={openFinance} />
       ) : (
-        <VendorList vendors={filteredVendors} onEdit={openEdit} onFinance={openFinance} />
+        <VendorTable vendors={filteredVendors} onEdit={openEdit} onFinance={openFinance} />
       )}
 
       <VendorDialog

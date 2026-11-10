@@ -602,7 +602,10 @@ export async function createOrder(data: OrderInput) {
               const menuData = await getMenuById(linkedMenuId);
               if (menuData && menuData.categories.length > 0) {
                 const logo = await getPdfLogoAssets();
-                const pdfBuffer = await generateMenuPdfBuffer(menuData, logo, "standard", {});
+                const pdfBuffer = await generateMenuPdfBuffer(menuData, logo, "standard", {
+                  fontFamily: "SourceSans",
+                  fontSize: "10pt",
+                });
                 pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
                 pdfFilename = `${sanitizeFilename(menuData.name)}.pdf`;
               }

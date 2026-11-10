@@ -9,6 +9,7 @@ import { FloatingAddButton } from "@/components/floating-add-button";
 import { OrderCalendar } from "@/components/orders/order-calendar";
 import { OrderGrid } from "@/components/orders/order-grid";
 import { OrderList } from "@/components/orders/order-list";
+import { PaymentReminderBanner } from "@/components/orders/payment-reminder-banner";
 
 type ViewMode = "grid" | "list" | "calendar";
 
@@ -79,6 +80,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
 
   return (
     <>
+      <PaymentReminderBanner orders={orders} />
       <div className="sticky top-0 z-20 -mx-4 mb-5 border-b border-border/80 bg-background/95 px-4 py-3 backdrop-blur-sm sm:-mx-6 sm:px-6">
         <div className="flex items-center gap-3">
           <label className="relative block min-w-0 flex-1">

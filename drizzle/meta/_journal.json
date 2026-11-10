@@ -78,6 +78,13 @@
       "when": 1793705822264,
       "tag": "0010_outgoing_vargas",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1747385777000,
+      "tag": "0011_vendor_sort_order",
+      "breakpoints": true
     }
   ]
 }

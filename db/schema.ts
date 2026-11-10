@@ -36,6 +36,7 @@ export const vendors = pgTable("vendors", {
   deliveryLocation: deliveryLocationEnum("delivery_location").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  sortOrder: integer("sort_order").notNull().default(0),
 });
 
 export const rawMaterials = pgTable("raw_materials", {

@@ -16,6 +16,7 @@ export type VendorWithMaterials = {
   name: string;
   phone: string;
   deliveryLocation: DeliveryLocation;
+  sortOrder: number;
   rawMaterials: { id: number; name: string }[];
 };
 
@@ -28,7 +29,7 @@ export async function getVendorsPageData(): Promise<VendorsPageData> {
   const [vendorRows, materials] = await Promise.all([
     db.query.vendors.findMany({
       with: { rawMaterialVendors: { with: { rawMaterial: true } } },
-      orderBy: asc(vendors.name),
+      orderBy: [asc(vendors.sortOrder), asc(vendors.name)],
     }),
     getMaterials(),
   ]);
@@ -39,6 +40,7 @@ export async function getVendorsPageData(): Promise<VendorsPageData> {
       name: vendor.name,
       phone: vendor.phone,
       deliveryLocation: vendor.deliveryLocation,
+      sortOrder: vendor.sortOrder,
       rawMaterials: vendor.rawMaterialVendors
         .map((rmv) => ({ id: rmv.rawMaterial.id, name: rmv.rawMaterial.name }))
         .sort((a, b) => a.name.localeCompare(b.name)),
@@ -64,6 +66,7 @@ export async function getVendor(id: string): Promise<VendorWithMaterials | null>
     name: vendor.name,
     phone: vendor.phone,
     deliveryLocation: vendor.deliveryLocation,
+    sortOrder: vendor.sortOrder,
     rawMaterials: vendor.rawMaterialVendors
       .map((rmv) => ({ id: rmv.rawMaterial.id, name: rmv.rawMaterial.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -224,5 +227,18 @@ export async function deleteVendor(formData: FormData) {
   }
 
   revalidateVendorPaths();
+  return { success: true as const };
+}
+
+export async function reorderVendors(items: { id: number; sortOrder: number }[]) {
+  if (!items.length) return { success: true as const };
+
+  await Promise.all(
+    items.map(({ id, sortOrder }) =>
+      db.update(vendors).set({ sortOrder, updatedAt: new Date() }).where(eq(vendors.id, id))
+    )
+  );
+
+  revalidatePath("/vendors");
   return { success: true as const };
 }
