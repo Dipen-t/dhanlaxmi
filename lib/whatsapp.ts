@@ -387,11 +387,17 @@ export async function sendWhatsAppTemplateMessage(options: {
       normalized.includes("invalid") ||
       normalized.includes("failed");
 
+    // Return clean error if SMS Tech Hub reports insufficient credits or other errors
     if (
       isError &&
       !normalized.includes("success") &&
       !normalized.includes('"status":"ok"')
     ) {
+      if (normalized.includes("no sufficient credits") || normalized.includes("insufficient")) {
+        const error = `WhatsApp Hub Error: No Sufficient Credits in SMS Tech Hub account (${user}). Please recharge WhatsApp credits.`;
+        logEnd(callId, false, error, durationMs);
+        return { error };
+      }
       const error = `WhatsApp Hub Error: ${raw.slice(0, 200)}`;
       logEnd(callId, false, error, durationMs);
       return { error };
@@ -473,14 +479,8 @@ export async function sendNewOrderVendorAlert(options: {
         options.notesLine || "-",
       ],
     });
-
-    // If Hub failed (e.g. no credits or template rejection), seamlessly fall back to ChatNexa
-    if ("error" in result) {
-      console.warn(`[WA-Alert] Hub template failed (${result.error}) — falling back to ChatNexa`);
-      result = await sendWhatsAppMessage(options.phone, options.fallbackMessage);
-    }
   } else {
-    result = await sendWhatsAppMessage(options.phone, options.fallbackMessage);
+    result = { error: "WhatsApp Hub configuration is missing (WHATSAPP_HUB_USER / WHATSAPP_HUB_PASS)." };
   }
 
   logSection(callId, "ALERT RESULT", {
@@ -552,28 +552,14 @@ export async function sendBookingConfirmation(options: {
   let templateResult: WhatsAppResult;
 
   if (useHub) {
-    // Send the Hub template message first (text only — the template body is
-    // "Hello User, Kindly find the menu. Thankyou." with no dynamic params).
+    // Send the approved "order_pdf" template via SMS Tech Hub
     templateResult = await sendWhatsAppTemplateMessage({
       phone: options.phone,
       template,
       params: [],
     });
-
-    // If Hub template failed (e.g. no credits or gateway rejection), fallback to ChatNexa
-    if ("error" in templateResult) {
-      console.warn(`[WA-Booking] Hub template failed (${templateResult.error}) — falling back to ChatNexa`);
-      templateResult = await sendWhatsAppMessage(
-        options.phone,
-        options.fallbackMessage,
-      );
-    }
   } else {
-    // No Hub creds — send the full free-text message via ChatNexa.
-    templateResult = await sendWhatsAppMessage(
-      options.phone,
-      options.fallbackMessage,
-    );
+    templateResult = { error: "WhatsApp Hub configuration is missing (WHATSAPP_HUB_USER / WHATSAPP_HUB_PASS)." };
   }
 
   logSection(callId, "TEMPLATE RESULT", {
@@ -581,43 +567,15 @@ export async function sendBookingConfirmation(options: {
     result: templateResult,
   });
 
-  // Always attempt to send the PDF attachment via ChatNexa (if available),
-  // even when the Hub template message already went through.
-  let attachResult: WhatsAppResult = { success: true };
-  if (options.pdfBase64) {
-    logSection(callId, "PDF ATTACHMENT", {
-      filename: options.pdfFilename || "menu.pdf",
-      base64Chars: options.pdfBase64.length,
-    });
-    attachResult = await sendWhatsAppMessage(
-      options.phone,
-      "", // empty text — attachment carries the content
-      options.pdfBase64,
-      options.pdfFilename || "menu.pdf",
-    );
-    logSection(callId, "PDF ATTACHMENT RESULT", {
-      ok: !("error" in attachResult),
-      result: attachResult,
-    });
-  }
-
-  // Report the final outcome: success only if both steps succeeded.
-  const ok = !("error" in templateResult) && !("error" in attachResult);
+  const ok = !("error" in templateResult);
   const summary = ok
-    ? `Booking confirmation sent to ${formatWhatsAppPhone(options.phone)}`
-    : [
-        "error" in templateResult ? `template: ${templateResult.error}` : null,
-        "error" in attachResult ? `pdf: ${attachResult.error}` : null,
-      ]
-        .filter(Boolean)
-        .join("; ");
+    ? `Booking confirmation sent to ${formatWhatsAppPhone(options.phone)} via SMS Tech Hub (${template})`
+    : `Failed: ${"error" in templateResult ? templateResult.error : "Unknown error"}`;
 
   logEnd(callId, ok, summary, Date.now() - started);
 
   if (!ok) {
-    return {
-      error: summary,
-    };
+    return templateResult;
   }
   return { success: true };
 }
