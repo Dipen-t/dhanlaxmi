@@ -166,16 +166,48 @@ export async function sendWhatsAppMessage(
 
   // Parse lines to populate template parameters {{1}}=Date, {{2}}=Venue, {{3}}=Details, {{4}}=Notes
   const dateMatch = message.match(/Date:\s*([^\n\r]+)/i);
+  const timeMatch = message.match(/Event time:\s*([^\n\r]+)/i);
   const venueMatch = message.match(/Venue:\s*([^\n\r]+)/i);
-  const dateVal = dateMatch ? dateMatch[1].trim() : "-";
+  const customerMatch = message.match(/Customer:\s*([^\n\r]+)/i);
+  const mealMatch = message.match(/Meal:\s*([^\n\r]+)/i);
+  const personsMatch = message.match(/Persons:\s*([^\n\r]+)/i);
+
+  const rawDate = dateMatch ? dateMatch[1].trim() : "-";
+  const dateVal = timeMatch ? `${rawDate} at ${timeMatch[1].trim()}` : rawDate;
   const venueVal = venueMatch ? venueMatch[1].trim() : "-";
+
+  // Filter out redundant header lines so {{3}} contains the actual items/dishes cleanly
+  const contentLines = message
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((line) => {
+      if (!line) return false;
+      if (/^(Order\s+ORD-|Date:|Event time:|Venue:|Customer:|Phone:|Meal:|Persons:)/i.test(line)) {
+        return false;
+      }
+      return true;
+    });
+
+  const detailsVal =
+    contentLines.length > 0
+      ? contentLines
+          .map((line) => (line.startsWith("-") || line.startsWith("•") || line.startsWith("*") ? line : `• ${line}`))
+          .join("\n")
+      : message;
+
+  // Build notes line for {{4}}
+  const noteParts: string[] = [];
+  if (customerMatch) noteParts.push(`Customer: ${customerMatch[1].trim()}`);
+  if (mealMatch) noteParts.push(`Meal: ${mealMatch[1].trim()}`);
+  if (personsMatch) noteParts.push(`Plates: ${personsMatch[1].trim()}`);
+  const notesVal = noteParts.length > 0 ? noteParts.join(" · ") : " ";
 
   const template = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
 
   return sendWhatsAppTemplateMessage({
     phone: receiver,
     template,
-    params: [dateVal, venueVal, message, "-"],
+    params: [dateVal, venueVal, detailsVal, notesVal],
   });
 }
 
@@ -230,17 +262,17 @@ export async function sendWhatsAppTemplateMessage(options: {
   }
 
   // Params are comma-separated by the gateway — keep separators literal and
-  // neutralize commas/newlines inside each value so splitting stays correct.
+  // neutralize commas inside each value so splitting stays correct.
+  // We PRESERVE newlines (\n) so list items and sections format cleanly on WhatsApp.
   const safeParams = options.params.map((value, index) => {
-    const cleaned = String(value ?? "")
-      .replace(/\r?\n+/g, " | ")
-      .replace(/,/g, ";")
-      .replace(/\s+/g, " ")
-      .trim();
+    const rawStr = String(value ?? "");
+    // Replace commas with semi-colons or spaces so the gateway's comma-separated
+    // param parser doesn't mistakenly split a single param into multiple.
+    const cleaned = rawStr.replace(/,/g, ";").trim();
     return {
       index: index + 1,
-      originalChars: String(value ?? "").length,
-      value: cleaned.length > 0 ? cleaned : "-",
+      originalChars: rawStr.length,
+      value: cleaned.length > 0 ? cleaned : " ",
     };
   });
 
@@ -381,7 +413,7 @@ export async function sendNewOrderVendorAlert(options: {
         options.dateLabel,
         options.venue,
         options.materialsLine,
-        options.notesLine || "-",
+        options.notesLine && options.notesLine.trim() ? options.notesLine : " ",
       ],
     });
   } else {

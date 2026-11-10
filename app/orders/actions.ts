@@ -444,9 +444,9 @@ async function notifyVendorsForOrder(params: {
               .join("; ")}`
           : "";
 
-      // Template {{5}} — raw materials list (newlines flattened for Params CSV).
+      // Template {{3}} — raw materials list (multiline with bullets)
       const materialsLine = group.items
-        .map((item) => `- ${item.name}: ${item.qty} ${item.unit}`)
+        .map((item) => `• ${item.name}: ${item.qty} ${item.unit}`)
         .join("\n");
 
       let fallbackMessage = `*Dhanlaxmi Caterer*\n*New booking*\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\n*Main order*\n${materialsLine}`;
