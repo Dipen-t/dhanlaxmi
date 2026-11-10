@@ -492,12 +492,60 @@ export async function sendBookingConfirmation(options: {
   let templateResult: WhatsAppResult;
 
   if (useHub) {
-    // Send the approved "order_pdf" template via SMS Tech Hub
-    templateResult = await sendWhatsAppTemplateMessage({
-      phone: options.phone,
-      template,
-      params: [],
-    });
+    const dishesClean = options.menuDishes
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter((l) => l && l !== "(menu not selected)")
+      .map((l) => (l.startsWith("-") || l.startsWith("•") || l.startsWith("*") ? l : `• ${l}`))
+      .join("  |  ") || "Menu confirmed";
+
+    const customerNotes = [
+      options.customerName ? `Customer: ${options.customerName}` : "",
+      options.meal ? `Meal: ${options.meal}` : "",
+      "Dhanlaxmi Caterer",
+    ]
+      .filter(Boolean)
+      .join("  |  ");
+
+    if (template === "order_pdf") {
+      // First attempt order_pdf
+      templateResult = await sendWhatsAppTemplateMessage({
+        phone: options.phone,
+        template: "order_pdf",
+        params: [],
+      });
+
+      // If order_pdf is not supported on the Utility endpoint (sendmsgutil.php),
+      // fall back to the approved utility template order_alert_final so the customer receives the booking confirmation.
+      if ("error" in templateResult) {
+        logSection(callId, "BOOKING FALLBACK", {
+          reason: templateResult.error,
+          fallbackTemplate: "order_alert_final",
+        });
+        templateResult = await sendWhatsAppTemplateMessage({
+          phone: options.phone,
+          template: "order_alert_final",
+          params: [
+            options.eventDate,
+            options.eventVenue,
+            dishesClean,
+            customerNotes,
+          ],
+        });
+      }
+    } else {
+      // Send the configured utility template directly
+      templateResult = await sendWhatsAppTemplateMessage({
+        phone: options.phone,
+        template,
+        params: [
+          options.eventDate,
+          options.eventVenue,
+          dishesClean,
+          customerNotes,
+        ],
+      });
+    }
   } else {
     templateResult = { error: "WhatsApp Hub configuration is missing (WHATSAPP_HUB_USER / WHATSAPP_HUB_PASS)." };
   }

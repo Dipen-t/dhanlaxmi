@@ -616,13 +616,15 @@ export async function createOrder(data: OrderInput) {
 
           const [yy, mm, dd] = date.split("-");
           const formattedDate = `${dd}/${mm}/${yy}`;
+          const formattedTime = formatEventTime(eventTime);
+          const eventSchedule = formattedTime ? `${formattedDate} at ${formattedTime}` : formattedDate;
           const fallbackMessage =
-            `*Dhanlaxmi Caterer*\n\nDear ${customerName || "Customer"},\nYour booking is confirmed.\n\nName: ${customerName || "-"}\nDate: ${formattedDate}\nEvent time: ${formatEventTime(eventTime)}\nVenue: ${venue}\nMeal: ${mealType}\n\nMenu:\n${dishList}\n\nThank you for choosing Dhanlaxmi Caterer.`;
+            `*Dhanlaxmi Caterer*\n\nDear ${customerName || "Customer"},\nYour booking is confirmed.\n\nName: ${customerName || "-"}\nDate: ${eventSchedule}\nVenue: ${venue}\nMeal: ${mealType}\n\nMenu:\n${dishList}\n\nThank you for choosing Dhanlaxmi Caterer.`;
 
           const result = await sendBookingConfirmation({
             phone: customerPhone,
             customerName: customerName || "Customer",
-            eventDate: formattedDate,
+            eventDate: eventSchedule,
             eventVenue: venue,
             meal: mealType,
             menuDishes: dishList,
@@ -749,6 +751,22 @@ export async function updateOrder(data: OrderInput) {
     await syncOrderMenuDishes(id, dishIds);
 
     revalidatePath("/orders");
+
+    // Send updated materials list to vendors when materials / order are edited
+    after(async () => {
+      await Promise.allSettled([
+        notifyVendorsForOrder({
+          orderId,
+          date,
+          eventTime,
+          venue,
+          numberOfPersons,
+          mealType,
+          materials,
+        }),
+      ]);
+    });
+
     return { success: true as const };
   } catch (e: any) {
     console.error("Error updating order:", e);
