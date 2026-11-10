@@ -1,6 +1,6 @@
 type WhatsAppResult = { success: true } | { error: string };
 
-type WhatsAppChannel = "chatnexa" | "hub-template" | "new-order-alert" | "booking-confirmation";
+type WhatsAppChannel = "smstechhub" | "hub-template" | "new-order-alert" | "booking-confirmation";
 
 let whatsAppCallSeq = 0;
 
@@ -140,131 +140,43 @@ function responseHeaderSnapshot(response: Response) {
   return out;
 }
 
-/** Free-text / attachment send via the existing ChatNexa JSON API. */
+function isWhatsAppHubConfigured() {
+  return Boolean(
+    process.env.WHATSAPP_HUB_USER?.trim() && process.env.WHATSAPP_HUB_PASS?.trim(),
+  );
+}
+
+/** Send message via SMS Tech Hub using the approved order_alert_final template. */
 export async function sendWhatsAppMessage(
   receiver: string,
   message: string,
-  attachment?: string,
-  attachmentName?: string,
+  _attachment?: string,
+  _attachmentName?: string,
 ): Promise<WhatsAppResult> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
-  logBanner(callId, "WhatsApp SEND (ChatNexa JSON)", "chatnexa");
+  logBanner(callId, "WhatsApp SEND (SMS Tech Hub)", "smstechhub");
 
-  const apiUrl = process.env.WHATAPP_API;
-  const instanceId = process.env.WHATSAPP_INSTANCE_ID;
-  const bearerToken = process.env.WHATSAPP_BEARER_TOKEN;
-
-  logSection(callId, "CONFIG", {
-    apiUrl: apiUrl || "(missing WHATAPP_API)",
-    instanceId: instanceId ? redactSecret(instanceId) : "(missing WHATSAPP_INSTANCE_ID)",
-    bearerToken: bearerToken ? redactSecret(bearerToken) : "(missing WHATSAPP_BEARER_TOKEN)",
-  });
-
-  if (!apiUrl || !instanceId || !bearerToken) {
-    const error = "WhatsApp configuration is missing.";
+  if (!isWhatsAppHubConfigured()) {
+    const error = "SMS Tech Hub credentials are missing in .env (WHATSAPP_HUB_USER / WHATSAPP_HUB_PASS).";
     logSection(callId, "ABORT", { reason: error });
     logEnd(callId, false, error, Date.now() - started);
     return { error };
   }
 
-  const formattedReceiver = formatWhatsAppPhone(receiver);
-  const hasAttachment = Boolean(attachment && attachment.length > 0);
+  // Parse lines to populate template parameters {{1}}=Date, {{2}}=Venue, {{3}}=Details, {{4}}=Notes
+  const dateMatch = message.match(/Date:\s*([^\n\r]+)/i);
+  const venueMatch = message.match(/Venue:\s*([^\n\r]+)/i);
+  const dateVal = dateMatch ? dateMatch[1].trim() : "-";
+  const venueVal = venueMatch ? venueMatch[1].trim() : "-";
 
-  const payload = {
-    receiver: formattedReceiver,
-    message,
-    instance_id: instanceId,
-    attachment: attachment || "",
-    attachment_name: attachmentName || "",
-  };
+  const template = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
 
-  logSection(callId, "REQUEST", {
-    method: "POST",
-    url: apiUrl,
-    phoneRaw: receiver,
-    phoneFormatted: formattedReceiver,
-    messageChars: message.length,
-    messagePreview: previewText(message),
-    attachment: hasAttachment
-      ? `${attachmentName || "unnamed"} (${attachment!.length} chars base64/payload)`
-      : "(none)",
-    bodyWithoutAttachment: JSON.stringify(
-      {
-        receiver: payload.receiver,
-        message: previewText(payload.message, 500),
-        instance_id: redactSecret(payload.instance_id),
-        attachment: hasAttachment ? `[${attachment!.length} chars omitted]` : "",
-        attachment_name: payload.attachment_name,
-      },
-      null,
-      2,
-    ),
+  return sendWhatsAppTemplateMessage({
+    phone: receiver,
+    template,
+    params: [dateVal, venueVal, message, "-"],
   });
-
-  try {
-    const response = await fetch(apiUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${bearerToken}`,
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const { contentType, raw, parsed } = await readResponseBody(response);
-    const durationMs = Date.now() - started;
-
-    logSection(callId, "RESPONSE", {
-      httpStatus: `${response.status} ${response.statusText || ""}`.trim(),
-      ok: response.ok,
-      duration: formatDuration(durationMs),
-      contentType,
-      headers: responseHeaderSnapshot(response),
-      bodyRaw: truncate(raw || "(empty body)"),
-      bodyJson: parsed ?? "(not JSON / parse failed)",
-    });
-
-    if (contentType.includes("application/json") && parsed && typeof parsed === "object") {
-      const data = parsed as Record<string, unknown>;
-      if (data.status === "success" || data.success) {
-        logEnd(callId, true, `Queued for ${formattedReceiver}`, durationMs);
-        return { success: true };
-      }
-      const error = `WhatsApp API Error: ${JSON.stringify(data)}`;
-      logEnd(callId, false, error, durationMs);
-      return { error };
-    }
-
-    if (response.ok && raw.trim()) {
-      // Some gateways return plain "success" text.
-      const normalized = raw.trim().toLowerCase();
-      if (normalized.includes("success") || normalized === "ok" || normalized === "1") {
-        logEnd(callId, true, `Accepted plain response for ${formattedReceiver}`, durationMs);
-        return { success: true };
-      }
-    }
-
-    const error = `WhatsApp API Error (${response.status}): Server returned non-JSON response.`;
-    logEnd(callId, false, error, durationMs);
-    return { error };
-  } catch (error) {
-    const durationMs = Date.now() - started;
-    const messageText = error instanceof Error ? error.message : "Unknown error";
-    logSection(callId, "NETWORK ERROR", {
-      name: error instanceof Error ? error.name : typeof error,
-      message: messageText,
-      stack: error instanceof Error ? error.stack : undefined,
-    });
-    logEnd(callId, false, `Fetch Error: ${messageText}`, durationMs);
-    return { error: `Fetch Error: ${messageText}` };
-  }
-}
-
-function isWhatsAppHubConfigured() {
-  return Boolean(
-    process.env.WHATSAPP_HUB_USER?.trim() && process.env.WHATSAPP_HUB_PASS?.trim(),
-  );
 }
 
 /**
@@ -282,7 +194,7 @@ export async function sendWhatsAppTemplateMessage(options: {
 
   const baseUrl =
     process.env.WHATSAPP_HUB_URL?.trim() ||
-    "http://smstechhub.nnsolutions.co.in/api/sendmsg.php";
+    "http://smstechhub.nnsolutions.co.in/api/sendmsgutil.php";
   const user = process.env.WHATSAPP_HUB_USER?.trim();
   const pass = process.env.WHATSAPP_HUB_PASS?.trim();
   const sender = process.env.WHATSAPP_HUB_SENDER?.trim() || "BUZWAP";
@@ -380,30 +292,23 @@ export async function sendWhatsAppTemplateMessage(options: {
     }
 
     const normalized = raw.trim().toLowerCase();
-    const isError =
-      normalized.includes("error") ||
-      normalized.includes("no sufficient credits") ||
-      normalized.includes("insufficient") ||
-      normalized.includes("invalid") ||
-      normalized.includes("failed");
+    const isSuccess =
+      raw.trim().startsWith("S.") ||
+      normalized.includes("success") ||
+      normalized.includes('"status":"ok"');
 
-    // Return clean error if SMS Tech Hub reports insufficient credits or other errors
-    if (
-      isError &&
-      !normalized.includes("success") &&
-      !normalized.includes('"status":"ok"')
-    ) {
+    if (!isSuccess) {
       if (normalized.includes("no sufficient credits") || normalized.includes("insufficient")) {
-        const error = `WhatsApp Hub Error: No Sufficient Credits in SMS Tech Hub account (${user}). Please recharge WhatsApp credits.`;
+        const error = `SMS Tech Hub Error: No Sufficient Credits in account (${user}). Please recharge WhatsApp credits.`;
         logEnd(callId, false, error, durationMs);
         return { error };
       }
-      const error = `WhatsApp Hub Error: ${raw.slice(0, 200)}`;
+      const error = `SMS Tech Hub Error: ${raw.trim().slice(0, 200)}`;
       logEnd(callId, false, error, durationMs);
       return { error };
     }
 
-    logEnd(callId, true, `Hub template queued for ${phone} (${options.template.trim()})`, durationMs);
+    logEnd(callId, true, `Hub template queued for ${phone} (${options.template.trim()}) -> ${raw.trim()}`, durationMs);
     return { success: true };
   } catch (error) {
     const durationMs = Date.now() - started;

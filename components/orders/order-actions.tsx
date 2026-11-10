@@ -110,7 +110,6 @@ export function OrderActions({
         }
       >
         <WhatsappShareDialog
-          directOnly
           onServerSend={shareOrderViaWhatsApp}
           title="Share order details"
           description="Send order and selected menu details directly to the recipient."
