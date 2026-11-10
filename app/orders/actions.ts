@@ -356,16 +356,34 @@ async function notifyVendorsForOrder(params: {
   numberOfPersons: number;
   mealType: string;
   materials: OrderRawMaterialRecord[];
+  targetVendorIds?: number[];
 }) {
-  const { orderId, date, eventTime, venue, numberOfPersons, mealType, materials } = params;
+  const {
+    orderId,
+    date,
+    eventTime,
+    venue,
+    numberOfPersons,
+    mealType,
+    materials,
+    targetVendorIds,
+  } = params;
+
+  if (targetVendorIds && targetVendorIds.length === 0) {
+    console.log(`[WA-notify] order ${orderId}: no targeted vendors — skipping WhatsApp`);
+    return;
+  }
+
   if (materials.length === 0) {
     console.log(`[WA-notify] order ${orderId}: no materials — skipping WhatsApp`);
     return;
   }
 
   try {
+    const targetSet = targetVendorIds ? new Set(targetVendorIds) : null;
+
     console.log(
-      `[WA-notify] order ${orderId}: preparing vendor alerts (${materials.length} material rows)`,
+      `[WA-notify] order ${orderId}: preparing vendor alerts (${materials.length} material rows, target vendors: ${targetSet ? [...targetSet].join(",") : "all"})`,
     );
 
     const materialIds = materials.map((m) => m.rawMaterialId);
@@ -375,9 +393,15 @@ async function notifyVendorsForOrder(params: {
 
     const selectedVendorIds = materials
       .map((m) => m.vendorId)
-      .filter((id): id is number => id != null);
+      .filter((id): id is number => id != null)
+      .filter((id) => (targetSet ? targetSet.has(id) : true));
 
     const uniqueVendorIds = [...new Set(selectedVendorIds)];
+    if (uniqueVendorIds.length === 0) {
+      console.log(`[WA-notify] order ${orderId}: no targeted vendors with materials found`);
+      return;
+    }
+
     let dbVendors: { id: number; name: string; phone: string; deliveryLocation: string }[] = [];
     if (uniqueVendorIds.length > 0) {
       dbVendors = await db.query.vendors.findMany({
@@ -392,6 +416,7 @@ async function notifyVendorsForOrder(params: {
 
     for (const m of materials) {
       if (!m.vendorId) continue;
+      if (targetSet && !targetSet.has(m.vendorId)) continue;
 
       const dbMaterial = dbMaterials.find((dbm) => dbm.id === m.rawMaterialId);
       const dbVendor = dbVendors.find((v) => v.id === m.vendorId);
@@ -652,6 +677,73 @@ export async function createOrder(data: OrderInput) {
   }
 }
 
+function getUpdatedVendorIds(
+  oldMaterials: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId?: number | null }[],
+  newMaterials: OrderRawMaterialRecord[],
+): number[] {
+  const oldByVendor = new Map<number, Map<number, { qty: string; unit: string; notes: string }>>();
+  for (const m of oldMaterials) {
+    if (!m.vendorId) continue;
+    if (!oldByVendor.has(m.vendorId)) {
+      oldByVendor.set(m.vendorId, new Map());
+    }
+    oldByVendor.get(m.vendorId)!.set(m.rawMaterialId, {
+      qty: String(m.unitQty ?? "").trim(),
+      unit: String(m.unitName ?? "").trim().toLowerCase(),
+      notes: String(m.notes ?? "").trim(),
+    });
+  }
+
+  const newByVendor = new Map<number, OrderRawMaterialRecord[]>();
+  for (const m of newMaterials) {
+    if (!m.vendorId) continue;
+    if (!newByVendor.has(m.vendorId)) {
+      newByVendor.set(m.vendorId, []);
+    }
+    newByVendor.get(m.vendorId)!.push(m);
+  }
+
+  const updatedVendorIds: number[] = [];
+
+  for (const [vendorId, newItems] of newByVendor.entries()) {
+    const oldItemsMap = oldByVendor.get(vendorId);
+    if (!oldItemsMap) {
+      // Vendor newly assigned in this update
+      updatedVendorIds.push(vendorId);
+      continue;
+    }
+
+    if (newItems.length !== oldItemsMap.size) {
+      // Number of items changed for this vendor
+      updatedVendorIds.push(vendorId);
+      continue;
+    }
+
+    let hasDiff = false;
+    for (const item of newItems) {
+      const oldItem = oldItemsMap.get(item.rawMaterialId);
+      if (!oldItem) {
+        hasDiff = true;
+        break;
+      }
+      const newQty = String(item.unitQty ?? "").trim();
+      const newUnit = String(item.unitName ?? "").trim().toLowerCase();
+      const newNotes = String(item.notes ?? "").trim();
+
+      if (newQty !== oldItem.qty || newUnit !== oldItem.unit || newNotes !== oldItem.notes) {
+        hasDiff = true;
+        break;
+      }
+    }
+
+    if (hasDiff) {
+      updatedVendorIds.push(vendorId);
+    }
+  }
+
+  return updatedVendorIds;
+}
+
 export async function updateOrder(data: OrderInput) {
   const id = Number(data.id);
   const orderId = normalizeText(data.orderId || "");
@@ -664,7 +756,9 @@ export async function updateOrder(data: OrderInput) {
   const existingOrder = Number.isSafeInteger(id) && id > 0
     ? await db.query.orders.findFirst({
         where: eq(orders.id, id),
-        columns: { extraPlates: true },
+        with: {
+          orderRawMaterials: true,
+        },
       })
     : null;
   const extraPlates = existingOrder?.extraPlates ?? 0;
@@ -752,20 +846,35 @@ export async function updateOrder(data: OrderInput) {
 
     revalidatePath("/orders");
 
-    // Send updated materials list to vendors when materials / order are edited
-    after(async () => {
-      await Promise.allSettled([
-        notifyVendorsForOrder({
-          orderId,
-          date,
-          eventTime,
-          venue,
-          numberOfPersons,
-          mealType,
-          materials,
-        }),
-      ]);
-    });
+    // Only send WhatsApp message to vendors whose materials were actually added or edited
+    const updatedVendorIds = getUpdatedVendorIds(
+      existingOrder.orderRawMaterials || [],
+      materials,
+    );
+
+    if (updatedVendorIds.length > 0) {
+      console.log(
+        `[WA-notify] order ${orderId}: materials updated for vendor IDs [${updatedVendorIds.join(", ")}] — sending alerts`,
+      );
+      after(async () => {
+        await Promise.allSettled([
+          notifyVendorsForOrder({
+            orderId,
+            date,
+            eventTime,
+            venue,
+            numberOfPersons,
+            mealType,
+            materials,
+            targetVendorIds: updatedVendorIds,
+          }),
+        ]);
+      });
+    } else {
+      console.log(
+        `[WA-notify] order ${orderId}: no vendor materials were updated — skipping vendor alerts`,
+      );
+    }
 
     return { success: true as const };
   } catch (e: any) {
