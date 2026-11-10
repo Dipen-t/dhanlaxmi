@@ -1,6 +1,6 @@
 type WhatsAppResult = { success: true } | { error: string };
 
-type WhatsAppChannel = "chatnexa" | "hub-template" | "new-order-alert";
+type WhatsAppChannel = "chatnexa" | "hub-template" | "new-order-alert" | "booking-confirmation";
 
 let whatsAppCallSeq = 0;
 
@@ -405,7 +405,22 @@ export async function sendWhatsAppTemplateMessage(options: {
   }
 }
 
-/** Vendor alerts use free text so the current layout does not depend on an old approved template. */
+/**
+ * Vendor order-alert via the approved "order_alert_final" Hub template.
+ *
+ * Template body:
+ *   New Order Alert!
+ *   Date: {{1}}
+ *   Venue: {{2}}
+ *   Please provide the following raw materials:
+ *   {{3}}
+ *
+ *   {{4}}
+ *   Thankyou.
+ *
+ * {{1}} = date + time label   {{2}} = venue
+ * {{3}} = materials list      {{4}} = optional High Tea / notes line (or "-")
+ */
 export async function sendNewOrderVendorAlert(options: {
   phone: string;
   orderId: string;
@@ -420,10 +435,10 @@ export async function sendNewOrderVendorAlert(options: {
   logBanner(callId, "WhatsApp NEW ORDER vendor alert", "new-order-alert");
 
   const template =
-    process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "New Order Alert";
-  // The old approved Hub template prints an order ID and places High Tea
-  // before the materials. Use free text for the current vendor layout.
-  const useHub = false;
+    process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
+  // Use the Hub template ("order_alert_final") when Hub credentials are
+  // present; fall back to the ChatNexa free-text path otherwise.
+  const useHub = isWhatsAppHubConfigured();
 
   logSection(callId, "ROUTING", {
     orderId: options.orderId,
@@ -434,21 +449,21 @@ export async function sendNewOrderVendorAlert(options: {
     notesLine: previewText(options.notesLine || "(empty)"),
     materialsPreview: previewText(options.materialsLine, 500),
     template,
-    path: useHub ? "hub-template (SMS Tech Hub)" : "chatnexa fallback (free text)",
+    path: useHub ? "hub-template (SMS Tech Hub — order_alert_final)" : "chatnexa fallback (free text)",
     hubConfigured: useHub,
   });
 
   let result: WhatsAppResult;
   if (useHub) {
+    // 4-param template: {{1}} date, {{2}} venue, {{3}} materials, {{4}} notes
     result = await sendWhatsAppTemplateMessage({
       phone: options.phone,
       template,
       params: [
-        options.orderId,
         options.dateLabel,
         options.venue,
-        options.notesLine,
         options.materialsLine,
+        options.notesLine || "-",
       ],
     });
   } else {
@@ -470,4 +485,117 @@ export async function sendNewOrderVendorAlert(options: {
   );
 
   return result;
+}
+
+/**
+ * Customer booking-confirmation via the approved "order_pdf" Hub template,
+ * plus the menu PDF sent as an attachment through ChatNexa.
+ *
+ * Template body (order_pdf):
+ *   Hello User,
+ *   Kindly find the menu.
+ *   Thankyou.
+ *   (PDF attachment delivered separately via ChatNexa)
+ *
+ * When Hub credentials are absent the function falls back to a free-text
+ * ChatNexa message (without the template, but still with the PDF if provided).
+ */
+export async function sendBookingConfirmation(options: {
+  phone: string;
+  customerName: string;
+  eventDate: string;
+  eventVenue: string;
+  meal: string;
+  menuDishes: string;
+  pdfBase64?: string;
+  pdfFilename?: string;
+  fallbackMessage: string;
+}): Promise<WhatsAppResult> {
+  const callId = nextWhatsAppCallId();
+  const started = Date.now();
+  logBanner(callId, "WhatsApp BOOKING CONFIRMATION (order_pdf)", "booking-confirmation");
+
+  const template =
+    process.env.WHATSAPP_BOOKING_TEMPLATE?.trim() || "order_pdf";
+  const useHub = isWhatsAppHubConfigured();
+
+  logSection(callId, "ROUTING", {
+    phoneRaw: options.phone,
+    phoneFormatted: formatWhatsAppPhone(options.phone),
+    customerName: options.customerName,
+    eventDate: options.eventDate,
+    eventVenue: options.eventVenue,
+    meal: options.meal,
+    menuDishesPreview: previewText(options.menuDishes, 300),
+    template,
+    hasPdf: Boolean(options.pdfBase64),
+    pdfFilename: options.pdfFilename || "(none)",
+    path: useHub
+      ? "hub-template (order_pdf) + ChatNexa PDF attachment"
+      : "chatnexa free-text + PDF attachment",
+    hubConfigured: useHub,
+  });
+
+  let templateResult: WhatsAppResult;
+
+  if (useHub) {
+    // Send the Hub template message first (text only — the template body is
+    // "Hello User, Kindly find the menu. Thankyou." with no dynamic params).
+    templateResult = await sendWhatsAppTemplateMessage({
+      phone: options.phone,
+      template,
+      params: [],
+    });
+  } else {
+    // No Hub creds — send the full free-text message via ChatNexa.
+    templateResult = await sendWhatsAppMessage(
+      options.phone,
+      options.fallbackMessage,
+    );
+  }
+
+  logSection(callId, "TEMPLATE RESULT", {
+    ok: !("error" in templateResult),
+    result: templateResult,
+  });
+
+  // Always attempt to send the PDF attachment via ChatNexa (if available),
+  // even when the Hub template message already went through.
+  let attachResult: WhatsAppResult = { success: true };
+  if (options.pdfBase64) {
+    logSection(callId, "PDF ATTACHMENT", {
+      filename: options.pdfFilename || "menu.pdf",
+      base64Chars: options.pdfBase64.length,
+    });
+    attachResult = await sendWhatsAppMessage(
+      options.phone,
+      "", // empty text — attachment carries the content
+      options.pdfBase64,
+      options.pdfFilename || "menu.pdf",
+    );
+    logSection(callId, "PDF ATTACHMENT RESULT", {
+      ok: !("error" in attachResult),
+      result: attachResult,
+    });
+  }
+
+  // Report the final outcome: success only if both steps succeeded.
+  const ok = !("error" in templateResult) && !("error" in attachResult);
+  const summary = ok
+    ? `Booking confirmation sent to ${formatWhatsAppPhone(options.phone)}`
+    : [
+        "error" in templateResult ? `template: ${templateResult.error}` : null,
+        "error" in attachResult ? `pdf: ${attachResult.error}` : null,
+      ]
+        .filter(Boolean)
+        .join("; ");
+
+  logEnd(callId, ok, summary, Date.now() - started);
+
+  if (!ok) {
+    return {
+      error: summary,
+    };
+  }
+  return { success: true };
 }

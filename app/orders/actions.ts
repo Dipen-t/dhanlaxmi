@@ -15,7 +15,7 @@ import {
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
-import { sendNewOrderVendorAlert, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendNewOrderVendorAlert, sendWhatsAppMessage, sendBookingConfirmation } from "@/lib/whatsapp";
 import { formatEventTime } from "@/lib/orders/event-time";
 
 
@@ -565,15 +565,76 @@ export async function createOrder(data: OrderInput) {
 
     // Keep notifications alive after the booking response has been sent.
     after(async () => {
+      // --- vendor alerts ---
       await Promise.allSettled([
         notifyVendorsForOrder({ orderId, date, eventTime, venue, numberOfPersons, mealType, materials }),
-        ...(customerPhone ? [sendWhatsAppMessage(
-          customerPhone,
-          `*Dhanlaxmi Caterer*\n\nDear ${customerName || "Customer"},\nYour booking is confirmed.\n\nDate: ${date.split("-").reverse().join("/")}\nEvent time: ${formatEventTime(eventTime)}\nVenue: ${venue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\nThank you for choosing Dhanlaxmi Caterer.`,
-        ).then((result) => {
-          if ("error" in result) console.error("Customer booking confirmation failed:", result.error);
-        })] : []),
       ]);
+
+      // --- customer booking confirmation (order_pdf template + menu PDF) ---
+      if (customerPhone) {
+        try {
+          // Build the dish list for the template / fallback message.
+          const dishList = data.dishIds && data.dishIds.length > 0
+            ? (await db.query.dishes.findMany({
+                where: inArray(dishes.id, data.dishIds.map(Number)),
+                with: { category: true },
+              }))
+                .map((d) => `- ${d.name}`)
+                .join("\n")
+            : "(menu not selected)";
+
+          // Try to generate the menu PDF as base64 for the attachment.
+          let pdfBase64: string | undefined;
+          let pdfFilename: string | undefined;
+          // We use the order's linked menuId if available.
+          const linkedMenuId = (await db.query.orders.findFirst({
+            where: eq(orders.id, newOrder.id),
+            columns: { menuId: true },
+          }))?.menuId;
+
+          if (linkedMenuId) {
+            try {
+              const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
+              const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
+              const { getMenuById } = await import("@/app/menus/actions");
+              const { sanitizeFilename } = await import("@/lib/menus/sanitize-filename");
+
+              const menuData = await getMenuById(linkedMenuId);
+              if (menuData && menuData.categories.length > 0) {
+                const logo = await getPdfLogoAssets();
+                const pdfBuffer = await generateMenuPdfBuffer(menuData, logo, "standard", {});
+                pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+                pdfFilename = `${sanitizeFilename(menuData.name)}.pdf`;
+              }
+            } catch (pdfErr) {
+              console.error("Menu PDF generation failed for booking confirmation:", pdfErr);
+            }
+          }
+
+          const [yy, mm, dd] = date.split("-");
+          const formattedDate = `${dd}/${mm}/${yy}`;
+          const fallbackMessage =
+            `*Dhanlaxmi Caterer*\n\nDear ${customerName || "Customer"},\nYour booking is confirmed.\n\nName: ${customerName || "-"}\nDate: ${formattedDate}\nEvent time: ${formatEventTime(eventTime)}\nVenue: ${venue}\nMeal: ${mealType}\n\nMenu:\n${dishList}\n\nThank you for choosing Dhanlaxmi Caterer.`;
+
+          const result = await sendBookingConfirmation({
+            phone: customerPhone,
+            customerName: customerName || "Customer",
+            eventDate: formattedDate,
+            eventVenue: venue,
+            meal: mealType,
+            menuDishes: dishList,
+            pdfBase64,
+            pdfFilename,
+            fallbackMessage,
+          });
+
+          if ("error" in result) {
+            console.error("Customer booking confirmation failed:", result.error);
+          }
+        } catch (err) {
+          console.error("Customer booking confirmation error:", err);
+        }
+      }
     });
 
     return { success: true as const, id: newOrder.id, orderId };
