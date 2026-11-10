@@ -192,15 +192,16 @@ export async function sendWhatsAppMessage(
     contentLines.length > 0
       ? contentLines
           .map((line) => (line.startsWith("-") || line.startsWith("•") || line.startsWith("*") ? line : `• ${line}`))
-          .join("\n")
-      : message;
+          .join("  |  ")
+      : "Order details confirmed";
 
   // Build notes line for {{4}}
   const noteParts: string[] = [];
   if (customerMatch) noteParts.push(`Customer: ${customerMatch[1].trim()}`);
   if (mealMatch) noteParts.push(`Meal: ${mealMatch[1].trim()}`);
   if (personsMatch) noteParts.push(`Plates: ${personsMatch[1].trim()}`);
-  const notesVal = noteParts.length > 0 ? noteParts.join(" · ") : " ";
+  noteParts.push("Dhanlaxmi Caterer");
+  const notesVal = noteParts.join(" · ");
 
   const template = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
 
@@ -263,16 +264,18 @@ export async function sendWhatsAppTemplateMessage(options: {
 
   // Params are comma-separated by the gateway — keep separators literal and
   // neutralize commas inside each value so splitting stays correct.
-  // We PRESERVE newlines (\n) so list items and sections format cleanly on WhatsApp.
+  // Meta Cloud API strictly forbids raw newlines (\n / \r) inside template params (#100 error).
+  // We format linebreaks with clean inline dividers ("  |  ").
   const safeParams = options.params.map((value, index) => {
     const rawStr = String(value ?? "");
-    // Replace commas with semi-colons or spaces so the gateway's comma-separated
-    // param parser doesn't mistakenly split a single param into multiple.
-    const cleaned = rawStr.replace(/,/g, ";").trim();
+    const cleaned = rawStr
+      .replace(/,/g, ";")
+      .replace(/\r?\n+/g, "  |  ")
+      .trim();
     return {
       index: index + 1,
       originalChars: rawStr.length,
-      value: cleaned.length > 0 ? cleaned : " ",
+      value: cleaned.length > 0 ? cleaned : "Dhanlaxmi Caterer",
     };
   });
 

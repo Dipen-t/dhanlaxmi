@@ -442,12 +442,12 @@ async function notifyVendorsForOrder(params: {
           ? `High Tea details: ${itemsWithNotes
               .map((i) => `${i.name} (${i.notes})`)
               .join("; ")}`
-          : "";
+          : "Dhanlaxmi Caterer";
 
-      // Template {{3}} — raw materials list (multiline with bullets)
+      // Template {{3}} — raw materials list (separated cleanly for Meta template compliance)
       const materialsLine = group.items
         .map((item) => `• ${item.name}: ${item.qty} ${item.unit}`)
-        .join("\n");
+        .join("  |  ");
 
       let fallbackMessage = `*Dhanlaxmi Caterer*\n*New booking*\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\n*Main order*\n${materialsLine}`;
       if (notesLine) fallbackMessage += `\n\n*High Tea details*\n${itemsWithNotes.map((item) => `${item.name}: ${item.notes}`).join("\n")}`;
