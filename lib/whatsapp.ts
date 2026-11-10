@@ -380,8 +380,15 @@ export async function sendWhatsAppTemplateMessage(options: {
     }
 
     const normalized = raw.trim().toLowerCase();
+    const isError =
+      normalized.includes("error") ||
+      normalized.includes("no sufficient credits") ||
+      normalized.includes("insufficient") ||
+      normalized.includes("invalid") ||
+      normalized.includes("failed");
+
     if (
-      normalized.includes("error") &&
+      isError &&
       !normalized.includes("success") &&
       !normalized.includes('"status":"ok"')
     ) {
@@ -466,6 +473,12 @@ export async function sendNewOrderVendorAlert(options: {
         options.notesLine || "-",
       ],
     });
+
+    // If Hub failed (e.g. no credits or template rejection), seamlessly fall back to ChatNexa
+    if ("error" in result) {
+      console.warn(`[WA-Alert] Hub template failed (${result.error}) — falling back to ChatNexa`);
+      result = await sendWhatsAppMessage(options.phone, options.fallbackMessage);
+    }
   } else {
     result = await sendWhatsAppMessage(options.phone, options.fallbackMessage);
   }
@@ -546,6 +559,15 @@ export async function sendBookingConfirmation(options: {
       template,
       params: [],
     });
+
+    // If Hub template failed (e.g. no credits or gateway rejection), fallback to ChatNexa
+    if ("error" in templateResult) {
+      console.warn(`[WA-Booking] Hub template failed (${templateResult.error}) — falling back to ChatNexa`);
+      templateResult = await sendWhatsAppMessage(
+        options.phone,
+        options.fallbackMessage,
+      );
+    }
   } else {
     // No Hub creds — send the full free-text message via ChatNexa.
     templateResult = await sendWhatsAppMessage(
