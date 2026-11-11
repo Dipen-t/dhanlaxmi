@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { categoryImageKeyById } from "@/lib/menus/category-images";
-import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendMenuPdfViaWhatsApp } from "@/lib/whatsapp";
+import { getWhatsAppPdfUrl } from "@/lib/whatsapp-pdf-url";
 import {
   dishCategories,
   menuCategories,
@@ -373,7 +373,7 @@ export async function deleteMenu(formData: FormData) {
   return { success: true as const };
 }
 
-export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: string) {
+export async function shareMenuViaWhatsApp(menuId: number, phone: string, _text: string) {
   if (!phone) {
     return { error: "Phone number is required." };
   }
@@ -388,18 +388,8 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: 
   }
 
   try {
-    const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
-    const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
-    const logo = await getPdfLogoAssets();
-    const pdfBuffer = await generateMenuPdfBuffer(menu, logo);
-    
-    // Server expects Base64 in attachments
-    // Server expects pure Base64 string for attachments
-    const base64Pdf = pdfBuffer.toString("base64");
-    const attachment = base64Pdf;
-    const attachmentName = `${sanitizeFilename(menu.name)}.pdf`;
-
-    const result = await sendWhatsAppMessage(phone, text, attachment, attachmentName);
+    const pdfUrl = await getWhatsAppPdfUrl("menus", menuId);
+    const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl);
     if ("error" in result && result.error) {
       return { error: result.error };
     }
@@ -407,6 +397,6 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, text: 
     return { success: true as const };
   } catch (error) {
     console.error("WhatsApp menu share error:", error);
-    return { error: "Could not send PDF. Try again." };
+    return { error: error instanceof Error ? error.message : "Could not send PDF. Try again." };
   }
 }

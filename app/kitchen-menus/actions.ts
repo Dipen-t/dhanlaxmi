@@ -320,7 +320,7 @@ export async function deleteKitchenMenu(formData: FormData) {
 export async function shareKitchenMenuViaWhatsApp(
   menuId: number,
   phone: string,
-  text: string,
+  _text: string,
 ) {
   if (!phone) {
     return { error: "Phone number is required." };
@@ -336,26 +336,17 @@ export async function shareKitchenMenuViaWhatsApp(
   }
 
   try {
-    const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
-    const { generateKitchenMenuPdfBuffer } = await import(
-      "@/lib/menus/generate-kitchen-menu-pdf"
-    );
-    const { sanitizeFilename } = await import("@/lib/menus/sanitize-filename");
-    const { sendWhatsAppMessage } = await import("@/lib/whatsapp");
-
-    const logo = await getPdfLogoAssets();
-    const pdfBuffer = await generateKitchenMenuPdfBuffer(menu, logo);
-    const attachment = pdfBuffer.toString("base64");
-    const attachmentName = `${sanitizeFilename(menu.name)}-kitchen.pdf`;
-
-    const result = await sendWhatsAppMessage(phone, text, attachment, attachmentName);
+    const { sendMenuPdfViaWhatsApp } = await import("@/lib/whatsapp");
+    const { getWhatsAppPdfUrl } = await import("@/lib/whatsapp-pdf-url");
+    const pdfUrl = await getWhatsAppPdfUrl("kitchen-menus", menuId);
+    const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl);
     if ("error" in result && result.error) {
       return { error: result.error };
     }
     return { success: true as const };
   } catch (error) {
     console.error("WhatsApp kitchen menu share error:", error);
-    return { error: "Could not send PDF. Try Open WhatsApp instead." };
+    return { error: error instanceof Error ? error.message : "Could not send PDF. Try again." };
   }
 }
 

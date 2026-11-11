@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { sendBookingConfirmation } from "./whatsapp";
+import { sendBookingConfirmation, sendMenuPdfViaWhatsApp } from "./whatsapp";
 
-test("customerorder uses date, venue, meal and retains fallback only on rejection", async () => {
+test("customer and PDF sends use exact templates and return provider errors without vendor fallback", async () => {
   const originalFetch = globalThis.fetch;
-  const keys = ["WHATSAPP_DEBUG", "WHATSAPP_HUB_USER", "WHATSAPP_HUB_PASS", "WHATSAPP_BOOKING_TEMPLATE", "WHATSAPP_ORDER_TEMPLATE"];
+  const keys = ["WHATSAPP_DEBUG", "WHATSAPP_HUB_USER", "WHATSAPP_HUB_PASS", "WHATSAPP_BOOKING_TEMPLATE", "WHATSAPP_ORDER_TEMPLATE", "WHATSAPP_HUB_URL"];
   const previous = keys.map((key) => process.env[key]);
   const requests: URL[] = [];
   const options = { phone: "9999999999", customerName: "Test customer", eventDate: "30/11/2026 at 10:00 PM", eventVenue: "Test venue", meal: "dinner", menuDishes: "Paneer", fallbackMessage: "Your booking is confirmed." };
@@ -12,18 +12,19 @@ test("customerorder uses date, venue, meal and retains fallback only on rejectio
     process.env.WHATSAPP_DEBUG = "0";
     process.env.WHATSAPP_HUB_USER = "test";
     process.env.WHATSAPP_HUB_PASS = "test";
+    process.env.WHATSAPP_HUB_URL = "http://smstechhub.nnsolutions.co.in/api/sendmsgutil.php";
     process.env.WHATSAPP_ORDER_TEMPLATE = "order_alert_final";
     process.env.WHATSAPP_BOOKING_TEMPLATE = "order_pdf";
     globalThis.fetch = async (input) => {
       requests.push(new URL(String(input)));
       return new Response("Template rejected", { status: 400 });
     };
-    assert.ok("error" in await sendBookingConfirmation(options));
-    assert.equal(requests.length, 2);
+    const failed = await sendBookingConfirmation(options);
+    assert.ok("error" in failed && failed.error.includes("Template rejected"));
+    assert.equal(requests.length, 1);
     assert.equal(requests[0].searchParams.get("text"), "customerorder");
+    assert.equal(requests[0].pathname, "/api/sendmsg.php");
     assert.equal(requests[0].searchParams.get("Params"), [options.eventDate, options.eventVenue, options.meal].join(","));
-    assert.equal(requests[1].searchParams.get("text"), "order_alert_final");
-    assert.ok(requests[1].searchParams.get("Params")?.includes(options.eventVenue));
 
     process.env.WHATSAPP_BOOKING_TEMPLATE = "order_pdf";
     globalThis.fetch = async (input) => {
@@ -31,8 +32,21 @@ test("customerorder uses date, venue, meal and retains fallback only on rejectio
       return new Response("S. Message queued", { status: 200 });
     };
     assert.deepEqual(await sendBookingConfirmation(options), { success: true });
-    assert.equal(requests.length, 3);
-    assert.equal(requests[2].searchParams.get("text"), "customerorder", "successful customer send needs no fallback");
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1].searchParams.get("text"), "customerorder");
+    const documentUrl = "https://example.com/api/menus/1/pdf?theme=standard&inline=true";
+    assert.deepEqual(await sendMenuPdfViaWhatsApp("+91 99999 99999", documentUrl), { success: true });
+    assert.equal(requests[2].searchParams.get("text"), "orderpdf");
+    assert.equal(requests[2].searchParams.get("phone"), "9999999999");
+    assert.equal(requests[2].searchParams.get("htype"), "document");
+    assert.equal(requests[2].searchParams.get("url"), documentUrl);
+    assert.equal(requests[2].searchParams.get("Params"), "");
+    globalThis.fetch = async () => new Response("Document URL not accessible", { status: 422 });
+    const documentError = await sendMenuPdfViaWhatsApp(options.phone, documentUrl);
+    assert.ok("error" in documentError && documentError.error.includes("Document URL not accessible"));
+    globalThis.fetch = async () => new Response(JSON.stringify({ success: false, message: "Unsuccessful: template rejected" }), { headers: { "content-type": "application/json" } });
+    const rejected = await sendBookingConfirmation(options);
+    assert.ok("error" in rejected && rejected.error.includes("template rejected"), "HTTP 200 provider errors must remain errors");
   } finally {
     globalThis.fetch = originalFetch;
     keys.forEach((key, index) => {

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import {
   createOrder,
@@ -261,6 +262,10 @@ export function OrderForm({
           setError(result.error);
           switchTab("details");
           return;
+        }
+
+        if ("whatsappError" in result && result.whatsappError) {
+          toast.error(`Order saved. Customer WhatsApp failed: ${result.whatsappError}`, { duration: Infinity, closeButton: true });
         }
 
         router.push("/orders");

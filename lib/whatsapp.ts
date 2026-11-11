@@ -220,14 +220,18 @@ export async function sendWhatsAppTemplateMessage(options: {
   phone: string;
   template: string;
   params: string[];
+  documentUrl?: string;
 }): Promise<WhatsAppResult> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
   logBanner(callId, "WhatsApp SEND (SMS Tech Hub template)", "hub-template");
 
-  const baseUrl =
+  const configuredBaseUrl =
     process.env.WHATSAPP_HUB_URL?.trim() ||
-    "http://smstechhub.nnsolutions.co.in/api/sendmsgutil.php";
+    "http://smstechhub.nnsolutions.co.in/api/sendmsg.php";
+  // Existing deployments may still use the old utility endpoint. The
+  // provider's current text/document contract uses sendmsg.php.
+  const baseUrl = configuredBaseUrl.replace(/\/sendmsgutil\.php(?=$|\?)/i, "/sendmsg.php");
   const user = process.env.WHATSAPP_HUB_USER?.trim();
   const pass = process.env.WHATSAPP_HUB_PASS?.trim();
   const sender = process.env.WHATSAPP_HUB_SENDER?.trim() || "BUZWAP";
@@ -254,9 +258,11 @@ export async function sendWhatsAppTemplateMessage(options: {
     return { error };
   }
 
-  const phone = formatWhatsAppPhone(options.phone);
-  if (!phone) {
-    const error = "Vendor phone number is missing.";
+  // This provider requires Indian numbers without the 91 country prefix.
+  const digits = options.phone.replace(/\D/g, "");
+  const phone = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  if (!/^\d{10}$/.test(phone)) {
+    const error = "Enter a valid 10-digit Indian phone number.";
     logSection(callId, "ABORT", { reason: error, phoneRaw: options.phone });
     logEnd(callId, false, error, Date.now() - started);
     return { error };
@@ -279,6 +285,15 @@ export async function sendWhatsAppTemplateMessage(options: {
     };
   });
 
+  let documentUrl: URL | null = null;
+  if (options.documentUrl) {
+    try {
+      documentUrl = new URL(options.documentUrl);
+      if (!["http:", "https:"].includes(documentUrl.protocol)) throw new Error("Invalid protocol");
+    } catch {
+      return { error: "A public HTTP or HTTPS PDF URL is required." };
+    }
+  }
   const query = [
     `user=${encodeURIComponent(user)}`,
     `pass=${encodeURIComponent(pass)}`,
@@ -288,6 +303,7 @@ export async function sendWhatsAppTemplateMessage(options: {
     "priority=wa",
     "stype=normal",
     `Params=${safeParams.map((p) => encodeURIComponent(p.value)).join(",")}`,
+    ...(documentUrl ? ["htype=document", `url=${encodeURIComponent(documentUrl.toString())}`] : []),
   ].join("&");
 
   const url = `${baseUrl}?${query}`;
@@ -305,7 +321,7 @@ export async function sendWhatsAppTemplateMessage(options: {
   });
 
   try {
-    const response = await fetch(url, { method: "GET" });
+    const response = await fetch(url, { method: "GET", signal: AbortSignal.timeout(15000) });
     const { contentType, raw, parsed } = await readResponseBody(response);
     const durationMs = Date.now() - started;
 
@@ -327,10 +343,14 @@ export async function sendWhatsAppTemplateMessage(options: {
     }
 
     const normalized = raw.trim().toLowerCase();
+    const responseData = parsed && typeof parsed === "object" ? parsed as Record<string, unknown> : null;
+    const explicitlyFailed = responseData?.success === false ||
+      ["error", "failed", "failure"].includes(String(responseData?.status ?? "").toLowerCase()) ||
+      /\b(error|failed|failure|unsuccessful|insufficient)\b/.test(normalized);
     const isSuccess =
-      raw.trim().startsWith("S.") ||
-      normalized.includes("success") ||
-      normalized.includes('"status":"ok"');
+      !explicitlyFailed && (raw.trim().startsWith("S.") ||
+      /\bsuccess(?:ful(?:ly)?)?\b/.test(normalized) ||
+      responseData?.success === true || responseData?.status === "ok");
 
     if (!isSuccess) {
       if (normalized.includes("no sufficient credits") || normalized.includes("insufficient")) {
@@ -440,9 +460,13 @@ export async function sendNewOrderVendorAlert(options: {
   return result;
 }
 
+/** Approved menu document template; the gateway fetches the public PDF URL. */
+export async function sendMenuPdfViaWhatsApp(phone: string, documentUrl: string): Promise<WhatsAppResult> {
+  return sendWhatsAppTemplateMessage({ phone, template: "orderpdf", params: [], documentUrl });
+}
+
 /**
- * Customer notifications try the approved customerorder template first. If it is
- * rejected, retain the legacy order_alert_final fallback as requested.
+ * Customer notifications use the approved customerorder template only.
  *
  * Parameters: {{1}} event date/time, {{2}} venue, {{3}} meal.
  * Attachments are not supported by the current Hub template endpoint.
@@ -485,39 +509,12 @@ export async function sendBookingConfirmation(options: {
   let templateResult: WhatsAppResult;
 
   if (useHub) {
-    const dishesClean = options.menuDishes
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter((l) => l && l !== "(menu not selected)")
-      .map((l) => (l.startsWith("-") || l.startsWith("•") || l.startsWith("*") ? l : `• ${l}`))
-      .join("  |  ") || "Menu confirmed";
-
-    const customerNotes = [
-      options.customerName ? `Customer: ${options.customerName}` : "",
-      options.meal ? `Meal: ${options.meal}` : "",
-      "Dhanlaxmi Caterer",
-    ]
-      .filter(Boolean)
-      .join("  |  ");
-
-    // Try the dedicated customer template before the legacy fallback.
     templateResult = await sendWhatsAppTemplateMessage({
       phone: options.phone,
       template,
       params: [options.eventDate, options.eventVenue, options.meal],
     });
 
-    if ("error" in templateResult) {
-      logSection(callId, "BOOKING FALLBACK", {
-        reason: templateResult.error,
-        fallbackTemplate: "order_alert_final",
-      });
-      templateResult = await sendWhatsAppTemplateMessage({
-        phone: options.phone,
-        template: "order_alert_final",
-        params: [options.eventDate, options.eventVenue, dishesClean, customerNotes],
-      });
-    }
   } else {
     templateResult = { error: "WhatsApp Hub configuration is missing (WHATSAPP_HUB_USER / WHATSAPP_HUB_PASS)." };
   }
