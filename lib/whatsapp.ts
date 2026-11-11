@@ -441,8 +441,8 @@ export async function sendNewOrderVendorAlert(options: {
 }
 
 /**
- * Customer notifications must use a dedicated customer template. Never fall
- * back to order_alert_final or sendWhatsAppMessage: both request vendor supplies.
+ * Customer notifications try the dedicated template first. If order_pdf is
+ * rejected, retain the legacy order_alert_final fallback as requested.
  *
  * Template body (order_pdf):
  *   Hello User,
@@ -507,14 +507,24 @@ export async function sendBookingConfirmation(options: {
       .join("  |  ");
 
     if (template === "order_pdf") {
-      // A rejected customer template is an error, not permission to send a
-      // different audience's approved template to this recipient.
+      // Try the dedicated customer template before the legacy fallback.
       templateResult = await sendWhatsAppTemplateMessage({
         phone: options.phone,
         template: "order_pdf",
         params: [],
       });
 
+      if ("error" in templateResult) {
+        logSection(callId, "BOOKING FALLBACK", {
+          reason: templateResult.error,
+          fallbackTemplate: "order_alert_final",
+        });
+        templateResult = await sendWhatsAppTemplateMessage({
+          phone: options.phone,
+          template: "order_alert_final",
+          params: [options.eventDate, options.eventVenue, dishesClean, customerNotes],
+        });
+      }
     } else {
       // Send the configured utility template directly
       templateResult = await sendWhatsAppTemplateMessage({
