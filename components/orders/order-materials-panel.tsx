@@ -13,8 +13,8 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import {
-  arrayMove,
-  rectSortingStrategy,
+  arraySwap,
+  rectSwappingStrategy,
   SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
@@ -201,7 +201,7 @@ export function OrderMaterialsPanel({
     const oldIndex = materialIds.indexOf(Number(active.id));
     const newIndex = materialIds.indexOf(Number(over.id));
     if (oldIndex < 0 || newIndex < 0) return;
-    onReorder(arrayMove(materialIds, oldIndex, newIndex));
+    onReorder(arraySwap(materialIds, oldIndex, newIndex));
   }
 
   function openEditor(materialId: number) {
@@ -277,10 +277,10 @@ export function OrderMaterialsPanel({
             }`}
           >
             <p className="mb-2 px-1 text-xs text-muted">
-              {query ? "Clear search to rearrange materials." : "Drag the handle on any card to arrange materials."}
+              {query ? "Clear search to rearrange materials." : "Drag a card by its handle onto another card to swap their positions."}
             </p>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={visibleMaterials.map((material) => material.id)} strategy={rectSortingStrategy}>
+              <SortableContext items={visibleMaterials.map((material) => material.id)} strategy={rectSwappingStrategy}>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-1.5">
               {visibleMaterials.map((material) => {
                 const item = selectedById.get(material.id);
