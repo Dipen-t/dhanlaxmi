@@ -595,7 +595,7 @@ export async function createOrder(data: OrderInput) {
         notifyVendorsForOrder({ orderId, date, eventTime, venue, numberOfPersons, mealType, materials }),
       ]);
 
-      // --- customer booking confirmation (order_pdf template + menu PDF) ---
+      // --- customer booking confirmation (customerorder template) ---
       if (customerPhone) {
         try {
           // Build the dish list for the template / fallback message.

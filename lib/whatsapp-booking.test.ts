@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { sendBookingConfirmation } from "./whatsapp";
 
-test("customer sends try order_pdf first and retain the legacy fallback on rejection", async () => {
+test("customerorder uses date, venue, meal and retains fallback only on rejection", async () => {
   const originalFetch = globalThis.fetch;
   const keys = ["WHATSAPP_DEBUG", "WHATSAPP_HUB_USER", "WHATSAPP_HUB_PASS", "WHATSAPP_BOOKING_TEMPLATE", "WHATSAPP_ORDER_TEMPLATE"];
   const previous = keys.map((key) => process.env[key]);
@@ -20,13 +20,10 @@ test("customer sends try order_pdf first and retain the legacy fallback on rejec
     };
     assert.ok("error" in await sendBookingConfirmation(options));
     assert.equal(requests.length, 2);
-    assert.equal(requests[0].searchParams.get("text"), "order_pdf");
+    assert.equal(requests[0].searchParams.get("text"), "customerorder");
+    assert.equal(requests[0].searchParams.get("Params"), [options.eventDate, options.eventVenue, options.meal].join(","));
     assert.equal(requests[1].searchParams.get("text"), "order_alert_final");
     assert.ok(requests[1].searchParams.get("Params")?.includes(options.eventVenue));
-
-    process.env.WHATSAPP_BOOKING_TEMPLATE = "order_alert_final";
-    assert.ok("error" in await sendBookingConfirmation(options));
-    assert.equal(requests.length, 2, "vendor configuration must be rejected before sending");
 
     process.env.WHATSAPP_BOOKING_TEMPLATE = "order_pdf";
     globalThis.fetch = async (input) => {
@@ -35,7 +32,7 @@ test("customer sends try order_pdf first and retain the legacy fallback on rejec
     };
     assert.deepEqual(await sendBookingConfirmation(options), { success: true });
     assert.equal(requests.length, 3);
-    assert.equal(requests[2].searchParams.get("text"), "order_pdf", "successful customer send needs no fallback");
+    assert.equal(requests[2].searchParams.get("text"), "customerorder", "successful customer send needs no fallback");
   } finally {
     globalThis.fetch = originalFetch;
     keys.forEach((key, index) => {

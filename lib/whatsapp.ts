@@ -441,13 +441,10 @@ export async function sendNewOrderVendorAlert(options: {
 }
 
 /**
- * Customer notifications try the dedicated template first. If order_pdf is
+ * Customer notifications try the approved customerorder template first. If it is
  * rejected, retain the legacy order_alert_final fallback as requested.
  *
- * Template body (order_pdf):
- *   Hello User,
- *   Kindly find the menu.
- *   Thankyou.
+ * Parameters: {{1}} event date/time, {{2}} venue, {{3}} meal.
  * Attachments are not supported by the current Hub template endpoint.
  */
 export async function sendBookingConfirmation(options: {
@@ -463,14 +460,11 @@ export async function sendBookingConfirmation(options: {
 }): Promise<WhatsAppResult> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
-  logBanner(callId, "WhatsApp BOOKING CONFIRMATION (order_pdf)", "booking-confirmation");
+  logBanner(callId, "WhatsApp BOOKING CONFIRMATION (customerorder)", "booking-confirmation");
 
-  const template =
-    process.env.WHATSAPP_BOOKING_TEMPLATE?.trim() || "order_pdf";
-  const vendorTemplate = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
-  if (["order_alert_final", "new order alert", vendorTemplate.toLowerCase()].includes(template.toLowerCase())) {
-    return { error: "WHATSAPP_BOOKING_TEMPLATE must be a customer confirmation template, not the vendor alert template." };
-  }
+  // Use this exact approved template and parameter contract even on hosts
+  // that still have the legacy order_pdf environment setting.
+  const template = "customerorder";
   const useHub = isWhatsAppHubConfigured();
 
   logSection(callId, "ROUTING", {
@@ -506,36 +500,22 @@ export async function sendBookingConfirmation(options: {
       .filter(Boolean)
       .join("  |  ");
 
-    if (template === "order_pdf") {
-      // Try the dedicated customer template before the legacy fallback.
-      templateResult = await sendWhatsAppTemplateMessage({
-        phone: options.phone,
-        template: "order_pdf",
-        params: [],
-      });
+    // Try the dedicated customer template before the legacy fallback.
+    templateResult = await sendWhatsAppTemplateMessage({
+      phone: options.phone,
+      template,
+      params: [options.eventDate, options.eventVenue, options.meal],
+    });
 
-      if ("error" in templateResult) {
-        logSection(callId, "BOOKING FALLBACK", {
-          reason: templateResult.error,
-          fallbackTemplate: "order_alert_final",
-        });
-        templateResult = await sendWhatsAppTemplateMessage({
-          phone: options.phone,
-          template: "order_alert_final",
-          params: [options.eventDate, options.eventVenue, dishesClean, customerNotes],
-        });
-      }
-    } else {
-      // Send the configured utility template directly
+    if ("error" in templateResult) {
+      logSection(callId, "BOOKING FALLBACK", {
+        reason: templateResult.error,
+        fallbackTemplate: "order_alert_final",
+      });
       templateResult = await sendWhatsAppTemplateMessage({
         phone: options.phone,
-        template,
-        params: [
-          options.eventDate,
-          options.eventVenue,
-          dishesClean,
-          customerNotes,
-        ],
+        template: "order_alert_final",
+        params: [options.eventDate, options.eventVenue, dishesClean, customerNotes],
       });
     }
   } else {
