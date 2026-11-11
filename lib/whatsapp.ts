@@ -441,17 +441,14 @@ export async function sendNewOrderVendorAlert(options: {
 }
 
 /**
- * Customer booking-confirmation via the approved "order_pdf" Hub template,
- * plus the menu PDF sent as an attachment through ChatNexa.
+ * Customer notifications must use a dedicated customer template. Never fall
+ * back to order_alert_final or sendWhatsAppMessage: both request vendor supplies.
  *
  * Template body (order_pdf):
  *   Hello User,
  *   Kindly find the menu.
  *   Thankyou.
- *   (PDF attachment delivered separately via ChatNexa)
- *
- * When Hub credentials are absent the function falls back to a free-text
- * ChatNexa message (without the template, but still with the PDF if provided).
+ * Attachments are not supported by the current Hub template endpoint.
  */
 export async function sendBookingConfirmation(options: {
   phone: string;
@@ -470,6 +467,10 @@ export async function sendBookingConfirmation(options: {
 
   const template =
     process.env.WHATSAPP_BOOKING_TEMPLATE?.trim() || "order_pdf";
+  const vendorTemplate = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
+  if (["order_alert_final", "new order alert", vendorTemplate.toLowerCase()].includes(template.toLowerCase())) {
+    return { error: "WHATSAPP_BOOKING_TEMPLATE must be a customer confirmation template, not the vendor alert template." };
+  }
   const useHub = isWhatsAppHubConfigured();
 
   logSection(callId, "ROUTING", {
@@ -483,9 +484,7 @@ export async function sendBookingConfirmation(options: {
     template,
     hasPdf: Boolean(options.pdfBase64),
     pdfFilename: options.pdfFilename || "(none)",
-    path: useHub
-      ? "hub-template (order_pdf) + ChatNexa PDF attachment"
-      : "chatnexa free-text + PDF attachment",
+    path: "hub-template (dedicated customer template)",
     hubConfigured: useHub,
   });
 
@@ -508,31 +507,14 @@ export async function sendBookingConfirmation(options: {
       .join("  |  ");
 
     if (template === "order_pdf") {
-      // First attempt order_pdf
+      // A rejected customer template is an error, not permission to send a
+      // different audience's approved template to this recipient.
       templateResult = await sendWhatsAppTemplateMessage({
         phone: options.phone,
         template: "order_pdf",
         params: [],
       });
 
-      // If order_pdf is not supported on the Utility endpoint (sendmsgutil.php),
-      // fall back to the approved utility template order_alert_final so the customer receives the booking confirmation.
-      if ("error" in templateResult) {
-        logSection(callId, "BOOKING FALLBACK", {
-          reason: templateResult.error,
-          fallbackTemplate: "order_alert_final",
-        });
-        templateResult = await sendWhatsAppTemplateMessage({
-          phone: options.phone,
-          template: "order_alert_final",
-          params: [
-            options.eventDate,
-            options.eventVenue,
-            dishesClean,
-            customerNotes,
-          ],
-        });
-      }
     } else {
       // Send the configured utility template directly
       templateResult = await sendWhatsAppTemplateMessage({

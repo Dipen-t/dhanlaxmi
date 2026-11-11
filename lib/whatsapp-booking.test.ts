@@ -1,0 +1,44 @@
+import assert from "node:assert/strict";
+import { test } from "node:test";
+import { sendBookingConfirmation } from "./whatsapp";
+
+test("customer sends never fall back to the vendor template", async () => {
+  const originalFetch = globalThis.fetch;
+  const keys = ["WHATSAPP_DEBUG", "WHATSAPP_HUB_USER", "WHATSAPP_HUB_PASS", "WHATSAPP_BOOKING_TEMPLATE", "WHATSAPP_ORDER_TEMPLATE"];
+  const previous = keys.map((key) => process.env[key]);
+  const requests: URL[] = [];
+  const options = { phone: "9999999999", customerName: "Test customer", eventDate: "30/11/2026 at 10:00 PM", eventVenue: "Test venue", meal: "dinner", menuDishes: "Paneer", fallbackMessage: "Your booking is confirmed." };
+  try {
+    process.env.WHATSAPP_DEBUG = "0";
+    process.env.WHATSAPP_HUB_USER = "test";
+    process.env.WHATSAPP_HUB_PASS = "test";
+    process.env.WHATSAPP_ORDER_TEMPLATE = "order_alert_final";
+    process.env.WHATSAPP_BOOKING_TEMPLATE = "order_pdf";
+    globalThis.fetch = async (input) => {
+      requests.push(new URL(String(input)));
+      return new Response("Template rejected", { status: 400 });
+    };
+    assert.ok("error" in await sendBookingConfirmation(options));
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].searchParams.get("text"), "order_pdf");
+
+    process.env.WHATSAPP_BOOKING_TEMPLATE = "order_alert_final";
+    assert.ok("error" in await sendBookingConfirmation(options));
+    assert.equal(requests.length, 1, "vendor configuration must be rejected before sending");
+
+    process.env.WHATSAPP_BOOKING_TEMPLATE = "order_pdf";
+    globalThis.fetch = async (input) => {
+      requests.push(new URL(String(input)));
+      return new Response("S. Message queued", { status: 200 });
+    };
+    assert.deepEqual(await sendBookingConfirmation(options), { success: true });
+    assert.equal(requests.length, 2);
+    assert.ok(requests.every((request) => request.searchParams.get("text") === "order_pdf"));
+  } finally {
+    globalThis.fetch = originalFetch;
+    keys.forEach((key, index) => {
+      if (previous[index] === undefined) delete process.env[key];
+      else process.env[key] = previous[index];
+    });
+  }
+});
