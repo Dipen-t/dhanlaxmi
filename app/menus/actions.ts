@@ -373,7 +373,7 @@ export async function deleteMenu(formData: FormData) {
   return { success: true as const };
 }
 
-export async function shareMenuViaWhatsApp(menuId: number, phone: string, _text: string) {
+export async function shareMenuViaWhatsApp(menuId: number, phone: string, _text: string, theme = "standard") {
   if (!phone) {
     return { error: "Phone number is required." };
   }
@@ -388,7 +388,7 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, _text:
   }
 
   try {
-    const pdfUrl = await getWhatsAppPdfUrl("menus", menuId);
+    const pdfUrl = await getWhatsAppPdfUrl("menus", menuId, theme);
     const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl);
     if ("error" in result && result.error) {
       return { error: result.error };

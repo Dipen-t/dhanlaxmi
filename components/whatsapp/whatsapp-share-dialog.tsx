@@ -1,7 +1,7 @@
 "use client";
 
 import { MessageCircle, X } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { openWhatsAppShare } from "@/lib/whatsapp-share";
@@ -19,6 +19,7 @@ type WhatsappShareDialogProps = {
   ariaLabel?: string;
   disabled?: boolean;
   directOnly?: boolean;
+  content?: ReactNode;
 };
 
 export function WhatsappShareDialog({
@@ -33,6 +34,7 @@ export function WhatsappShareDialog({
   ariaLabel,
   disabled = false,
   directOnly = false,
+  content,
 }: WhatsappShareDialogProps) {
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
@@ -142,10 +144,10 @@ export function WhatsappShareDialog({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby={titleId}
-                className="relative z-10 w-full max-w-sm overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl"
+                className={`relative z-10 flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl ${content ? "max-w-3xl" : "max-w-sm"}`}
                 style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
               >
-                <div className="flex items-center justify-between border-b border-border px-5 py-4">
+                <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
                   <h2 id={titleId} className="text-base font-semibold">
                     {title}
                   </h2>
@@ -159,8 +161,9 @@ export function WhatsappShareDialog({
                   </button>
                 </div>
 
-                <form onSubmit={handleServerSend} className="flex flex-col gap-4 p-5">
+                <form onSubmit={handleServerSend} className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain p-5">
                   <p className="text-sm text-muted text-pretty">{description}</p>
+                  {content ? <fieldset disabled={isLoading || success} className="min-w-0">{content}</fieldset> : null}
                   <div className="space-y-1.5">
                     <label htmlFor={`${titleId}-phone`} className="text-sm font-medium">
                       {directOnly ? "Recipient phone number" : "Phone number (optional for Open WhatsApp)"}

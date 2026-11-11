@@ -27,7 +27,12 @@ const nextConfig: NextConfig = {
       "./public/fonts/menu/*.ttf",
       "./public/menu-category-images/pdf/*.png",
     ],
-    "/api/kitchen-menus/*/pdf": ["./public/fonts/menu/*.ttf"],
+    "/api/kitchen-menus/*/pdf": [
+      "./public/fonts/menu/*.ttf",
+      "./public/menu-themes/*/background-*pdf.jpg",
+      "./public/menu-themes/logo-*.png",
+      "./public/menu-category-images/pdf/*.png",
+    ],
   },
   async headers() {
     return [

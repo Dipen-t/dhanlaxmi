@@ -32,10 +32,11 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   try {
+    const theme = new URL(_request.url).searchParams.get("theme") || "standard";
     const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
     const { generateKitchenMenuPdfBuffer } = await import("@/lib/menus/generate-kitchen-menu-pdf");
     const logo = await getPdfLogoAssets();
-    const pdfBuffer = await generateKitchenMenuPdfBuffer(menu, logo);
+    const pdfBuffer = await generateKitchenMenuPdfBuffer(menu, logo, theme);
 
     const filename = `${sanitizeFilename(menu.name)}-kitchen.pdf`;
 

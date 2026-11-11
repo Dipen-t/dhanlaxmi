@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { MenuThemePicker } from "@/components/menus/menu-theme-picker";
+
 import {
   shareKitchenMenuViaWhatsApp,
   type KitchenMenuDetail,
@@ -30,9 +33,11 @@ export function KitchenMenuWhatsappShare({
   className = "",
   buttonClassName,
 }: KitchenMenuWhatsappShareProps) {
+  const [theme, setTheme] = useState("standard");
   return (
     <WhatsappShareDialog
       directOnly
+      content={<MenuThemePicker value={theme} onChange={setTheme} />}
       title="Share kitchen menu"
       description="Send the kitchen menu and PDF directly to the recipient."
       variant={variant}
@@ -53,7 +58,7 @@ export function KitchenMenuWhatsappShare({
           })),
         })
       }
-      onServerSend={(phone, text) => shareKitchenMenuViaWhatsApp(menu.id, phone, text)}
+      onServerSend={(phone, text) => shareKitchenMenuViaWhatsApp(menu.id, phone, text, theme)}
     />
   );
 }
