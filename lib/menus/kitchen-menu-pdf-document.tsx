@@ -1,107 +1,362 @@
-import { Document, Image, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
+import {
+  Document,
+  Image,
+  Page,
+  StyleSheet,
+  Text,
+  View,
+} from "@react-pdf/renderer";
+
 import type { KitchenMenuDetail } from "@/app/kitchen-menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
+const PAGE_HORIZONTAL_PADDING = 36;
+const HEADER_CLEARANCE = 50;
+
+const colors = {
+  white: "#FFFFFF",
+  cream: "#FFFFFF",
+  ink: "#000000",
+  muted: "#333333",
+  teal: "#000000",
+  tealDeep: "#000000",
+  tealLine: "#000000",
+  rule: "#000000",
+};
+
 const styles = StyleSheet.create({
-  page: { padding: 32, paddingBottom: 35, fontFamily: "SourceSans", fontSize: 10, color: "#000000", backgroundColor: "#FFFFFF" },
-  header: { alignItems: "center", marginBottom: 12 },
-  title: { fontSize: 10, marginTop: 5, textAlign: "center" },
-  table: { borderTopWidth: 0.6, borderLeftWidth: 0.6, borderColor: "#555555" },
-  row: { flexDirection: "row" },
-  half: { width: "50%", flexDirection: "row" },
-  cell: { borderRightWidth: 0.6, borderBottomWidth: 0.6, borderColor: "#555555", paddingHorizontal: 5, paddingVertical: 4, minHeight: 23, justifyContent: "center" },
-  label: { width: "48%" },
-  value: { width: "52%" },
-  labelText: { fontSize: 10, fontWeight: 600 },
-  valueText: { fontSize: 10, lineHeight: 1.2 },
-  footer: { position: "absolute", bottom: 17, left: 32, right: 32, textAlign: "right", fontSize: 8, color: "#555555" },
+  page: {
+    backgroundColor: colors.cream,
+    paddingTop: HEADER_CLEARANCE,
+    paddingBottom: 36,
+    paddingHorizontal: PAGE_HORIZONTAL_PADDING,
+    fontFamily: "SourceSans",
+    fontSize: 10,
+    color: colors.ink,
+  },
+  pageHeader: {
+    position: "absolute",
+    top: 14,
+    left: PAGE_HORIZONTAL_PADDING,
+    right: PAGE_HORIZONTAL_PADDING,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+  },
+  coverSection: {
+    marginBottom: 8,
+    alignItems: "center",
+  },
+  coverBody: {
+    width: "100%",
+    maxWidth: 420,
+    alignItems: "center",
+  },
+  menuTitle: {
+    fontFamily: "SourceSans",
+    fontSize: 24,
+    fontWeight: 700,
+    color: colors.ink,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  menuSubtitle: {
+    fontFamily: "SourceSans",
+    fontSize: 12,
+    color: colors.ink,
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  fieldsCard: {
+    backgroundColor: colors.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.rule,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 4,
+    width: "100%",
+  },
+  fieldsRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  field: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 4,
+  },
+  fieldLabel: {
+    fontSize: 8.5,
+    fontFamily: "SourceSans",
+    fontWeight: 600,
+    color: colors.teal,
+    marginRight: 5,
+  },
+  fieldLine: {
+    flex: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.ink,
+    marginBottom: 2,
+    minWidth: 40,
+  },
+  fieldValue: {
+    fontSize: 9.5,
+    fontFamily: "SourceSans",
+    color: colors.ink,
+    marginLeft: 4,
+  },
+  sectionIntro: {
+    display: "none",
+  },
+  categoryBlock: {
+    marginBottom: 10,
+  },
+  categoryHeader: {
+    marginBottom: 4,
+  },
+  categoryTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+  },
+  flankLine: {
+    display: "none",
+  },
+  categoryName: {
+    fontFamily: "SourceSans",
+    fontWeight: 700,
+    fontSize: 14,
+    textTransform: "uppercase",
+    color: colors.ink,
+    paddingHorizontal: 12,
+    textAlign: "center",
+  },
+  selectionRule: {
+    display: "none",
+  },
+  dishGrid: {
+    paddingTop: 2,
+  },
+  dishRow: {
+    flexDirection: "row",
+    width: "100%",
+  },
+  dishItem: {
+    width: "33.33%",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingRight: 8,
+    paddingVertical: 3,
+  },
+  dishItemSingleColumn: {
+    width: "100%",
+  },
+  dishItemTwoColumns: {
+    width: "50%",
+  },
+  dishQuantity: {
+    fontSize: 10,
+    fontFamily: "SourceSans",
+    color: colors.tealDeep,
+    marginLeft: 4,
+    fontWeight: 600,
+    flexShrink: 0,
+  },
+  dishName: {
+    fontSize: 10.5,
+    fontFamily: "SourceSans",
+    color: colors.ink,
+    lineHeight: 1.2,
+    flexGrow: 1,
+    flexShrink: 1,
+  },
+  counterGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 5,
+  },
+  counterItem: {
+    width: "33.33%",
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  counterName: {
+    fontSize: 9.5,
+    fontFamily: "SourceSans",
+    color: colors.ink,
+    marginRight: 4,
+  },
+  footer: {
+    position: "absolute",
+    bottom: 16,
+    left: PAGE_HORIZONTAL_PADDING,
+    right: PAGE_HORIZONTAL_PADDING,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: colors.tealLine,
+    paddingTop: 5,
+  },
+  footerBrand: {
+    fontFamily: "SourceSans",
+    fontSize: 10,
+    color: colors.ink,
+  },
+  footerPage: {
+    fontFamily: "SourceSans",
+    fontSize: 7,
+    color: colors.muted,
+  },
 });
 
-type Entry = { label: string; value: string };
-type MenuPdfDocumentProps = { menu: KitchenMenuDetail; logo: PdfLogoAssets };
+type MenuPdfDocumentProps = {
+  menu: KitchenMenuDetail;
+  logo: PdfLogoAssets;
+};
 
-function menuEntries(menu: KitchenMenuDetail): Entry[] {
-  const date = menu.date ? new Date(menu.date) : null;
-  const dateLabel = date && !Number.isNaN(date.getTime())
-    ? `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}` : "";
-  const entries: Entry[] = [
-    { label: "DATE", value: dateLabel },
-    { label: "VENUE", value: menu.venue ?? "" },
-    { label: "PERSONS", value: menu.numberOfPersons ? String(menu.numberOfPersons) : "" },
-    { label: "LUNCH", value: menu.mealType === "Lunch" ? "Yes" : "" },
-    { label: "DINNER", value: menu.mealType === "Dinner" ? "Yes" : "" },
-    { label: "DELIVER BY", value: formatDeliveryTime(menu.deliveryTime) ?? "" },
-  ];
-  for (const category of menu.categories) {
-    if (category.isQtyField) {
-      for (const dish of category.dishes) entries.push({ label: dish.name, value: dish.quantity ?? "" });
-    } else {
-      // Each dish remains a complete row; large categories can span pages.
-      category.dishes.forEach((dish, index) => {
-        entries.push({ label: index === 0 ? category.name : `${category.name} (cont.)`, value: dish.quantity ? `${dish.name} - ${dish.quantity}` : dish.name });
-      });
-    }
-  }
-  return entries;
-}
-
-function Cells({ entry }: { entry?: Entry }) {
+function PageHeader({ logo }: { logo: PdfLogoAssets }) {
   return (
-    <View style={styles.half}>
-      <View style={[styles.cell, styles.label]}><Text style={styles.labelText}>{entry?.label.toUpperCase() ?? " "}</Text></View>
-      <View style={[styles.cell, styles.value]}><Text style={styles.valueText}>{entry?.value || " "}</Text></View>
+    <View style={styles.pageHeader} fixed>
+      <Image
+        src={logo.src}
+        style={{ width: logo.headerWidth, height: logo.headerHeight }}
+      />
     </View>
   );
 }
 
-function lineCount(text: string, capacity: number) {
-  let lines = 1;
-  let used = 0;
-  for (const word of text.split(/\s+/)) {
-    const length = word.length;
-    if (used && used + length + 1 > capacity) { lines++; used = 0; }
-    lines += Math.floor(Math.max(0, length - 1) / capacity);
-    used = (used ? used + 1 : 0) + (length % capacity || capacity);
-  }
-  return lines;
+function CategorySection({
+  category,
+}: {
+  category: KitchenMenuDetail["categories"][number];
+}) {
+  const columns = category.dishes.length <= 3 ? 1 : category.isQtyField ? 2 : 3;
+  const rows = Array.from(
+    { length: Math.ceil(category.dishes.length / columns) },
+    (_, index) => category.dishes.slice(index * columns, (index + 1) * columns),
+  );
+
+  return (
+    <View style={styles.categoryBlock}>
+      <View style={styles.categoryHeader} minPresenceAhead={32}>
+        <View style={styles.categoryTitleRow}>
+          <Text style={styles.categoryName}>{category.name}</Text>
+        </View>
+      </View>
+
+      <View style={styles.dishGrid}>
+        {rows.map((row, rowIndex) => (
+          <View key={`${category.id}-row-${rowIndex}`} style={styles.dishRow} wrap={false}>
+            {row.map((dish) => (
+              <View
+                key={dish.id}
+                style={[
+                  styles.dishItem,
+                  columns === 1
+                    ? styles.dishItemSingleColumn
+                    : columns === 2
+                      ? styles.dishItemTwoColumns
+                      : {},
+                ]}
+              >
+                {dish.quantity ? (
+                  <>
+                    <Text style={styles.dishName}>{dish.name}</Text>
+                    <Text style={styles.dishQuantity}>- {dish.quantity}</Text>
+                  </>
+                ) : (
+                  <Text style={styles.dishName}>{dish.name}</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
 }
 
 export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
-  const entries = menuEntries(menu);
-  const midpoint = Math.ceil(entries.length / 2);
-  const left = entries.slice(0, midpoint);
-  const right = entries.slice(midpoint);
-  const pages: { left: Entry; right?: Entry }[][] = [[]];
-  let height = 0;
-  left.forEach((entry, index) => {
-    const other = right[index];
-    const lines = Math.max(lineCount(entry.label, 18), lineCount(entry.value, 22), lineCount(other?.label ?? "", 18), lineCount(other?.value ?? "", 22));
-    const rowHeight = Math.max(23, lines * 13 + 10);
-    if (height + rowHeight > 580 && pages[pages.length - 1].length) {
-      pages.push([]);
-      height = 0;
-    }
-    pages[pages.length - 1].push({ left: entry, right: other });
-    height += rowHeight;
-  });
-  const logoWidth = 230;
+  const deliveryTime = formatDeliveryTime(menu.deliveryTime);
   return (
-    <Document title={`${menu.name} - Kitchen`} author="Dhanlaxmi Caterer">
-      {pages.map((rows, pageIndex) => <Page key={pageIndex} size="A4" style={styles.page}>
-        <View style={styles.header}>
-          <Image src={logo.src} style={{ width: logoWidth, height: logoWidth * logo.headerHeight / logo.headerWidth }} />
-          <Text style={styles.title}>{menu.name}</Text>
-        </View>
-        <View style={styles.table}>
-          {rows.map((row, index) => (
-            <View key={index} style={styles.row} wrap={false}>
-              <Cells entry={row.left} /><Cells entry={row.right} />
+    <Document title={`${menu.name} - Kitchen`} author="Dhalaxmi Catering Service">
+      <Page size="A4" style={styles.page}>
+        <PageHeader logo={logo} />
+
+        <View style={styles.coverSection} wrap={false}>
+          <View style={styles.coverBody}>
+            <Text style={styles.menuTitle}>{menu.name}</Text>
+            <Text style={styles.menuSubtitle}>Kitchen Operations Menu</Text>
+
+            <View style={styles.fieldsCard}>
+              <View style={[styles.fieldsRow, { marginBottom: 8 }]}>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Venue:</Text>
+                  {menu.venue ? (
+                    <Text style={styles.fieldValue}>{menu.venue}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Date:</Text>
+                  {menu.date ? (
+                    <Text style={styles.fieldValue}>{new Date(menu.date).toLocaleDateString()}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
+                </View>
+              </View>
+              <View style={styles.fieldsRow}>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Persons:</Text>
+                  {menu.numberOfPersons ? (
+                    <Text style={styles.fieldValue}>{menu.numberOfPersons}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
+                </View>
+                <View style={styles.field}>
+                  <Text style={styles.fieldLabel}>Deliver by:</Text>
+                  {deliveryTime ? (
+                    <Text style={styles.fieldValue}>{deliveryTime}</Text>
+                  ) : (
+                    <View style={styles.fieldLine} />
+                  )}
+                </View>
+              </View>
+              {menu.mealType ? (
+                <View style={[styles.fieldsRow, { marginTop: 8 }]}>
+                  <View style={styles.field}>
+                    <Text style={styles.fieldLabel}>Meal:</Text>
+                    <Text style={styles.fieldValue}>{menu.mealType}</Text>
+                  </View>
+                  <View style={styles.field} />
+                </View>
+              ) : null}
             </View>
-          ))}
+          </View>
         </View>
-        <Text style={styles.footer} fixed render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
-      </Page>)}
+
+        {menu.categories.map((category, index) => (
+          <CategorySection key={`${category.id}-${index}`} category={category} />
+        ))}
+
+        <View style={styles.footer} fixed>
+          <Text style={styles.footerBrand}>Dhalaxmi Catering Service</Text>
+          <Text
+            style={styles.footerPage}
+            render={({ pageNumber, totalPages }) =>
+              `${menu.name} (Kitchen)  ·  Page ${pageNumber} of ${totalPages}`
+            }
+          />
+        </View>
+      </Page>
     </Document>
   );
 }
