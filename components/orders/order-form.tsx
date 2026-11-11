@@ -207,6 +207,14 @@ export function OrderForm({
       return;
     }
 
+    const form = event.currentTarget;
+    if (!form.checkValidity()) {
+      setError("Please complete the required order details highlighted below.");
+      switchTab("details");
+      window.setTimeout(() => form.reportValidity(), 50);
+      return;
+    }
+
     const selectedById = new Map(selectedMaterials.map((item) => [item.rawMaterialId, item]));
     const itemsToSubmit = orderedMaterialIds
       .map((id) => selectedById.get(id))
@@ -244,17 +252,23 @@ export function OrderForm({
     };
 
     startTransition(async () => {
-      const result = isEditing
-        ? await updateOrder(data)
-        : await createOrder(data);
+      try {
+        const result = isEditing
+          ? await updateOrder(data)
+          : await createOrder(data);
 
-      if (result.error) {
-        setError(result.error);
+        if (result.error) {
+          setError(result.error);
+          switchTab("details");
+          return;
+        }
+
+        router.push("/orders");
+        router.refresh();
+      } catch {
+        setError("The order could not be saved. Check your connection and try again. If this continues, check the server log.");
         window.scrollTo({ top: 0, behavior: "smooth" });
-        return;
       }
-
-      router.push("/orders");
     });
   }
 
@@ -276,6 +290,7 @@ export function OrderForm({
   return (
     <form
       onSubmit={handleSubmit}
+      noValidate
       className={
         fullScreenMode
           ? "fixed inset-0 z-40 flex flex-col gap-2 overflow-hidden bg-background px-4 pt-2.5 pb-19 sm:px-6"
