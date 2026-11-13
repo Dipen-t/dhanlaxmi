@@ -19,7 +19,20 @@ export function buildPublicPdfUrl(origin: string, kind: "menus" | "kitchen-menus
   return pdfUrl.toString();
 }
 
-export async function getWhatsAppPdfUrl(kind: "menus" | "kitchen-menus", id: number, theme = "standard") {
+export async function getWhatsAppPdfUrl(
+  kind: "menus" | "kitchen-menus",
+  id: number,
+  theme: string,
+  renderPdf: () => Promise<Buffer>,
+) {
+  if (kind === "menus" && !menuPdfThemes.some((item) => item.id === theme)) {
+    throw new Error("Select a valid PDF design.");
+  }
+  const token = process.env.BLOB_READ_WRITE_TOKEN?.trim();
+  if (token) {
+    const { uploadWhatsAppPdf } = await import("@/lib/whatsapp-pdf-blob");
+    return uploadWhatsAppPdf(await renderPdf(), token);
+  }
   const configured = process.env.WHATSAPP_PUBLIC_APP_URL?.trim();
   if (configured) return buildPublicPdfUrl(configured, kind, id, theme);
   const requestHeaders = await headers();

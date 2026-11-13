@@ -389,7 +389,14 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, recipi
   }
 
   try {
-    const pdfUrl = await getWhatsAppPdfUrl("menus", menuId, theme);
+    const pdfUrl = await getWhatsAppPdfUrl("menus", menuId, theme, async () => {
+      const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
+      const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
+      return generateMenuPdfBuffer(menu, await getPdfLogoAssets(), theme, {
+        fontFamily: "SourceSans",
+        fontSize: "10pt",
+      });
+    });
     const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl, sanitizeFilename(menu.name), recipientName);
     if ("error" in result && result.error) {
       return { error: result.error };

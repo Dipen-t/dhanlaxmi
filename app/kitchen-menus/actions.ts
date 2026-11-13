@@ -339,7 +339,11 @@ export async function shareKitchenMenuViaWhatsApp(
     const { sendMenuPdfViaWhatsApp } = await import("@/lib/whatsapp");
     const { getWhatsAppPdfUrl } = await import("@/lib/whatsapp-pdf-url");
     const { sanitizeFilename } = await import("@/lib/menus/sanitize-filename");
-    const pdfUrl = await getWhatsAppPdfUrl("kitchen-menus", menuId);
+    const pdfUrl = await getWhatsAppPdfUrl("kitchen-menus", menuId, "standard", async () => {
+      const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
+      const { generateKitchenMenuPdfBuffer } = await import("@/lib/menus/generate-kitchen-menu-pdf");
+      return generateKitchenMenuPdfBuffer(menu, await getPdfLogoAssets());
+    });
     const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl, `${sanitizeFilename(menu.name)}-kitchen`, recipientName);
     if ("error" in result && result.error) {
       return { error: result.error };
