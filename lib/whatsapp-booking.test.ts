@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { sendBookingConfirmation, sendMenuPdfViaWhatsApp } from "./whatsapp";
+import { sendBookingConfirmation, sendMenuPdfViaWhatsApp, sendWhatsAppTemplateMessage } from "./whatsapp";
 
 test("customer and PDF sends use exact templates and return provider errors without vendor fallback", async () => {
   const originalFetch = globalThis.fetch;
@@ -48,6 +48,14 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.equal(requests[2].searchParams.get("fname"), "dinner-menu");
     assert.equal(requests[2].searchParams.get("url"), documentUrl);
     assert.equal(requests[2].searchParams.get("Params"), "Priya Sharma");
+    const vendorAlert = await sendWhatsAppTemplateMessage({
+      phone: options.phone,
+      template: "order_alert_final",
+      params: [options.eventDate, options.eventVenue, options.menuDishes, "Test notes"],
+    });
+    assert.deepEqual(vendorAlert, { success: true });
+    assert.equal(requests[3].pathname, "/api/sendmsgutil.php");
+    assert.equal(requests[3].searchParams.get("text"), "order_alert_final");
     globalThis.fetch = async () => new Response("Document URL not accessible", { status: 422 });
     const documentError = await sendMenuPdfViaWhatsApp(options.phone, documentUrl, "dinner-menu", "Priya Sharma");
     assert.ok("error" in documentError && documentError.error.includes("Document URL not accessible"));

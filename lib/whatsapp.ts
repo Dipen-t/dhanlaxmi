@@ -214,7 +214,7 @@ export async function sendWhatsAppMessage(
 
 /**
  * Template WhatsApp via SMS Tech Hub (normal text + Params).
- * Booking confirmations and documents use sendmsgutil.php.
+ * All WhatsApp templates use sendmsgutil.php.
  */
 export async function sendWhatsAppTemplateMessage(options: {
   phone: string;
@@ -228,11 +228,8 @@ export async function sendWhatsAppTemplateMessage(options: {
 
   const configuredBaseUrl =
     process.env.WHATSAPP_HUB_URL?.trim() ||
-    "http://smstechhub.nnsolutions.co.in/api/sendmsg.php";
-  const useUtilityEndpoint = options.template === "customerorder" || Boolean(options.document);
-  const baseUrl = useUtilityEndpoint
-    ? configuredBaseUrl.replace(/\/sendmsg\.php(?=$|\?)/i, "/sendmsgutil.php")
-    : configuredBaseUrl.replace(/\/sendmsgutil\.php(?=$|\?)/i, "/sendmsg.php");
+    "https://smstechhub.nnsolutions.co.in/api/sendmsgutil.php";
+  const baseUrl = configuredBaseUrl.replace(/\/sendmsg\.php(?=$|\?)/i, "/sendmsgutil.php");
   const user = process.env.WHATSAPP_HUB_USER?.trim();
   const pass = process.env.WHATSAPP_HUB_PASS?.trim();
   const sender = process.env.WHATSAPP_HUB_SENDER?.trim() || "BUZWAP";
