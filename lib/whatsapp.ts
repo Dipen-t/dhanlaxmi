@@ -109,6 +109,12 @@ function formatWhatsAppPhone(receiver: string) {
   return digits;
 }
 
+export function normalizeWhatsAppHubPhone(value: string) {
+  const digits = value.replace(/\D/g, "");
+  const local = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
+  return /^\d{10}$/.test(local) ? local : null;
+}
+
 async function readResponseBody(response: Response) {
   const contentType = response.headers.get("content-type") || "(none)";
   const raw = await response.text();
@@ -257,9 +263,8 @@ export async function sendWhatsAppTemplateMessage(options: {
   }
 
   // This provider requires Indian numbers without the 91 country prefix.
-  const digits = options.phone.replace(/\D/g, "");
-  const phone = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
-  if (!/^\d{10}$/.test(phone)) {
+  const phone = normalizeWhatsAppHubPhone(options.phone);
+  if (!phone) {
     const error = "Enter a valid 10-digit Indian phone number.";
     logSection(callId, "ABORT", { reason: error, phoneRaw: options.phone });
     logEnd(callId, false, error, Date.now() - started);

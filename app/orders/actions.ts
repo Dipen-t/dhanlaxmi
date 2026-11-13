@@ -15,7 +15,7 @@ import {
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
-import { sendNewOrderVendorAlert, sendBookingConfirmation } from "@/lib/whatsapp";
+import { normalizeWhatsAppHubPhone, sendNewOrderVendorAlert, sendBookingConfirmation } from "@/lib/whatsapp";
 import { formatEventTime } from "@/lib/orders/event-time";
 
 
@@ -355,6 +355,7 @@ async function notifyVendorsForOrder(params: {
   venue: string;
   numberOfPersons: number;
   mealType: string;
+  customerPhone: string | null;
   materials: OrderRawMaterialRecord[];
   targetVendorIds?: number[];
 }) {
@@ -365,6 +366,7 @@ async function notifyVendorsForOrder(params: {
     venue,
     numberOfPersons,
     mealType,
+    customerPhone,
     materials,
     targetVendorIds,
   } = params;
@@ -444,9 +446,14 @@ async function notifyVendorsForOrder(params: {
       })),
     );
 
+    const customerNumber = normalizeWhatsAppHubPhone(customerPhone ?? "");
     let index = 0;
     for (const group of vendorGroups.values()) {
       index += 1;
+      if (customerNumber && normalizeWhatsAppHubPhone(group.vendor.phone) === customerNumber) {
+        console.warn(`[WA-notify] order ${orderId}: skipped vendor ${group.vendor.id} because its phone matches the customer`);
+        continue;
+      }
       const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
       const [yyyy, mm, dd] = date.split("-");
       const formattedDate = `${dd}/${mm}/${yyyy}`;
@@ -589,7 +596,7 @@ export async function createOrder(data: OrderInput) {
     revalidatePath("/orders");
 
     after(async () => {
-      await notifyVendorsForOrder({ orderId, date, eventTime, venue, numberOfPersons, mealType, materials });
+      await notifyVendorsForOrder({ orderId, date, eventTime, venue, numberOfPersons, mealType, customerPhone, materials });
     });
 
     // Wait for the customer result so the operator can see provider errors.
@@ -812,6 +819,7 @@ export async function updateOrder(data: OrderInput) {
             venue,
             numberOfPersons,
             mealType,
+            customerPhone,
             materials,
             targetVendorIds: updatedVendorIds,
           }),
