@@ -466,11 +466,20 @@ export async function sendNewOrderVendorAlert(options: {
 }
 
 /** Approved menu document template; the gateway fetches the public PDF URL. */
-export async function sendMenuPdfViaWhatsApp(phone: string, documentUrl: string, filename: string): Promise<WhatsAppResult> {
+export async function sendMenuPdfViaWhatsApp(
+  phone: string,
+  documentUrl: string,
+  filename: string,
+  recipientName: string,
+): Promise<WhatsAppResult> {
+  const name = typeof recipientName === "string" ? recipientName.trim() : "";
+  if (!name || name.length > 100) {
+    return { error: "Enter a recipient name of 1 to 100 characters." };
+  }
   return sendWhatsAppTemplateMessage({
     phone,
     template: "orderdoc",
-    params: ["there"],
+    params: [name],
     document: { url: documentUrl, filename },
   });
 }

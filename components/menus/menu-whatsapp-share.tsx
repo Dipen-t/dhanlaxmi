@@ -18,8 +18,9 @@ export function MenuWhatsappShare({ menuId, menuName, variant = "icon", classNam
   return (
     <WhatsappShareDialog
       directOnly
+      requireRecipientName
       title="Send menu PDF"
-      description="Choose a PDF design and enter the recipient’s phone number."
+      description="Choose a PDF design and enter the recipient’s name and phone number."
       variant={variant}
       buttonLabel="Share via WhatsApp"
       className={className}
@@ -27,7 +28,7 @@ export function MenuWhatsappShare({ menuId, menuName, variant = "icon", classNam
       ariaLabel={`Share ${menuName} via WhatsApp`}
       content={<MenuThemePicker value={theme} onChange={setTheme} />}
       buildMessage={() => `Here is the menu for ${menuName}.`}
-      onServerSend={(phone, text) => shareMenuViaWhatsApp(menuId, phone, text, theme)}
+      onServerSend={(phone, _text, name) => shareMenuViaWhatsApp(menuId, phone, name, theme)}
     />
   );
 }

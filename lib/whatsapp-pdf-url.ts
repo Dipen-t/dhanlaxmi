@@ -2,7 +2,9 @@ import { headers } from "next/headers";
 import { menuPdfThemes } from "@/lib/menus/pdf-themes";
 
 export function buildPublicPdfUrl(origin: string, kind: "menus" | "kitchen-menus", id: number, theme = "standard") {
-  if (!menuPdfThemes.some((item) => item.id === theme)) throw new Error("Select a valid PDF design.");
+  if (kind === "menus" && !menuPdfThemes.some((item) => item.id === theme)) {
+    throw new Error("Select a valid PDF design.");
+  }
   const base = new URL(origin);
   const host = base.hostname.toLowerCase();
   if (!Number.isSafeInteger(id) || id < 1) throw new Error("Invalid menu.");
@@ -13,7 +15,7 @@ export function buildPublicPdfUrl(origin: string, kind: "menus" | "kitchen-menus
     throw new Error("WhatsApp needs a public PDF URL. Set WHATSAPP_PUBLIC_APP_URL to the public app address; localhost and private Wi-Fi addresses cannot be used.");
   }
   const pdfUrl = new URL(`/api/${kind}/${id}/pdf`, base.origin);
-  pdfUrl.searchParams.set("theme", theme);
+  if (kind === "menus") pdfUrl.searchParams.set("theme", theme);
   return pdfUrl.toString();
 }
 

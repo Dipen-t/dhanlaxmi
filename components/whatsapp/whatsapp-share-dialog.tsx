@@ -11,7 +11,7 @@ type WhatsappShareDialogProps = {
   description?: string;
   buildMessage: () => string;
   /** Optional server send; if it fails, wa.me fallback still works. */
-  onServerSend?: (phone: string, text: string) => Promise<{ error?: string } | { success: true }>;
+  onServerSend?: (phone: string, text: string, recipientName: string) => Promise<{ error?: string } | { success: true }>;
   variant?: "icon" | "button";
   buttonLabel?: string;
   className?: string;
@@ -19,6 +19,7 @@ type WhatsappShareDialogProps = {
   ariaLabel?: string;
   disabled?: boolean;
   directOnly?: boolean;
+  requireRecipientName?: boolean;
   content?: ReactNode;
 };
 
@@ -34,12 +35,14 @@ export function WhatsappShareDialog({
   ariaLabel,
   disabled = false,
   directOnly = false,
+  requireRecipientName = false,
   content,
 }: WhatsappShareDialogProps) {
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [phone, setPhone] = useState("");
+  const [recipientName, setRecipientName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -65,6 +68,7 @@ export function WhatsappShareDialog({
   function handleClose() {
     setIsOpen(false);
     setPhone("");
+    setRecipientName("");
     setSuccess(false);
     setError(null);
   }
@@ -80,6 +84,11 @@ export function WhatsappShareDialog({
       await handleOpenWhatsApp();
       return;
     }
+    const name = recipientName.trim();
+    if (requireRecipientName && !name) {
+      setError("Enter the recipient’s name.");
+      return;
+    }
     if (!phone.trim()) {
       setError("Enter a recipient phone number.");
       return;
@@ -89,7 +98,7 @@ export function WhatsappShareDialog({
     setSuccess(false);
     try {
       const text = buildMessage();
-      const result = await onServerSend(phone.trim(), text);
+      const result = await onServerSend(phone.trim(), text, name);
       if ("error" in result && result.error) {
         setError(directOnly ? result.error : `${result.error} You can still use Open WhatsApp below.`);
       } else {
@@ -164,6 +173,24 @@ export function WhatsappShareDialog({
                 <form onSubmit={handleServerSend} className="flex min-h-0 flex-col gap-4 overflow-y-auto overscroll-contain p-5">
                   <p className="text-sm text-muted text-pretty">{description}</p>
                   {content ? <fieldset disabled={isLoading || success} className="min-w-0">{content}</fieldset> : null}
+                  {requireRecipientName ? (
+                    <div className="space-y-1.5">
+                      <label htmlFor={`${titleId}-name`} className="text-sm font-medium">
+                        Recipient name
+                      </label>
+                      <input
+                        id={`${titleId}-name`}
+                        type="text"
+                        required
+                        maxLength={100}
+                        value={recipientName}
+                        onChange={(e) => setRecipientName(e.target.value)}
+                        disabled={isLoading || success}
+                        autoComplete="section-recipient name"
+                        className="min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                      />
+                    </div>
+                  ) : null}
                   <div className="space-y-1.5">
                     <label htmlFor={`${titleId}-phone`} className="text-sm font-medium">
                       {directOnly ? "Recipient phone number" : "Phone number (optional for Open WhatsApp)"}
@@ -176,7 +203,7 @@ export function WhatsappShareDialog({
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       disabled={isLoading || success}
-                      autoComplete="tel"
+                      autoComplete={requireRecipientName ? "section-recipient tel" : "tel"}
                       className="min-h-12 w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
                     />
                   </div>
