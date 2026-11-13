@@ -43,7 +43,7 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.equal(requests[2].searchParams.get("htype"), "document");
     assert.equal(requests[2].searchParams.get("fname"), "dinner-menu");
     assert.equal(requests[2].searchParams.get("url"), documentUrl);
-    assert.equal(requests[2].searchParams.get("Params"), "1");
+    assert.equal(requests[2].searchParams.get("Params"), "there");
     globalThis.fetch = async () => new Response("Document URL not accessible", { status: 422 });
     const documentError = await sendMenuPdfViaWhatsApp(options.phone, documentUrl, "dinner-menu");
     assert.ok("error" in documentError && documentError.error.includes("Document URL not accessible"));

@@ -470,7 +470,7 @@ export async function sendMenuPdfViaWhatsApp(phone: string, documentUrl: string,
   return sendWhatsAppTemplateMessage({
     phone,
     template: "orderdoc",
-    params: ["1"],
+    params: ["there"],
     document: { url: documentUrl, filename },
   });
 }
