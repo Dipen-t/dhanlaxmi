@@ -214,7 +214,7 @@ export async function sendWhatsAppMessage(
 
 /**
  * Template WhatsApp via SMS Tech Hub (normal text + Params).
- * GET …/api/sendmsg.php?user=&pass=&sender=&phone=&text=TEMPLATE&priority=wa&stype=normal&Params=p1,p2,…
+ * Booking confirmations and documents use sendmsgutil.php.
  */
 export async function sendWhatsAppTemplateMessage(options: {
   phone: string;
@@ -229,7 +229,8 @@ export async function sendWhatsAppTemplateMessage(options: {
   const configuredBaseUrl =
     process.env.WHATSAPP_HUB_URL?.trim() ||
     "http://smstechhub.nnsolutions.co.in/api/sendmsg.php";
-  const baseUrl = options.document
+  const useUtilityEndpoint = options.template === "customerorder" || Boolean(options.document);
+  const baseUrl = useUtilityEndpoint
     ? configuredBaseUrl.replace(/\/sendmsg\.php(?=$|\?)/i, "/sendmsgutil.php")
     : configuredBaseUrl.replace(/\/sendmsgutil\.php(?=$|\?)/i, "/sendmsg.php");
   const user = process.env.WHATSAPP_HUB_USER?.trim();
