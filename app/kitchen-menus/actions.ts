@@ -339,8 +339,9 @@ export async function shareKitchenMenuViaWhatsApp(
   try {
     const { sendMenuPdfViaWhatsApp } = await import("@/lib/whatsapp");
     const { getWhatsAppPdfUrl } = await import("@/lib/whatsapp-pdf-url");
+    const { sanitizeFilename } = await import("@/lib/menus/sanitize-filename");
     const pdfUrl = await getWhatsAppPdfUrl("kitchen-menus", menuId, theme);
-    const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl);
+    const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl, `${sanitizeFilename(menu.name)}-kitchen`);
     if ("error" in result && result.error) {
       return { error: result.error };
     }

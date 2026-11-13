@@ -220,7 +220,7 @@ export async function sendWhatsAppTemplateMessage(options: {
   phone: string;
   template: string;
   params: string[];
-  documentUrl?: string;
+  document?: { url: string; filename: string };
 }): Promise<WhatsAppResult> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
@@ -229,9 +229,9 @@ export async function sendWhatsAppTemplateMessage(options: {
   const configuredBaseUrl =
     process.env.WHATSAPP_HUB_URL?.trim() ||
     "http://smstechhub.nnsolutions.co.in/api/sendmsg.php";
-  // Existing deployments may still use the old utility endpoint. The
-  // provider's current text/document contract uses sendmsg.php.
-  const baseUrl = configuredBaseUrl.replace(/\/sendmsgutil\.php(?=$|\?)/i, "/sendmsg.php");
+  const baseUrl = options.document
+    ? configuredBaseUrl.replace(/\/sendmsg\.php(?=$|\?)/i, "/sendmsgutil.php")
+    : configuredBaseUrl.replace(/\/sendmsgutil\.php(?=$|\?)/i, "/sendmsg.php");
   const user = process.env.WHATSAPP_HUB_USER?.trim();
   const pass = process.env.WHATSAPP_HUB_PASS?.trim();
   const sender = process.env.WHATSAPP_HUB_SENDER?.trim() || "BUZWAP";
@@ -285,11 +285,16 @@ export async function sendWhatsAppTemplateMessage(options: {
     };
   });
 
-  let documentUrl: URL | null = null;
-  if (options.documentUrl) {
+  const documentParams: string[] = [];
+  if (options.document) {
     try {
-      documentUrl = new URL(options.documentUrl);
+      const documentUrl = new URL(options.document.url);
       if (!["http:", "https:"].includes(documentUrl.protocol)) throw new Error("Invalid protocol");
+      documentParams.push(
+        "htype=document",
+        `fname=${encodeURIComponent(options.document.filename)}`,
+        `url=${encodeURIComponent(documentUrl.toString())}`,
+      );
     } catch {
       return { error: "A public HTTP or HTTPS PDF URL is required." };
     }
@@ -303,7 +308,7 @@ export async function sendWhatsAppTemplateMessage(options: {
     "priority=wa",
     "stype=normal",
     `Params=${safeParams.map((p) => encodeURIComponent(p.value)).join(",")}`,
-    ...(documentUrl ? ["htype=document", `url=${encodeURIComponent(documentUrl.toString())}`] : []),
+    ...documentParams,
   ].join("&");
 
   const url = `${baseUrl}?${query}`;
@@ -461,8 +466,13 @@ export async function sendNewOrderVendorAlert(options: {
 }
 
 /** Approved menu document template; the gateway fetches the public PDF URL. */
-export async function sendMenuPdfViaWhatsApp(phone: string, documentUrl: string): Promise<WhatsAppResult> {
-  return sendWhatsAppTemplateMessage({ phone, template: "orderpdf", params: [], documentUrl });
+export async function sendMenuPdfViaWhatsApp(phone: string, documentUrl: string, filename: string): Promise<WhatsAppResult> {
+  return sendWhatsAppTemplateMessage({
+    phone,
+    template: "orderdoc",
+    params: ["1"],
+    document: { url: documentUrl, filename },
+  });
 }
 
 /**

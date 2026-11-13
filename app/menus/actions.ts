@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { categoryImageKeyById } from "@/lib/menus/category-images";
 import { sendMenuPdfViaWhatsApp } from "@/lib/whatsapp";
+import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 import { getWhatsAppPdfUrl } from "@/lib/whatsapp-pdf-url";
 import {
   dishCategories,
@@ -389,7 +390,7 @@ export async function shareMenuViaWhatsApp(menuId: number, phone: string, _text:
 
   try {
     const pdfUrl = await getWhatsAppPdfUrl("menus", menuId, theme);
-    const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl);
+    const result = await sendMenuPdfViaWhatsApp(phone, pdfUrl, sanitizeFilename(menu.name));
     if ("error" in result && result.error) {
       return { error: result.error };
     }
