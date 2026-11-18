@@ -1,62 +1,96 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import type { CategoryWithDishes } from "../../app/menus/actions";
 import { menuCatalog } from "../../db/menu-catalog";
-import { buildOrderDishCatalog, sortOrderDishCategories } from "./dish-category-order";
+import { buildOrderDishCatalog } from "./dish-category-order";
 
-test("the existing order catalog follows the printed sequence with all non-veg categories last", () => {
-  const before = [...menuCatalog];
-  const sorted = sortOrderDishCategories(menuCatalog);
-  assert.deepEqual(sorted.map((category) => category.name), [
-    "Paneer Mush Starter",
-    "Choice of Veg Starter",
-    "Choice of Palak Starter",
-    "Chat Counter",
-    "South Indian Counter",
-    "Italian Counter",
-    "Chinese Counter",
-    "Choice of Veg Soup",
-    "Rice",
-    "Veg Main Course",
-    "Dal / Curry",
-    "Raita",
-    "Sweet Counter",
-    "Rotis",
-    "Salad",
-    "Dessert",
-    "Fruit & Juices",
-    "Choice of Non Veg Starter",
-    "Fish Starter",
-    "Non Veg Main Course",
-  ]);
-  assert.deepEqual(menuCatalog, before);
-  assert.ok(sorted.every((category) => menuCatalog.includes(category)));
-});
+const printedHeadings = [
+  "Welcome Drinks",
+  "Welcome Starters",
+  "Our Spl. Chaats",
+  "South Indian and Gourmet",
+  "Chinese Counter",
+  "Indian Counter",
+  "Paneer Ki Sabji",
+  "Indian Main Course",
+  "Tawa Bahar",
+  "Daal or Kadi",
+  "Raita Ka Chaska",
+  "Mithas Ki Bahar",
+  "Roti Ki Tokri",
+  "Green Salad, Papad, Pickle, Fryums",
+  "Ice Cream Parlour",
+  "Paan or Mukhwas",
+  "Fresh Fruits, Hot Kadai Milk, Cold Masala Milk, Malai Ice Gola",
+  "Mineral Water Glasses",
+  "New Attraction (Seasonal)",
+  "Extras",
+];
 
-test("the actual order catalog starts with welcome drinks extracted from the mixed fruit category", () => {
+function existingCatalog(): CategoryWithDishes[] {
   let dishId = 1;
-  const categories = menuCatalog.map((category, index) => ({
+  return menuCatalog.map((category, index) => ({
     ...category,
     id: index + 1,
     dishes: category.dishes.map((name) => ({ id: dishId++, name })),
   }));
-  const sorted = buildOrderDishCatalog(categories);
-  assert.equal(sorted[0].name, "Welcome Drinks");
-  assert.deepEqual(sorted[0].dishes.map((dish) => dish.name), ["Fresh Juice", "Mocktail Counter"]);
-  assert.deepEqual(sorted.find((category) => category.name === "Fresh Fruits")?.dishes.map((dish) => dish.name), ["Fresh Fruit"]);
-  assert.ok(sorted.findIndex((category) => category.name === "Choice of Veg Soup") > sorted.findIndex((category) => category.name === "Chinese Counter"));
-  assert.deepEqual(sorted.slice(-3).map((category) => category.name), ["Choice of Non Veg Starter", "Fish Starter", "Non Veg Main Course"]);
-  const allIds = (values: typeof categories) => values.flatMap((category) => category.dishes.map((dish) => dish.id)).sort((a, b) => a - b);
-  assert.deepEqual(allIds(sorted), allIds(categories));
-  assert.equal(new Set(sorted.map((category) => category.id)).size, sorted.length);
-  assert.equal(categories.find((category) => category.name === "Fruit & Juices")?.dishes.length, 3);
+}
+
+test("all three printed pages are followed exactly, then non-veg categories appear last", () => {
+  const catalog = existingCatalog();
+  const before = structuredClone(catalog);
+  const grouped = buildOrderDishCatalog(catalog);
+  assert.deepEqual(grouped.map((category) => category.name), [
+    ...printedHeadings,
+    "Choice of Non Veg Starter",
+    "Fish Starter",
+    "Non Veg Main Course",
+  ]);
+  const ids = (categories: CategoryWithDishes[]) => categories.flatMap((category) => category.dishes.map((dish) => dish.id)).sort((a, b) => a - b);
+  assert.deepEqual(ids(grouped), ids(catalog), "every existing selectable dish survives exactly once");
+  assert.equal(new Set(grouped.map((category) => category.id)).size, grouped.length);
+  assert.deepEqual(catalog, before);
+  assert.deepEqual(buildOrderDishCatalog(catalog), grouped, "opening the form again gives the same sequence");
 });
 
-test("printed headings and custom categories retain their dishes while non-veg stays at the end", () => {
-  const names = ["Nonveg Specials", "Extras", "New Custom Counter", "Fresh Fruits", "Paan or Mukhwas", "Ice Cream Parlour", "Green Salad", "Roti Ki Tokri", "Mithas Ki Bahar", "Raita Ka Chaska", "Daal or Kadi", "Tawa Bahar", "Indian Main Course", "Paneer Ki Sabji", "Indian Counter", "Chinese Counter", "South Indian and Gourmet", "Our Spl. Chaats", "Welcome Starters", "Welcome Drinks", "Chicken Counter"];
-  const categories = names.map((name) => ({ name, dishes: [{ name: `${name} dish` }] }));
-  const sorted = sortOrderDishCategories(categories);
-  assert.deepEqual(sorted.map((category) => category.name), [
-    "Welcome Drinks", "Welcome Starters", "Our Spl. Chaats", "South Indian and Gourmet", "Chinese Counter", "Indian Counter", "Paneer Ki Sabji", "Indian Main Course", "Tawa Bahar", "Daal or Kadi", "Raita Ka Chaska", "Mithas Ki Bahar", "Roti Ki Tokri", "Green Salad", "Ice Cream Parlour", "Paan or Mukhwas", "Fresh Fruits", "Extras", "New Custom Counter", "Nonveg Specials", "Chicken Counter",
+test("existing mixed categories are grouped under the headings shown in the photos", () => {
+  const grouped = buildOrderDishCatalog(existingCatalog());
+  const names = (heading: string) => grouped.find((category) => category.name === heading)!.dishes.map((dish) => dish.name);
+  assert.deepEqual(names("Welcome Drinks"), ["Fresh Juice"]);
+  assert.ok(names("Extras").includes("Mocktail Counter"), "the photo lists Mocktail Counter under Extras");
+  assert.ok(names("Extras").includes("Pasta"));
+  assert.ok(names("South Indian and Gourmet").includes("Pizza"));
+  assert.deepEqual(names("South Indian and Gourmet"), ["Masala Dossa", "Mysuri Dossa", "Butter Masala Dossa", "Uttappa", "Pizza"]);
+  assert.ok(!names("Indian Counter").includes("Masala Dossa"));
+  const starters = names("Welcome Starters");
+  assert.deepEqual(starters.slice(0, 4), ["Cocktel Samosa", "Veg Manchurian", "Harabhara Kabab", "Veg Drigan Roll"]);
+  assert.ok(starters.includes("Palak Cheese Roll"));
+  assert.ok(starters.includes("Paneer Amritsari Tikki"));
+  assert.ok(names("Chinese Counter").includes("Veg Manchow Soup"));
+  assert.ok(names("Chinese Counter").includes("Schzwan Rice"));
+  assert.ok(!names("Indian Counter").includes("Schzwan Rice"));
+  assert.ok(names("Tawa Bahar").includes("Veg Hydrabadi Biryani"));
+  assert.ok(names("Paneer Ki Sabji").includes("Paneer Butter Masala"));
+  assert.ok(!names("Indian Main Course").includes("Paneer Butter Masala"));
+  assert.ok(names("Indian Main Course").includes("Veg Makhanwala"));
+  assert.equal(names("Raita Ka Chaska")[0], "Dahi Wada");
+  assert.ok(!names("Our Spl. Chaats").includes("Dahi Wada"));
+  assert.deepEqual(names("Mithas Ki Bahar").slice(0, 3), ["Gajar Halwa", "Mung Dal Halwa", "Jalebi Rabdi"]);
+  assert.deepEqual(names("Roti Ki Tokri").slice(0, 2), ["Methi Roti", "Roomali Roti"]);
+  assert.deepEqual(names("Daal or Kadi").slice(0, 3), ["Dal Tadka", "Dal Mahrani", "Dal Palak"]);
+  assert.equal(names("Ice Cream Parlour")[0], "Vanilla with Hot Chocklet");
+  assert.deepEqual(names(printedHeadings[16]), ["Fresh Fruit"]);
+});
+
+test("missing sections remain in their reference positions and custom dishes stay selectable", () => {
+  const grouped = buildOrderDishCatalog([
+    { id: 1, name: "Custom Counter", selectionRule: "Any two", dishes: [{ id: 1, name: "Custom dish" }] },
+    { id: 2, name: "Non-Veg Specials", selectionRule: "Any one", dishes: [{ id: 2, name: "Chicken" }] },
   ]);
-  assert.ok(sorted.every((category) => categories.includes(category)));
+  assert.deepEqual(grouped.slice(0, 20).map((category) => category.name), printedHeadings);
+  assert.equal(grouped[0].dishes.length, 0);
+  assert.deepEqual(grouped[19].dishes, [{ id: 1, name: "Custom dish" }]);
+  assert.equal(grouped.at(-1)?.name, "Non-Veg Specials");
+  assert.match(grouped[19].selectionRule, /Custom Counter \(Any two\)/);
+  assert.deepEqual(buildOrderDishCatalog([]), []);
 });

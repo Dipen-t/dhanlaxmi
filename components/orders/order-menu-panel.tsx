@@ -34,7 +34,10 @@ export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Pro
   function toggleCategory(dishIds: number[]) {
     const next = new Set(selectedSet);
     const allSelected = dishIds.length > 0 && dishIds.every((dishId) => next.has(dishId));
-    for (const dishId of dishIds) allSelected ? next.delete(dishId) : next.add(dishId);
+    for (const dishId of dishIds) {
+      if (allSelected) next.delete(dishId);
+      else next.add(dishId);
+    }
     onDishChange([...next]);
   }
 
@@ -80,11 +83,13 @@ export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Pro
                 <section key={category.id} className="rounded-xl border border-border p-3">
                   <div className="mb-2 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-semibold text-foreground">{category.name}</h3>
-                      <p className="text-xs text-muted">{category.selectionRule} · {selectedCount} of {category.dishes.length} selected</p>
+                      <h3 className="text-base font-semibold text-pretty text-foreground">{category.name}</h3>
+                      {category.selectionRule ? <p className="mt-1 text-xs text-muted">{category.selectionRule}</p> : null}
+                      <p className="text-xs text-muted">{selectedCount} of {category.dishes.length} selected</p>
                     </div>
-                    <button type="button" onClick={() => toggleCategory(dishIds)} className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:bg-surface">{allSelected ? "Clear category" : "Select all"}</button>
+                    <button type="button" disabled={dishIds.length === 0} onClick={() => toggleCategory(dishIds)} className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:bg-surface disabled:cursor-default disabled:opacity-40">{allSelected ? "Clear category" : "Select all"}</button>
                   </div>
+                  {category.dishes.length === 0 ? <p className="py-2 text-sm text-muted">No dishes added to this section yet.</p> : null}
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                     {category.dishes.map((dish) => {
                       const selected = selectedSet.has(dish.id);
