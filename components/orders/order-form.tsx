@@ -29,6 +29,7 @@ import {
 import { PersonsStepper } from "@/components/orders/persons-stepper";
 import { calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { todayCalendarDateString } from "@/lib/utils";
+import { sortOrderDishCategories } from "@/lib/orders/dish-category-order";
 
 type OrderFormProps = {
   order: OrderRecord | null;
@@ -81,6 +82,7 @@ export function OrderForm({
   const totalPlateCount = plateCount + extraPlates;
   const calculatedTotal = calculateTotalWithExtraPlates(plateCount, extraPlates, perPlateAmount);
   const [selectedDishIds, setSelectedDishIds] = useState<number[]>(order?.dishIds ?? []);
+  const orderedMenuCatalog = useMemo(() => sortOrderDishCategories(menuCatalog), [menuCatalog]);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
@@ -222,7 +224,7 @@ export function OrderForm({
       customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
       materialOrder: orderedMaterialIds,
-      dishIds: menuCatalog
+      dishIds: orderedMenuCatalog
         .flatMap((category) => category.dishes)
         .map((dish) => dish.id)
         .filter((dishId) => selectedDishIds.includes(dishId)),
@@ -578,7 +580,7 @@ export function OrderForm({
         className={activeTab === "dishes" ? "flex min-h-0 flex-1 flex-col" : "hidden"}
       >
         <OrderDishesPanel
-          catalog={menuCatalog}
+          catalog={orderedMenuCatalog}
           selectedDishIds={selectedDishIds}
           onDishChange={setSelectedDishIds}
         />
