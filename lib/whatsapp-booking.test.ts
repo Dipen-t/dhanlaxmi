@@ -24,7 +24,7 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.equal(requests.length, 1);
     assert.equal(requests[0].searchParams.get("text"), "customerorder");
     assert.equal(requests[0].pathname, "/api/sendmsgutil.php");
-    assert.equal(requests[0].searchParams.get("Params"), [options.eventDate, options.eventVenue, options.meal].join(","));
+    assert.equal(requests[0].searchParams.get("Params"), ["30/11/2026", options.eventVenue, options.meal].join(","));
 
     process.env.WHATSAPP_BOOKING_TEMPLATE = "order_pdf";
     process.env.WHATSAPP_HUB_URL = "http://smstechhub.nnsolutions.co.in/api/sendmsg.php";
@@ -56,6 +56,9 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.deepEqual(vendorAlert, { success: true });
     assert.equal(requests[3].pathname, "/api/sendmsgutil.php");
     assert.equal(requests[3].searchParams.get("text"), "order_alert_final");
+    assert.equal(requests[3].searchParams.get("Params"), [options.eventDate, options.eventVenue, options.menuDishes, "Test notes"].join(","));
+    assert.deepEqual(await sendBookingConfirmation({ ...options, eventDate: "17/11/2026" }), { success: true });
+    assert.equal(requests[4].searchParams.get("Params"), "17/11/2026,Test venue,dinner");
     globalThis.fetch = async () => new Response("Document URL not accessible", { status: 422 });
     const documentError = await sendMenuPdfViaWhatsApp(options.phone, documentUrl, "dinner-menu", "Priya Sharma");
     assert.ok("error" in documentError && documentError.error.includes("Document URL not accessible"));

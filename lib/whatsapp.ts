@@ -490,7 +490,7 @@ export async function sendMenuPdfViaWhatsApp(
 /**
  * Customer notifications use the approved customerorder template only.
  *
- * Parameters: {{1}} event date/time, {{2}} venue, {{3}} meal.
+ * Parameters: {{1}} event date, {{2}} venue, {{3}} meal.
  * Attachments are not supported by the current Hub template endpoint.
  */
 export async function sendBookingConfirmation(options: {
@@ -511,13 +511,14 @@ export async function sendBookingConfirmation(options: {
   // Use this exact approved template and parameter contract even on hosts
   // that still have the legacy order_pdf environment setting.
   const template = "customerorder";
+  const eventDate = options.eventDate.trim().replace(/\s+at\s+.*$/i, "");
   const useHub = isWhatsAppHubConfigured();
 
   logSection(callId, "ROUTING", {
     phoneRaw: options.phone,
     phoneFormatted: formatWhatsAppPhone(options.phone),
     customerName: options.customerName,
-    eventDate: options.eventDate,
+    eventDate,
     eventVenue: options.eventVenue,
     meal: options.meal,
     menuDishesPreview: previewText(options.menuDishes, 300),
@@ -534,7 +535,7 @@ export async function sendBookingConfirmation(options: {
     templateResult = await sendWhatsAppTemplateMessage({
       phone: options.phone,
       template,
-      params: [options.eventDate, options.eventVenue, options.meal],
+      params: [eventDate, options.eventVenue, options.meal],
     });
 
   } else {
