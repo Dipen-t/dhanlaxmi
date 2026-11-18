@@ -50,6 +50,7 @@ export const orders = pgTable("orders", {
   orderId: text("order_id").notNull().unique(),
   date: timestamp("date", { mode: "date" }).notNull(),
   eventTime: text("event_time"),
+  materialOrder: integer("material_order").array(),
   venue: text("venue").notNull(),
   numberOfPersons: integer("number_of_persons").notNull(),
   extraPlates: integer("extra_plates").notNull().default(0),
@@ -137,6 +138,7 @@ export const orderRawMaterials = pgTable(
     unitName: text("unit_name").notNull(),
     notes: text("notes"),
     sortOrder: integer("sort_order").notNull().default(0),
+    timing: text("timing"),
   },
   (table) => [primaryKey({ columns: [table.orderId, table.rawMaterialId] })]
 );

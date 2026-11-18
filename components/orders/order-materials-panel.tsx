@@ -1,7 +1,7 @@
 "use client";
 
 import { Check, GripVertical, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   closestCenter,
   DndContext,
@@ -23,12 +23,15 @@ import { CSS } from "@dnd-kit/utilities";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import { QtyStepper } from "@/components/orders/qty-stepper";
+import { EventTimePicker } from "@/components/orders/event-time-picker";
+import { formatEventTime } from "@/lib/orders/event-time";
 
 export type OrderMaterialDraft = {
   rawMaterialId: number;
   unitQty: string;
   unitName: string;
   notes?: string;
+  timing?: string;
   vendorId: number | null;
 };
 
@@ -50,7 +53,6 @@ type OrderMaterialsPanelProps = {
     rawMaterialId: number,
     updates: Partial<OrderMaterialDraft>,
   ) => void;
-  onCommitOrder: () => void;
   onReorder: (selectedIds: number[]) => void;
 };
 
@@ -59,6 +61,7 @@ function SortableMaterialCard({
   name,
   detail,
   notes,
+  timing,
   active,
   complete,
   partial,
@@ -69,6 +72,7 @@ function SortableMaterialCard({
   name: string;
   detail?: string;
   notes?: string;
+  timing?: string;
   active: boolean;
   complete: boolean;
   partial: boolean;
@@ -127,6 +131,11 @@ function SortableMaterialCard({
             Note: {notes}
           </span>
         ) : null}
+        {timing ? (
+          <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/90" : "text-muted"}`} title={timing}>
+            Timing: {formatEventTime(timing)}
+          </span>
+        ) : null}
       </button>
     </div>
   );
@@ -149,11 +158,11 @@ export function OrderMaterialsPanel({
   sortedMaterials,
   selectedMaterials,
   onUpdate,
-  onCommitOrder,
   onReorder,
 }: OrderMaterialsPanelProps) {
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
@@ -205,22 +214,24 @@ export function OrderMaterialsPanel({
   }
 
   function openEditor(materialId: number) {
-    if (editingId !== null && editingId !== materialId) {
-      onCommitOrder();
-    }
+    if (!validateTiming()) return;
     setEditingId(materialId);
   }
 
+  function validateTiming() {
+    const invalid = editorRef.current?.querySelector<HTMLSelectElement>("select:invalid");
+    return invalid ? invalid.reportValidity() : true;
+  }
+
   function closeEditor() {
+    if (!validateTiming()) return;
     setEditingId(null);
-    onCommitOrder();
   }
 
   function clearEditingMaterial() {
     if (editingId === null) return;
-    onUpdate(editingId, { unitQty: "", unitName: "" });
+    onUpdate(editingId, { unitQty: "", unitName: "", timing: "" });
     setEditingId(null);
-    onCommitOrder();
   }
 
   if (materials.length === 0) {
@@ -271,11 +282,7 @@ export function OrderMaterialsPanel({
             </p>
           </div>
         ) : (
-          <div
-            className={`h-full overflow-y-auto overscroll-contain p-2 sm:p-2.5 ${
-              editingMaterial ? "pt-52 sm:pt-44" : ""
-            }`}
-          >
+          <div className="h-full overflow-y-auto overscroll-contain p-2 sm:p-2.5">
             <p className="mb-2 px-1 text-xs text-muted">
               {query ? "Clear search to rearrange materials." : "Drag a card by its handle onto another card to swap their positions."}
             </p>
@@ -300,6 +307,7 @@ export function OrderMaterialsPanel({
                     name={material.name}
                     detail={complete ? `${item.unitQty} ${item.unitName}${vendorName ? ` ${vendorName}` : ""}` : partial ? `${item.unitQty} · need unit` : undefined}
                     notes={item.notes}
+                    timing={item.timing}
                     active={active}
                     complete={complete}
                     partial={partial}
@@ -316,10 +324,11 @@ export function OrderMaterialsPanel({
 
         {editingMaterial && editingItem ? (
           <div
+            ref={editorRef}
             role="dialog"
             aria-modal="true"
             aria-label={`Edit ${editingMaterial.name}`}
-            className="absolute inset-x-2 top-2 z-20 rounded-2xl border border-border bg-background p-3.5 shadow-lg sm:inset-x-3 sm:top-3 sm:p-4"
+            className="absolute inset-x-2 top-2 z-20 max-h-[calc(100%-1rem)] overflow-y-auto overscroll-contain rounded-2xl border border-border bg-background p-3.5 shadow-lg sm:inset-x-3 sm:top-3 sm:p-4"
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -432,6 +441,15 @@ export function OrderMaterialsPanel({
                 </div>
               </div>
               
+              <div className="min-w-0 sm:col-span-3 mt-2">
+                <EventTimePicker
+                  key={editingMaterial.id}
+                  defaultValue={editingItem.timing}
+                  label="Delivery timing (optional)"
+                  required={false}
+                  onChange={(timing) => onUpdate(editingMaterial.id, { timing })}
+                />
+              </div>
               <div className="min-w-0 sm:col-span-3 mt-2">
                 <label
                   htmlFor={`edit-notes-${editingMaterial.id}`}

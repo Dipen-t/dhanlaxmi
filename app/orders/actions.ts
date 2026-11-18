@@ -16,7 +16,7 @@ import {
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 import { normalizeWhatsAppHubPhone, sendNewOrderVendorAlert, sendBookingConfirmation } from "@/lib/whatsapp";
-import { formatEventTime } from "@/lib/orders/event-time";
+import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "@/lib/orders/vendor-timing";
 
 
 export type MealType = "breakfast" | "lunch" | "dinner";
@@ -26,6 +26,7 @@ export type OrderRawMaterialRecord = {
   unitQty: string;
   unitName: string;
   notes?: string | null;
+  timing?: string | null;
   vendorId?: number | null;
   sortOrder?: number;
 };
@@ -42,6 +43,7 @@ export type OrderRecord = {
   orderId: string;
   date: string;
   eventTime: string | null;
+  materialOrder: number[];
   venue: string;
   numberOfPersons: number;
   extraPlates: number;
@@ -69,6 +71,7 @@ function serializeOrder(order: {
   orderId: string;
   date: Date;
   eventTime: string | null;
+  materialOrder?: number[] | null;
   venue: string;
   numberOfPersons: number;
   extraPlates: number;
@@ -96,6 +99,7 @@ function serializeOrder(order: {
     unitQty: string;
     unitName: string;
     notes?: string | null;
+    timing?: string | null;
     vendorId: number | null;
     sortOrder?: number;
     vendor?: { name: string } | null;
@@ -123,6 +127,7 @@ function serializeOrder(order: {
     orderId: order.orderId,
     date: toDateString(order.date),
     eventTime: order.eventTime,
+    materialOrder: order.materialOrder ?? (order.orderRawMaterials ?? []).map((material) => material.rawMaterialId),
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
     extraPlates: order.extraPlates,
@@ -252,7 +257,6 @@ function normalizeText(value: string) {
 function validateOrderFields(
   orderId: string,
   date: string,
-  eventTime: string,
   venue: string,
   numberOfPersons: number,
   perPlateAmount: number,
@@ -269,12 +273,6 @@ function validateOrderFields(
   }
   if (Number.isNaN(Date.parse(date))) {
     return "Enter a valid date.";
-  }
-  if (!eventTime) {
-    return "Event time is required.";
-  }
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(eventTime)) {
-    return "Enter a valid event time.";
   }
   if (!venue) {
     return "Venue is required.";
@@ -301,7 +299,6 @@ export type OrderInput = {
   id?: number;
   orderId: string;
   date: string;
-  eventTime: string;
   venue: string;
   numberOfPersons: number;
   perPlateAmount: number;
@@ -311,6 +308,7 @@ export type OrderInput = {
   customerPhone?: string;
   rawMaterials: OrderRawMaterialRecord[];
   dishIds?: number[];
+  materialOrder?: number[];
 };
 
 async function validateDishSelection(dishIds: number[]) {
@@ -326,12 +324,16 @@ async function validateDishSelection(dishIds: number[]) {
   return null;
 }
 
-async function syncOrderMenuDishes(orderId: number, dishIds: number[]) {
-  await db.delete(orderMenuDishes).where(eq(orderMenuDishes.orderId, orderId));
+async function syncOrderMenuDishes(
+  orderId: number,
+  dishIds: number[],
+  transaction: Parameters<Parameters<typeof db.transaction>[0]>[0],
+) {
+  await transaction.delete(orderMenuDishes).where(eq(orderMenuDishes.orderId, orderId));
   const uniqueIds = [...new Set(dishIds.filter((id) => Number.isFinite(id) && id > 0))];
   if (uniqueIds.length === 0) return;
 
-  const valid = await db.query.dishes.findMany({
+  const valid = await transaction.query.dishes.findMany({
     where: inArray(dishes.id, uniqueIds),
     columns: { id: true },
   });
@@ -344,14 +346,13 @@ async function syncOrderMenuDishes(orderId: number, dishIds: number[]) {
       sortOrder: index,
     }));
   if (rows.length > 0) {
-    await db.insert(orderMenuDishes).values(rows);
+    await transaction.insert(orderMenuDishes).values(rows);
   }
 }
 
 async function notifyVendorsForOrder(params: {
   orderId: string;
   date: string;
-  eventTime: string;
   venue: string;
   numberOfPersons: number;
   mealType: string;
@@ -362,7 +363,6 @@ async function notifyVendorsForOrder(params: {
   const {
     orderId,
     date,
-    eventTime,
     venue,
     numberOfPersons,
     mealType,
@@ -411,34 +411,21 @@ async function notifyVendorsForOrder(params: {
       });
     }
 
-    const vendorGroups = new Map<
-      number,
-      { vendor: (typeof dbVendors)[number]; items: { name: string; qty: string; unit: string; notes?: string | null }[] }
-    >();
-
-    for (const m of materials) {
-      if (!m.vendorId) continue;
-      if (targetSet && !targetSet.has(m.vendorId)) continue;
-
-      const dbMaterial = dbMaterials.find((dbm) => dbm.id === m.rawMaterialId);
-      const dbVendor = dbVendors.find((v) => v.id === m.vendorId);
-
-      if (dbMaterial && dbVendor) {
-        if (!vendorGroups.has(dbVendor.id)) {
-          vendorGroups.set(dbVendor.id, { vendor: dbVendor, items: [] });
-        }
-        vendorGroups.get(dbVendor.id)!.items.push({
-          name: dbMaterial.name,
-          qty: m.unitQty,
-          unit: m.unitName,
-          notes: m.notes,
+    const vendorGroups = groupMaterialsByVendorTiming(materials, mealType)
+      .filter((group) => !targetSet || targetSet.has(group.vendorId))
+      .flatMap((group) => {
+        const vendor = dbVendors.find((row) => row.id === group.vendorId);
+        if (!vendor) return [];
+        const items = group.items.flatMap((material) => {
+          const dbMaterial = dbMaterials.find((row) => row.id === material.rawMaterialId);
+          return dbMaterial ? [{ name: dbMaterial.name, qty: material.unitQty, unit: material.unitName, notes: material.notes }] : [];
         });
-      }
-    }
+        return items.length > 0 ? [{ vendor, timing: group.timing, items }] : [];
+      });
 
     console.log(
-      `[WA-notify] order ${orderId}: ${vendorGroups.size} vendor group(s) to notify`,
-      [...vendorGroups.values()].map((g) => ({
+      `[WA-notify] order ${orderId}: ${vendorGroups.length} vendor group(s) to notify`,
+      vendorGroups.map((g) => ({
         vendorId: g.vendor.id,
         name: g.vendor.name,
         phone: g.vendor.phone,
@@ -448,22 +435,14 @@ async function notifyVendorsForOrder(params: {
 
     const customerNumber = normalizeWhatsAppHubPhone(customerPhone ?? "");
     let index = 0;
-    for (const group of vendorGroups.values()) {
+    for (const group of vendorGroups) {
       index += 1;
       if (customerNumber && normalizeWhatsAppHubPhone(group.vendor.phone) === customerNumber) {
         console.warn(`[WA-notify] order ${orderId}: skipped vendor ${group.vendor.id} because its phone matches the customer`);
         continue;
       }
       const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
-      const [yyyy, mm, dd] = date.split("-");
-      const formattedDate = `${dd}/${mm}/${yyyy}`;
-      const formattedEventTime = new Intl.DateTimeFormat("en-IN", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true,
-        timeZone: "UTC",
-      }).format(new Date(`1970-01-01T${eventTime}:00Z`));
-      const eventSchedule = `${formattedDate} at ${formattedEventTime}`;
+      const eventSchedule = vendorScheduleLabel(date, group.timing);
 
       const itemsWithNotes = group.items.filter(
         (i) => i.notes && i.notes.trim().length > 0,
@@ -482,11 +461,11 @@ async function notifyVendorsForOrder(params: {
         .join("  |  ");
 
       let fallbackMessage = `*Dhanlaxmi Caterer*\n*New booking*\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\n*Main order*\n${materialsLine}`;
-      if (notesLine) fallbackMessage += `\n\n*High Tea details*\n${itemsWithNotes.map((item) => `${item.name}: ${item.notes}`).join("\n")}`;
+      if (itemsWithNotes.length > 0) fallbackMessage += `\n\n*High Tea details*\n${itemsWithNotes.map((item) => `${item.name}: ${item.notes}`).join("\n")}`;
       fallbackMessage += "\n\nThank you.";
 
       console.log(
-        `[WA-notify] order ${orderId}: sending ${index}/${vendorGroups.size} → ${group.vendor.name} (${group.vendor.phone})`,
+        `[WA-notify] order ${orderId}: sending ${index}/${vendorGroups.length} → ${group.vendor.name} (${group.vendor.phone})`,
       );
 
       const result = await sendNewOrderVendorAlert({
@@ -512,7 +491,6 @@ async function notifyVendorsForOrder(params: {
 export async function createOrder(data: OrderInput) {
   const preferredOrderId = normalizeText(data.orderId || "");
   const date = data.date || "";
-  const eventTime = data.eventTime?.trim() || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
   const perPlateAmount = Number(data.perPlateAmount);
@@ -522,7 +500,17 @@ export async function createOrder(data: OrderInput) {
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
-  const materials = data.rawMaterials || [];
+  const materials = (data.rawMaterials || []).map((material) => ({
+    ...material,
+    timing: material.timing?.trim() || null,
+  }));
+  if (materials.some((material) => material.timing && !/^([01]\d|2[0-3]):[0-5]\d$/.test(material.timing))) {
+    return { error: "Select a complete delivery timing for each kitchen item, or leave it empty." };
+  }
+  const materialOrder = data.materialOrder ?? materials.map((material) => material.rawMaterialId);
+  if (materialOrder.length > 10000 || new Set(materialOrder).size !== materialOrder.length || materialOrder.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    return { error: "The kitchen item arrangement is invalid. Refresh and try again." };
+  }
   const dishIds = [...new Set((data.dishIds || []).map(Number))];
 
   const orderId = await allocateUniqueOrderId(preferredOrderId);
@@ -530,7 +518,6 @@ export async function createOrder(data: OrderInput) {
   const error = validateOrderFields(
     orderId,
     date,
-    eventTime,
     venue,
     numberOfPersons,
     perPlateAmount,
@@ -561,42 +548,46 @@ export async function createOrder(data: OrderInput) {
   try {
     const eventDate = parseCalendarDate(date);
 
-    const [newOrder] = await db.insert(orders).values({
-      orderId,
-      date: eventDate,
-      eventTime,
-      venue,
-      numberOfPersons,
-      perPlateAmount,
-      mealType: mealType as MealType,
-      totalAmount,
-      discount,
-      customerName,
-      customerPhone,
-      isPaymentAmount,
-      extraPlates: 0,
-    }).returning({ id: orders.id });
+    const newOrder = await db.transaction(async (transaction) => {
+      const [newOrder] = await transaction.insert(orders).values({
+        orderId,
+        date: eventDate,
+        materialOrder,
+        venue,
+        numberOfPersons,
+        perPlateAmount,
+        mealType: mealType as MealType,
+        totalAmount,
+        discount,
+        customerName,
+        customerPhone,
+        isPaymentAmount,
+        extraPlates: 0,
+      }).returning({ id: orders.id });
 
-    if (materials.length > 0) {
-      await db.insert(orderRawMaterials).values(
-        materials.map((m, index) => ({
-          orderId: newOrder.id,
-          rawMaterialId: m.rawMaterialId,
-          unitQty: String(m.unitQty),
-          unitName: String(m.unitName),
-          notes: m.notes || null,
-          vendorId: m.vendorId || null,
-          sortOrder: index,
-        }))
-      );
-    }
+      if (materials.length > 0) {
+        await transaction.insert(orderRawMaterials).values(
+          materials.map((m, index) => ({
+            orderId: newOrder.id,
+            rawMaterialId: m.rawMaterialId,
+            unitQty: String(m.unitQty),
+            unitName: String(m.unitName),
+            notes: m.notes || null,
+            timing: m.timing?.trim() || null,
+            vendorId: m.vendorId || null,
+            sortOrder: index,
+          }))
+        );
+      }
 
-    await syncOrderMenuDishes(newOrder.id, dishIds);
+      await syncOrderMenuDishes(newOrder.id, dishIds, transaction);
+      return newOrder;
+    });
 
     revalidatePath("/orders");
 
     after(async () => {
-      await notifyVendorsForOrder({ orderId, date, eventTime, venue, numberOfPersons, mealType, customerPhone, materials });
+      await notifyVendorsForOrder({ orderId, date, venue, numberOfPersons, mealType, customerPhone, materials });
     });
 
     // Wait for the customer result so the operator can see provider errors.
@@ -608,7 +599,7 @@ export async function createOrder(data: OrderInput) {
         const result = await sendBookingConfirmation({
           phone: customerPhone,
           customerName: customerName || "Customer",
-          eventDate: `${formattedDate} at ${formatEventTime(eventTime)}`,
+          eventDate: formattedDate,
           eventVenue: venue,
           meal: mealType,
           menuDishes: "",
@@ -632,10 +623,10 @@ export async function createOrder(data: OrderInput) {
 }
 
 function getUpdatedVendorIds(
-  oldMaterials: { rawMaterialId: number; unitQty: string; unitName: string; notes?: string | null; vendorId?: number | null }[],
+  oldMaterials: OrderRawMaterialRecord[],
   newMaterials: OrderRawMaterialRecord[],
 ): number[] {
-  const oldByVendor = new Map<number, Map<number, { qty: string; unit: string; notes: string }>>();
+  const oldByVendor = new Map<number, Map<number, { qty: string; unit: string; notes: string; timing: string }>>();
   for (const m of oldMaterials) {
     if (!m.vendorId) continue;
     if (!oldByVendor.has(m.vendorId)) {
@@ -645,6 +636,7 @@ function getUpdatedVendorIds(
       qty: String(m.unitQty ?? "").trim(),
       unit: String(m.unitName ?? "").trim().toLowerCase(),
       notes: String(m.notes ?? "").trim(),
+      timing: m.timing?.trim() || "",
     });
   }
 
@@ -684,7 +676,7 @@ function getUpdatedVendorIds(
       const newUnit = String(item.unitName ?? "").trim().toLowerCase();
       const newNotes = String(item.notes ?? "").trim();
 
-      if (newQty !== oldItem.qty || newUnit !== oldItem.unit || newNotes !== oldItem.notes) {
+      if (newQty !== oldItem.qty || newUnit !== oldItem.unit || newNotes !== oldItem.notes || (item.timing?.trim() || "") !== oldItem.timing) {
         hasDiff = true;
         break;
       }
@@ -702,7 +694,6 @@ export async function updateOrder(data: OrderInput) {
   const id = Number(data.id);
   const orderId = normalizeText(data.orderId || "");
   const date = data.date || "";
-  const eventTime = data.eventTime?.trim() || "";
   const venue = normalizeText(data.venue || "");
   const numberOfPersons = Number(data.numberOfPersons);
   const perPlateAmount = Number(data.perPlateAmount);
@@ -721,7 +712,17 @@ export async function updateOrder(data: OrderInput) {
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
-  const materials = data.rawMaterials || [];
+  const materials = (data.rawMaterials || []).map((material) => ({
+    ...material,
+    timing: material.timing?.trim() || null,
+  }));
+  if (materials.some((material) => material.timing && !/^([01]\d|2[0-3]):[0-5]\d$/.test(material.timing))) {
+    return { error: "Select a complete delivery timing for each kitchen item, or leave it empty." };
+  }
+  const materialOrder = data.materialOrder ?? materials.map((material) => material.rawMaterialId);
+  if (materialOrder.length > 10000 || new Set(materialOrder).size !== materialOrder.length || materialOrder.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    return { error: "The kitchen item arrangement is invalid. Refresh and try again." };
+  }
   const dishIds = [...new Set((data.dishIds || []).map(Number))];
 
   if (!id || Number.isNaN(id)) {
@@ -734,7 +735,6 @@ export async function updateOrder(data: OrderInput) {
   const error = validateOrderFields(
     orderId,
     date,
-    eventTime,
     venue,
     numberOfPersons,
     perPlateAmount,
@@ -757,54 +757,57 @@ export async function updateOrder(data: OrderInput) {
   try {
     const eventDate = parseCalendarDate(date);
 
-    const [updated] = await db
-      .update(orders)
-      .set({
-        orderId,
-        date: eventDate,
-        eventTime,
-        venue,
-        numberOfPersons,
-        perPlateAmount,
-        mealType: mealType as MealType,
-        totalAmount,
-        discount,
-        customerName,
-        customerPhone,
-        isPaymentAmount,
-        updatedAt: new Date(),
-      })
-      .where(eq(orders.id, id))
-      .returning({ id: orders.id });
+    await db.transaction(async (transaction) => {
+      const [updated] = await transaction
+        .update(orders)
+        .set({
+          orderId,
+          date: eventDate,
+          materialOrder,
+          venue,
+          numberOfPersons,
+          perPlateAmount,
+          mealType: mealType as MealType,
+          totalAmount,
+          discount,
+          customerName,
+          customerPhone,
+          isPaymentAmount,
+          updatedAt: new Date(),
+        })
+        .where(eq(orders.id, id))
+        .returning({ id: orders.id });
 
-    if (!updated) {
-      throw new Error("Order not found");
-    }
+      if (!updated) {
+        throw new Error("Order not found");
+      }
 
-    await db.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
-    if (materials.length > 0) {
-      await db.insert(orderRawMaterials).values(
-        materials.map((m, index) => ({
-          orderId: id,
-          rawMaterialId: m.rawMaterialId,
-          unitQty: String(m.unitQty),
-          unitName: String(m.unitName),
-          notes: m.notes || null,
-          vendorId: m.vendorId || null,
-          sortOrder: index,
-        }))
-      );
-    }
+      await transaction.delete(orderRawMaterials).where(eq(orderRawMaterials.orderId, id));
+      if (materials.length > 0) {
+        await transaction.insert(orderRawMaterials).values(
+          materials.map((m, index) => ({
+            orderId: id,
+            rawMaterialId: m.rawMaterialId,
+            unitQty: String(m.unitQty),
+            unitName: String(m.unitName),
+            notes: m.notes || null,
+            timing: m.timing?.trim() || null,
+            vendorId: m.vendorId || null,
+            sortOrder: index,
+          }))
+        );
+      }
 
-    await syncOrderMenuDishes(id, dishIds);
+      await syncOrderMenuDishes(id, dishIds, transaction);
+    });
 
     revalidatePath("/orders");
 
     // Only send WhatsApp message to vendors whose materials were actually added or edited
-    const updatedVendorIds = getUpdatedVendorIds(
-      existingOrder.orderRawMaterials || [],
-      materials,
-    );
+    const scheduleChanged = toDateString(existingOrder.date) !== date || existingOrder.venue !== venue || existingOrder.mealType !== mealType;
+    const updatedVendorIds = scheduleChanged
+      ? [...new Set(materials.flatMap((material) => material.vendorId ? [material.vendorId] : []))]
+      : getUpdatedVendorIds(existingOrder.orderRawMaterials || [], materials);
 
     if (updatedVendorIds.length > 0) {
       console.log(
@@ -815,7 +818,6 @@ export async function updateOrder(data: OrderInput) {
           notifyVendorsForOrder({
             orderId,
             date,
-            eventTime,
             venue,
             numberOfPersons,
             mealType,

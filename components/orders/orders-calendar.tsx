@@ -1,10 +1,8 @@
 "use client";
 
-import { Clock3 } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
-import { formatEventTime } from "@/lib/orders/event-time";
 import { formatOrderDate, MealBadge, PersonsBadge } from "./order-badges";
 import { SelectedMenuDialog } from "./selected-menu-dialog";
 
@@ -110,12 +108,6 @@ export function OrdersCalendar({ orders, onEdit }: OrdersCalendarProps) {
                           {order.customerName || "Unnamed customer"}
                         </p>
                         <p className="mt-0.5 text-sm text-muted">{order.venue}</p>
-                        {order.eventTime ? (
-                          <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
-                            <Clock3 className="size-4" strokeWidth={1.75} aria-hidden />
-                            {formatEventTime(order.eventTime)}
-                          </p>
-                        ) : null}
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <MealBadge mealType={order.mealType} />

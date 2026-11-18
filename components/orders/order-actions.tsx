@@ -121,7 +121,6 @@ export function OrderActions({
             buildOrderShareText({
               orderId: order.orderId,
               date: order.date,
-              eventTime: order.eventTime,
               venue: order.venue,
               customerName: order.customerName,
               customerPhone: order.customerPhone,

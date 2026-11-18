@@ -1,6 +1,5 @@
 import type { OrderRecord } from "@/app/orders/actions";
 
-import { formatEventTime } from "@/lib/orders/event-time";
 import { isMenuPending } from "@/lib/orders/menu-status";
 
 import {
@@ -44,7 +43,6 @@ export function OrderGrid({ orders, onEdit, onFinance }: OrderGridProps) {
               </p>
               <p className="mt-1 text-sm text-muted">
                 {formatOrderDate(order.date)}
-                {order.eventTime ? ` · ${formatEventTime(order.eventTime)}` : ""}
               </p>
               <p className="mt-2 text-sm font-medium text-foreground text-pretty">
                 {order.venue}

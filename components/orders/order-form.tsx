@@ -22,13 +22,13 @@ import {
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import type { CategoryWithDishes } from "@/app/menus/actions";
 import { OrderDishesPanel } from "@/components/orders/order-menu-panel";
-import { EventTimePicker } from "@/components/orders/event-time-picker";
 import {
   OrderMaterialsPanel,
   type OrderMaterialDraft,
 } from "@/components/orders/order-materials-panel";
 import { PersonsStepper } from "@/components/orders/persons-stepper";
 import { calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
+import { todayCalendarDateString } from "@/lib/utils";
 
 type OrderFormProps = {
   order: OrderRecord | null;
@@ -49,33 +49,19 @@ const mealOptions: {
   { value: "dinner", label: "Dinner", icon: Moon },
 ];
 
-function isMaterialComplete(item: OrderMaterialDraft) {
-  return (
-    item.unitQty.trim() !== "" &&
-    item.unitQty !== "0" &&
-    item.unitName.trim() !== ""
-  );
-}
-
-function orderMaterialsByCompletion(
+function initialMaterialOrder(
   materials: MaterialWithVendor[],
-  selected: OrderMaterialDraft[],
   currentOrder?: number[],
 ) {
-  const completeIds = new Set(
-    selected.filter(isMaterialComplete).map((item) => item.rawMaterialId),
-  );
-
   const rank = new Map((currentOrder ?? []).map((id, index) => [id, index]));
 
   return [...materials]
     .sort((a, b) => {
-      const aComplete = completeIds.has(a.id);
-      const bComplete = completeIds.has(b.id);
-      if (aComplete !== bComplete) return aComplete ? -1 : 1;
       const aRank = rank.get(a.id);
       const bRank = rank.get(b.id);
       if (aRank !== undefined && bRank !== undefined) return aRank - bRank;
+      if (aRank !== undefined) return -1;
+      if (bRank !== undefined) return 1;
       return a.name.localeCompare(b.name);
     })
     .map((material) => material.id);
@@ -130,26 +116,19 @@ export function OrderForm({
           unitQty: existing?.unitQty ?? "",
           unitName: existing?.unitName ?? "",
           notes: existing?.notes ?? "",
+          timing: existing?.timing ?? "",
           vendorId: existing?.vendorId ?? defaultVendorId,
         };
       });
     },
   );
 
-  const selectedMaterialsRef = useRef(selectedMaterials);
-  selectedMaterialsRef.current = selectedMaterials;
-
   const [orderedMaterialIds, setOrderedMaterialIds] = useState<number[]>(() =>
-    orderMaterialsByCompletion(
+    initialMaterialOrder(
       rawMaterials,
-      selectedMaterials,
-      order?.rawMaterials.map((material) => material.rawMaterialId),
+      order?.materialOrder,
     ),
   );
-
-  function refreshMaterialOrder(next = selectedMaterialsRef.current) {
-    setOrderedMaterialIds((current) => orderMaterialsByCompletion(rawMaterials, next, current));
-  }
 
   function reorderSelectedMaterials(selectedIds: number[]) {
     setOrderedMaterialIds((current) => [
@@ -210,8 +189,9 @@ export function OrderForm({
 
     const form = event.currentTarget;
     if (!form.checkValidity()) {
-      setError("Please complete the required order details highlighted below.");
-      switchTab("details");
+      const invalidTiming = form.querySelector("[data-delivery-timing] select:invalid");
+      setError(invalidTiming ? "Complete the delivery timing or clear it to use the meal name." : "Please complete the required order details highlighted below.");
+      switchTab(invalidTiming ? "materials" : "details");
       window.setTimeout(() => form.reportValidity(), 50);
       return;
     }
@@ -237,7 +217,6 @@ export function OrderForm({
       id: order?.id,
       orderId: String(formData.get("orderId") || ""),
       date: String(formData.get("date") || ""),
-      eventTime: String(formData.get("eventTime") || ""),
       venue: String(formData.get("venue") || ""),
       numberOfPersons: Number(formData.get("numberOfPersons")),
       perPlateAmount,
@@ -246,6 +225,7 @@ export function OrderForm({
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
+      materialOrder: orderedMaterialIds,
       dishIds: menuCatalog
         .flatMap((category) => category.dishes)
         .map((dish) => dish.id)
@@ -285,7 +265,6 @@ export function OrderForm({
       const next = prev.map((item) =>
         item.rawMaterialId === rawMaterialId ? { ...item, ...updates } : item,
       );
-      selectedMaterialsRef.current = next;
       return next;
     });
   }
@@ -382,13 +361,9 @@ export function OrderForm({
                 name="date"
                 type="date"
                 required
-                defaultValue={order?.date ?? ""}
+                defaultValue={order?.date ?? todayCalendarDateString()}
                 className="w-full min-w-0 max-w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
               />
-            </div>
-
-            <div className="min-w-0">
-              <EventTimePicker defaultValue={order?.eventTime} />
             </div>
 
             <div className="min-w-0">
@@ -597,7 +572,6 @@ export function OrderForm({
           sortedMaterials={sortedMaterials}
           selectedMaterials={selectedMaterials}
           onUpdate={updateMaterial}
-          onCommitOrder={refreshMaterialOrder}
           onReorder={reorderSelectedMaterials}
         />
       </div>

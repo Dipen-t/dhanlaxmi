@@ -1,10 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Clock3, MapPin } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
-import { formatEventTime } from "@/lib/orders/event-time";
 import { isMenuPending } from "@/lib/orders/menu-status";
 import { formatCurrency } from "@/lib/utils";
 
@@ -261,12 +260,6 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                   </span>
                   {order.customerName ? (
                     <span className="mt-1 block text-sm text-muted">{order.customerName}</span>
-                  ) : null}
-                  {order.eventTime ? (
-                    <span className="mt-1 flex items-center gap-1.5 text-sm font-medium text-foreground">
-                      <Clock3 className="size-4 shrink-0" strokeWidth={1.75} aria-hidden />
-                      {formatEventTime(order.eventTime)}
-                    </span>
                   ) : null}
                   <span className="mt-2 flex flex-wrap gap-2">
                     <MealBadge mealType={order.mealType} />
