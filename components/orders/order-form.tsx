@@ -29,7 +29,7 @@ import {
 import { PersonsStepper } from "@/components/orders/persons-stepper";
 import { calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { todayCalendarDateString } from "@/lib/utils";
-import { sortOrderDishCategories } from "@/lib/orders/dish-category-order";
+import { buildOrderDishCatalog } from "@/lib/orders/dish-category-order";
 
 type OrderFormProps = {
   order: OrderRecord | null;
@@ -82,7 +82,7 @@ export function OrderForm({
   const totalPlateCount = plateCount + extraPlates;
   const calculatedTotal = calculateTotalWithExtraPlates(plateCount, extraPlates, perPlateAmount);
   const [selectedDishIds, setSelectedDishIds] = useState<number[]>(order?.dishIds ?? []);
-  const orderedMenuCatalog = useMemo(() => sortOrderDishCategories(menuCatalog), [menuCatalog]);
+  const orderedMenuCatalog = useMemo(() => buildOrderDishCatalog(menuCatalog), [menuCatalog]);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
     () => {
