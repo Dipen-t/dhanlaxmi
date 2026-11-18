@@ -42,6 +42,7 @@ export const vendors = pgTable("vendors", {
 export const rawMaterials = pgTable("raw_materials", {
   id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
+  sortOrder: integer("sort_order").notNull().default(2147483647),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

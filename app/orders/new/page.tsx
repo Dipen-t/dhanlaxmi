@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function NewOrderPage() {
   const [suggestedOrderId, rawMaterials, menuCatalog] = await Promise.all([
     getSuggestedOrderId(),
-    getMaterials(),
+    getMaterials(true),
     getCatalogCategories(),
   ]);
 

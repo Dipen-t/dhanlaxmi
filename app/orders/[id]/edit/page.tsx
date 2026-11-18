@@ -27,7 +27,7 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
   const [order, suggestedOrderId, rawMaterials, menuCatalog] = await Promise.all([
     getOrder(String(orderId)),
     getSuggestedOrderId(),
-    getMaterials(),
+    getMaterials(true),
     getCatalogCategories(),
   ]);
 

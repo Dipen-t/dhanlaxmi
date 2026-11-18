@@ -54,6 +54,7 @@ type OrderMaterialsPanelProps = {
     updates: Partial<OrderMaterialDraft>,
   ) => void;
   onReorder: (selectedIds: number[]) => void;
+  isSavingOrder: boolean;
 };
 
 function SortableMaterialCard({
@@ -159,6 +160,7 @@ export function OrderMaterialsPanel({
   selectedMaterials,
   onUpdate,
   onReorder,
+  isSavingOrder,
 }: OrderMaterialsPanelProps) {
   const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -284,7 +286,7 @@ export function OrderMaterialsPanel({
         ) : (
           <div className="h-full overflow-y-auto overscroll-contain p-2 sm:p-2.5">
             <p className="mb-2 px-1 text-xs text-muted">
-              {query ? "Clear search to rearrange materials." : "Drag a card by its handle onto another card to swap their positions."}
+              {isSavingOrder ? "Saving arrangement…" : query ? "Clear search to rearrange materials." : "Drag a card by its handle onto another card to swap their positions."}
             </p>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
               <SortableContext items={visibleMaterials.map((material) => material.id)} strategy={rectSwappingStrategy}>
@@ -311,7 +313,7 @@ export function OrderMaterialsPanel({
                     active={active}
                     complete={complete}
                     partial={partial}
-                    dragDisabled={Boolean(query)}
+                    dragDisabled={Boolean(query) || isSavingOrder}
                     onEdit={() => openEditor(material.id)}
                   />
                 );

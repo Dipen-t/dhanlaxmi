@@ -19,7 +19,7 @@ import {
   type MealType,
   type OrderRecord,
 } from "@/app/orders/actions";
-import type { MaterialWithVendor } from "@/app/raw-materials/actions";
+import { saveOrderMaterialArrangement, type MaterialWithVendor } from "@/app/raw-materials/actions";
 import type { CategoryWithDishes } from "@/app/menus/actions";
 import { OrderDishesPanel } from "@/components/orders/order-menu-panel";
 import {
@@ -48,24 +48,6 @@ const mealOptions: {
   { value: "lunch", label: "Lunch", icon: Sun },
   { value: "dinner", label: "Dinner", icon: Moon },
 ];
-
-function initialMaterialOrder(
-  materials: MaterialWithVendor[],
-  currentOrder?: number[],
-) {
-  const rank = new Map((currentOrder ?? []).map((id, index) => [id, index]));
-
-  return [...materials]
-    .sort((a, b) => {
-      const aRank = rank.get(a.id);
-      const bRank = rank.get(b.id);
-      if (aRank !== undefined && bRank !== undefined) return aRank - bRank;
-      if (aRank !== undefined) return -1;
-      if (bRank !== undefined) return 1;
-      return a.name.localeCompare(b.name);
-    })
-    .map((material) => material.id);
-}
 
 export function OrderForm({
   order,
@@ -124,17 +106,31 @@ export function OrderForm({
   );
 
   const [orderedMaterialIds, setOrderedMaterialIds] = useState<number[]>(() =>
-    initialMaterialOrder(
-      rawMaterials,
-      order?.materialOrder,
-    ),
+    rawMaterials.map((material) => material.id),
   );
+  const [isSavingMaterialOrder, setIsSavingMaterialOrder] = useState(false);
+  const materialOrderSavingRef = useRef(false);
 
-  function reorderSelectedMaterials(selectedIds: number[]) {
-    setOrderedMaterialIds((current) => [
+  async function reorderSelectedMaterials(selectedIds: number[]) {
+    if (materialOrderSavingRef.current) return;
+    const previous = orderedMaterialIds;
+    const next = [
       ...selectedIds,
-      ...current.filter((id) => !selectedIds.includes(id)),
-    ]);
+      ...previous.filter((id) => !selectedIds.includes(id)),
+    ];
+    materialOrderSavingRef.current = true;
+    setIsSavingMaterialOrder(true);
+    setOrderedMaterialIds(next);
+    try {
+      const result = await saveOrderMaterialArrangement(next);
+      if (result.error) throw new Error(result.error);
+    } catch (error) {
+      setOrderedMaterialIds(previous);
+      toast.error(error instanceof Error ? error.message : "Could not save the kitchen item arrangement. Try again.");
+    } finally {
+      materialOrderSavingRef.current = false;
+      setIsSavingMaterialOrder(false);
+    }
   }
 
   const sortedMaterials = useMemo(() => {
@@ -573,6 +569,7 @@ export function OrderForm({
           selectedMaterials={selectedMaterials}
           onUpdate={updateMaterial}
           onReorder={reorderSelectedMaterials}
+          isSavingOrder={isSavingMaterialOrder}
         />
       </div>
 

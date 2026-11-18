@@ -10,6 +10,7 @@ try {
   await sql.begin(async (transaction) => {
     await transaction`ALTER TABLE order_raw_materials ADD COLUMN IF NOT EXISTS timing text`;
     await transaction`ALTER TABLE orders ADD COLUMN IF NOT EXISTS material_order integer[]`;
+    await transaction`ALTER TABLE raw_materials ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 2147483647`;
   });
   console.log("Kitchen item timing and saved arrangement are ready.");
 } catch (error) {

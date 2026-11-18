@@ -1,0 +1,1 @@
+ALTER TABLE "raw_materials" ADD COLUMN IF NOT EXISTS "sort_order" integer DEFAULT 2147483647 NOT NULL;

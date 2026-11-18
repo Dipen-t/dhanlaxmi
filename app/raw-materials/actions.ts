@@ -1,6 +1,6 @@
 "use server";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, inArray, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -12,11 +12,32 @@ export type MaterialWithVendor = {
   rawMaterialVendors: { vendor: { id: number; name: string } }[];
 };
 
-export async function getMaterials(): Promise<MaterialWithVendor[]> {
+export async function getMaterials(sortForOrders = false): Promise<MaterialWithVendor[]> {
   return db.query.rawMaterials.findMany({
     with: { rawMaterialVendors: { with: { vendor: true } } },
-    orderBy: asc(rawMaterials.name),
+    orderBy: sortForOrders ? [asc(rawMaterials.sortOrder), asc(rawMaterials.name)] : asc(rawMaterials.name),
   });
+}
+
+export async function saveOrderMaterialArrangement(ids: number[]) {
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 10000 || new Set(ids).size !== ids.length || ids.some((id) => !Number.isSafeInteger(id) || id <= 0)) {
+    return { error: "The kitchen item arrangement is invalid. Reload the form and try again." };
+  }
+  try {
+    const positions = ids.map((id, index) => sql`when ${id} then ${index}`);
+    await db.transaction(async (transaction) => {
+      const updated = await transaction.update(rawMaterials)
+        .set({ sortOrder: sql`case ${rawMaterials.id} ${sql.join(positions, sql` `)} else ${rawMaterials.sortOrder} end` })
+        .where(inArray(rawMaterials.id, ids))
+        .returning({ id: rawMaterials.id });
+      if (updated.length !== ids.length) throw new Error("A kitchen item was removed.");
+    });
+    revalidatePath("/orders/new");
+    revalidatePath("/orders/[id]/edit", "page");
+    return { success: true as const };
+  } catch {
+    return { error: "Could not save the kitchen item arrangement. Check your connection and try again." };
+  }
 }
 
 function normalizeName(name: string) {
