@@ -6,6 +6,7 @@ import { db } from "@/db";
 import { orders, orderPayments, orderPaymentExpenses, vendors, vendorPayments } from "@/db/schema";
 import { calculateCashPosition } from "@/lib/reports/cash-position";
 import type { VendorPayment } from "@/lib/expenses/vendor-ledger";
+import { parseOtherExpenseEntries, parseVendorExpenseEntries } from "@/lib/expenses/entry-batch";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 
 export type VendorDropdownItem = { id: number; name: string };
@@ -127,9 +128,6 @@ export async function getOrderExpenseLedger(
 function validId(id: number) {
   return Number.isSafeInteger(id) && id > 0;
 }
-function validAmount(amount: number) {
-  return Number.isInteger(amount) && amount > 0 && amount <= 2147483647;
-}
 function entryDate(data: FormData): Date | null {
   const value = String(data.get("date") || "");
   if (!value) return new Date();
@@ -145,46 +143,57 @@ function refreshOrder(orderId: number) {
   revalidatePath(`/orders/${orderId}/finance`);
 }
 
-export async function createExpense(data: FormData) {
-  const orderId = Number(data.get("orderId"));
-  const orderPaymentId = Number(data.get("orderPaymentId"));
-  const amount = Number(data.get("amount"));
-  const description = String(data.get("description") || "").trim();
-  const date = entryDate(data);
-  if (!validId(orderId) || !validId(orderPaymentId)) {
-    return { error: "Choose an order and a client payment received." };
-  }
-  if (!validAmount(amount)) {
-    return { error: "Enter a positive whole-rupee amount." };
-  }
-  if (!description || description.length > 240) {
-    return { error: "Enter a description of up to 240 characters." };
-  }
-  if (!date) return { error: "Enter a valid date." };
-  try {
-    const receipt = await db.query.orderPayments.findFirst({
-      where: and(
+type ExpenseTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+async function recordAgainstReceipt(
+  orderId: number,
+  orderPaymentId: number,
+  save: (transaction: ExpenseTransaction) => Promise<string | null>,
+) {
+  return db.transaction(async (transaction) => {
+    const [receipt] = await transaction.select({ id: orderPayments.id })
+      .from(orderPayments)
+      .where(and(
         eq(orderPayments.id, orderPaymentId),
         eq(orderPayments.orderId, orderId),
         eq(orderPayments.isWaived, false),
-      ),
-      columns: { id: true },
+      ))
+      .for("update");
+    if (!receipt) return { error: "That client payment is no longer available for this order. Refresh and choose another." };
+    const error = await save(transaction);
+    return error ? { error } : { success: true as const };
+  });
+}
+
+export async function createExpenses(data: FormData) {
+  const orderId = Number(data.get("orderId"));
+  const orderPaymentId = Number(data.get("orderPaymentId"));
+  if (!validId(orderId) || !validId(orderPaymentId)) {
+    return { error: "Choose an order and a client payment received." };
+  }
+  const parsed = parseOtherExpenseEntries(data);
+  if (!parsed.entries) return { error: parsed.error };
+  const date = entryDate(data);
+  if (!date) return { error: "Enter a valid date." };
+  const entries = parsed.entries;
+  try {
+    const result = await recordAgainstReceipt(orderId, orderPaymentId, async (transaction) => {
+      await transaction.insert(orderPaymentExpenses).values(
+        entries.map((entry) => ({ ...entry, orderPaymentId, date })),
+      );
+      return null;
     });
-    if (!receipt) {
-      return {
-        error:
-          "That client payment is no longer available for this order. Refresh and choose another.",
-      };
-    }
-    await db
-      .insert(orderPaymentExpenses)
-      .values({ orderPaymentId, amount, description, date });
+    if (result.error) return result;
     refreshOrder(orderId);
-    return { success: true };
+    return { success: true as const, count: entries.length };
   } catch (error) {
     console.error("Expense entry failed:", error);
-    return { error: "Could not save the expense. Please try again." };
+    return { error: "Could not save the expenses. Please try again." };
   }
+}
+
+export async function createExpense(data: FormData) {
+  return createExpenses(data);
 }
 
 export async function deleteExpense(data: FormData) {
@@ -224,54 +233,41 @@ export async function deleteExpense(data: FormData) {
   }
 }
 
-export async function createVendorPaymentForExpenses(data: FormData) {
-  const vendorId = Number(data.get("vendorId"));
+export async function createVendorPaymentsForExpenses(data: FormData) {
   const orderId = Number(data.get("orderId"));
   const orderPaymentId = Number(data.get("orderPaymentId"));
-  const amount = Number(data.get("amount"));
+  if (!validId(orderId) || !validId(orderPaymentId)) {
+    return { error: "Choose an order and a client payment received." };
+  }
+  const parsed = parseVendorExpenseEntries(data);
+  if (!parsed.entries) return { error: parsed.error };
   const date = entryDate(data);
-  const notes = String(data.get("notes") || "").trim() || null;
-  if (!validId(vendorId) || !validId(orderId) || !validId(orderPaymentId)) {
-    return { error: "Choose an order, payment received, and vendor." };
-  }
-  if (!validAmount(amount)) {
-    return { error: "Enter a positive whole-rupee amount." };
-  }
   if (!date) return { error: "Enter a valid date." };
-  if (notes && notes.length > 240) {
-    return { error: "Keep notes within 240 characters." };
-  }
+  const notes = String(data.get("notes") || "").trim() || null;
+  if (notes && notes.length > 240) return { error: "Keep notes within 240 characters." };
+  const entries = parsed.entries;
   try {
-    const receipt = await db.query.orderPayments.findFirst({
-      where: and(
-        eq(orderPayments.id, orderPaymentId),
-        eq(orderPayments.orderId, orderId),
-        eq(orderPayments.isWaived, false),
-      ),
-      columns: { id: true },
+    const result = await recordAgainstReceipt(orderId, orderPaymentId, async (transaction) => {
+      const found = await transaction.query.vendors.findMany({
+        where: inArray(vendors.id, entries.map((entry) => entry.vendorId)),
+        columns: { id: true },
+      });
+      if (found.length !== entries.length) return "A vendor is no longer available. Refresh the form and try again.";
+      await transaction.insert(vendorPayments).values(
+        entries.map((entry) => ({ ...entry, orderId, orderPaymentId, date, notes })),
+      );
+      return null;
     });
-    if (!receipt) {
-      return {
-        error:
-          "That client payment is no longer available for this order. Refresh and try again.",
-      };
-    }
-    await db.insert(vendorPayments).values({
-      vendorId,
-      orderId,
-      orderPaymentId,
-      amount,
-      date,
-      notes,
-    });
+    if (result.error) return result;
     refreshOrder(orderId);
-    revalidatePath(`/vendors/${vendorId}/finance`);
-    return { success: true };
+    for (const entry of entries) revalidatePath(`/vendors/${entry.vendorId}/finance`);
+    return { success: true as const, count: entries.length };
   } catch (error) {
     console.error("Vendor payment entry failed:", error);
-    return {
-      error:
-        "Could not save the vendor payment. Check the order and vendor, then try again.",
-    };
+    return { error: "Could not save the vendor payments. Check the order and vendors, then try again." };
   }
+}
+
+export async function createVendorPaymentForExpenses(data: FormData) {
+  return createVendorPaymentsForExpenses(data);
 }

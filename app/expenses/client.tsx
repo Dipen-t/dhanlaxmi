@@ -25,9 +25,9 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import {
   getOrderExpenseLedger,
-  createExpense,
+  createExpenses,
   deleteExpense,
-  createVendorPaymentForExpenses,
+  createVendorPaymentsForExpenses,
   type OrderExpenseLedger,
   type OrderSelectionItem,
   type VendorDropdownItem,
@@ -108,6 +108,7 @@ export function ExpensesClient({
   const [awaitingLedger, setAwaitingLedger] = useState(initialOrderId != null);
   const selectedRef = useRef<number | "">(initialOrderId ?? "");
   const requestVersion = useRef(0);
+  const entrySavingRef = useRef(false);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -127,7 +128,6 @@ export function ExpensesClient({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- closeOrderPicker is stable enough for open lifecycle
   }, [pickerOpen]);
 
   useEffect(() => {
@@ -181,8 +181,6 @@ export function ExpensesClient({
       startLoading(async () => {
         await refreshLedger(selectedOrderId);
       });
-    } else {
-      setAwaitingLedger(false);
     }
   }, [selectedOrderId, refreshLedger]);
 
@@ -243,7 +241,7 @@ export function ExpensesClient({
 
   function addEntry(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selectedOrderId === "" || !activeForm || isSaving) return;
+    if (selectedOrderId === "" || !activeForm || entrySavingRef.current) return;
     const orderId = selectedOrderId;
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -251,23 +249,26 @@ export function ExpensesClient({
     data.set("orderPaymentId", String(activeForm.paymentId));
     const isVendor = activeForm.kind === "vendor";
     setEntryError(null);
+    entrySavingRef.current = true;
     startSaving(async () => {
       try {
         const result = isVendor
-          ? await createVendorPaymentForExpenses(data)
-          : await createExpense(data);
-        if (result.error) {
+          ? await createVendorPaymentsForExpenses(data)
+          : await createExpenses(data);
+        if ("error" in result && result.error) {
           setEntryError(result.error);
           return;
         }
         form.reset();
         toast.success(
-          isVendor ? "Vendor payment recorded" : "Expense recorded",
+          isVendor ? "Vendor payments recorded" : "Expenses recorded",
         );
         await refreshLedger(orderId);
         closeForm();
       } catch {
-        setEntryError("Could not save this entry. Please try again.");
+        setEntryError("Could not save these entries. Please try again.");
+      } finally {
+        entrySavingRef.current = false;
       }
     });
   }
@@ -297,8 +298,6 @@ export function ExpensesClient({
   const receipts = ledger?.payments.filter((payment) => !payment.isWaived) ?? [];
   const unallocatedVendorPayments =
     ledger?.vendorPayments.filter((payment) => !payment.orderPaymentId) ?? [];
-  const linkedIds = new Set(ledger?.linkedVendors.map((vendor) => vendor.id));
-  const otherVendors = vendors.filter((vendor) => !linkedIds.has(vendor.id));
   const selectedOrderMeta =
     ledger?.order ??
     orders.find((order) => order.id === selectedOrderId) ??
@@ -725,7 +724,7 @@ export function ExpensesClient({
 
       <dialog
         ref={entryDialogRef}
-        className="app-dialog"
+        className="app-dialog app-dialog-wide"
         aria-labelledby={entryTitleId}
         onClose={handleEntryDialogClose}
         onCancel={(event) => {
@@ -740,8 +739,7 @@ export function ExpensesClient({
             kind={activeForm.kind}
             titleId={entryTitleId}
             receiptLabel={activeReceiptLabel}
-            linkedVendors={ledger?.linkedVendors ?? []}
-            otherVendors={otherVendors}
+            vendors={vendors}
             entryError={entryError}
             isSaving={isSaving}
             onCancel={closeForm}
@@ -875,8 +873,7 @@ function EntryForm({
   kind,
   titleId,
   receiptLabel,
-  linkedVendors,
-  otherVendors,
+  vendors,
   entryError,
   isSaving,
   onCancel,
@@ -885,148 +882,118 @@ function EntryForm({
   kind: EntryFormKind;
   titleId: string;
   receiptLabel: string | null;
-  linkedVendors: VendorDropdownItem[];
-  otherVendors: VendorDropdownItem[];
+  vendors: VendorDropdownItem[];
   entryError: string | null;
   isSaving: boolean;
   onCancel: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const isVendor = kind === "vendor";
+  const [vendorAmounts, setVendorAmounts] = useState<Record<number, string>>({});
+  const [expenses, setExpenses] = useState([{ id: 0, description: "", amount: "" }]);
+  const nextExpenseId = useRef(1);
+  const amounts = isVendor ? Object.values(vendorAmounts) : expenses.map((expense) => expense.amount);
+  const total = amounts.reduce((sum, value) => sum + (Number(value) || 0), 0);
+  const filledCount = isVendor
+    ? amounts.filter((amount) => amount.trim()).length
+    : expenses.filter((expense) => expense.description.trim() || expense.amount.trim()).length;
+
+  function updateExpense(id: number, updates: { description?: string; amount?: string }) {
+    setExpenses((current) => current.map((expense) => expense.id === id ? { ...expense, ...updates } : expense));
+  }
+
+  function addExpenseRow() {
+    const id = nextExpenseId.current++;
+    setExpenses((current) => [...current, { id, description: "", amount: "" }]);
+  }
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col">
-      <div className="px-5 pt-5 pb-4">
-        <h2
-          id={titleId}
-          className="text-lg font-semibold text-foreground"
-        >
-          {isVendor ? "Add vendor payment" : "Add other expense"}
+    <form onSubmit={onSubmit} className="flex min-h-0 min-w-0 flex-col">
+      <div className="shrink-0 px-5 pt-5 pb-4">
+        <h2 id={titleId} className="text-lg font-semibold text-foreground">
+          {isVendor ? "Vendor expenses" : "Other expenses"}
         </h2>
-        {receiptLabel ? (
-          <p className="mt-1 text-sm text-muted">
-            Allocated against {receiptLabel}
-          </p>
-        ) : null}
-
-        <fieldset
-          disabled={isSaving}
-          className="mt-5 grid min-w-0 grid-cols-1 gap-4"
-        >
-          {isVendor ? (
-            <>
-              <label className="block min-w-0">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Vendor
-                </span>
-                <select
-                  name="vendorId"
-                  required
-                  defaultValue=""
-                  className={fieldClass}
-                >
-                  <option value="" disabled>
-                    Choose a vendor
-                  </option>
-                  {linkedVendors.length ? (
-                    <optgroup label="Order vendors">
-                      {linkedVendors.map((vendor) => (
-                        <option key={vendor.id} value={vendor.id}>
-                          {vendor.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                  {otherVendors.length ? (
-                    <optgroup label="Other vendors">
-                      {otherVendors.map((vendor) => (
-                        <option key={vendor.id} value={vendor.id}>
-                          {vendor.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null}
-                </select>
-              </label>
-              <label className="block min-w-0">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Notes (optional)
-                </span>
-                <input
-                  name="notes"
-                  maxLength={240}
-                  placeholder="e.g. Advance for vegetables"
-                  className={fieldClass}
-                />
-              </label>
-            </>
-          ) : (
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-sm font-medium text-foreground">
-                Description
-              </span>
-              <input
-                name="description"
-                required
-                maxLength={240}
-                placeholder="e.g. Transport or labour"
-                className={fieldClass}
-              />
-            </label>
-          )}
-          <label className="block min-w-0">
-            <span className="mb-1.5 block text-sm font-medium text-foreground">
-              Amount (₹)
-            </span>
-            <input
-              name="amount"
-              type="number"
-              inputMode="numeric"
-              min="1"
-              max="2147483647"
-              step="1"
-              required
-              placeholder="0"
-              className={`${fieldClass} tabular-nums`}
-            />
-          </label>
-          <label className="block min-w-0">
-            <span className="mb-1.5 block text-sm font-medium text-foreground">
-              Date
-            </span>
-            <input
-              name="date"
-              type="date"
-              defaultValue={today()}
-              required
-              className={fieldClass}
-            />
-          </label>
-        </fieldset>
-
-        {entryError ? (
-          <p role="alert" className="mt-4 text-sm text-error">
-            {entryError}
-          </p>
-        ) : null}
+        {receiptLabel ? <p className="mt-1 text-sm text-muted">Allocated against {receiptLabel}</p> : null}
       </div>
 
-      <div className="flex flex-wrap justify-end gap-2 border-t border-border bg-surface/50 px-5 py-4">
-        <button
-          type="button"
-          className={secondaryButton}
-          disabled={isSaving}
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
-        <button type="submit" className={primaryButton} disabled={isSaving}>
-          {isSaving
-            ? "Saving…"
-            : isVendor
-              ? "Save vendor payment"
-              : "Save expense"}
-        </button>
+      <fieldset disabled={isSaving} className="app-dialog-body min-h-0 min-w-0 space-y-4 overflow-y-auto overscroll-contain px-5 pb-5">
+        <label className="block min-w-0">
+          <span className="mb-1.5 block text-sm font-medium text-foreground">Date</span>
+          <input name="date" type="date" defaultValue={today()} required className={fieldClass} />
+        </label>
+
+        {isVendor ? (
+          <>
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-sm font-medium text-foreground">Notes for these payments (optional)</span>
+              <input name="notes" maxLength={240} placeholder="e.g. Advance for supplies" className={fieldClass} />
+            </label>
+            <p className="text-sm text-muted">Enter the amount beside each vendor you paid. Leave the others empty.</p>
+            <div className="divide-y divide-border rounded-lg border border-border">
+              {vendors.map((vendor) => (
+                <div key={vendor.id} className="px-3 py-3">
+                  <input type="hidden" name="vendorId" value={vendor.id} />
+                  <label className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,10rem)] items-center gap-3">
+                    <span className="break-words text-sm font-medium text-foreground">{vendor.name}</span>
+                    <input
+                      name="amount"
+                      type="number"
+                      inputMode="numeric"
+                      min="1"
+                      max="2147483647"
+                      step="1"
+                      aria-label={`Amount paid to ${vendor.name}`}
+                      value={vendorAmounts[vendor.id] ?? ""}
+                      onChange={(event) => setVendorAmounts((current) => ({ ...current, [vendor.id]: event.target.value }))}
+                      placeholder="Amount (₹)"
+                      className={`${fieldClass} tabular-nums`}
+                    />
+                  </label>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {expenses.map((expense, index) => {
+                const required = Boolean(expense.description.trim() || expense.amount.trim());
+                return (
+                  <div key={expense.id} className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_2.5rem] items-end gap-2">
+                    <label className="block min-w-0">
+                      <span className="mb-1.5 block text-sm font-medium text-foreground">Description</span>
+                      <input name="description" required={required} maxLength={240} value={expense.description} onChange={(event) => updateExpense(expense.id, { description: event.target.value })} aria-label={`Expense ${index + 1} description`} placeholder="Transport or labour" className={fieldClass} />
+                    </label>
+                    <label className="block min-w-0">
+                      <span className="mb-1.5 block text-sm font-medium text-foreground">Amount (₹)</span>
+                      <input name="amount" type="number" inputMode="numeric" min="1" max="2147483647" step="1" required={required} value={expense.amount} onChange={(event) => updateExpense(expense.id, { amount: event.target.value })} aria-label={`Expense ${index + 1} amount`} placeholder="0" className={`${fieldClass} tabular-nums`} />
+                    </label>
+                    <button type="button" disabled={expenses.length === 1} onClick={() => setExpenses((current) => current.filter((row) => row.id !== expense.id))} aria-label={`Remove expense ${index + 1}`} className="inline-flex min-h-12 items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30">
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <button type="button" onClick={addExpenseRow} className={quietButton}>
+              <Plus className="size-4" aria-hidden /> Add more
+            </button>
+          </>
+        )}
+      </fieldset>
+
+      {entryError ? <p role="alert" className="shrink-0 px-5 pb-4 text-sm text-error">{entryError}</p> : null}
+      <div className="shrink-0 border-t border-border bg-surface/50 px-5 py-4">
+        <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+          <span className="text-muted">{filledCount} {isVendor ? "vendor payments" : "expenses"}</span>
+          <span className="font-semibold tabular-nums text-foreground">Total {formatCurrency(total)}</span>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button type="button" className={secondaryButton} disabled={isSaving} onClick={onCancel}>Cancel</button>
+          <button type="submit" className={primaryButton} disabled={isSaving || filledCount === 0}>
+            {isSaving ? "Saving…" : isVendor ? "Save vendor expenses" : "Save expenses"}
+          </button>
+        </div>
       </div>
     </form>
   );
