@@ -2,7 +2,8 @@
 
 import { Pencil, Trash2 } from "lucide-react";
 import dynamic from "next/dynamic";
-import { useRef, useTransition } from "react";
+import { useState } from "react";
+import { DeleteConfirmation } from "@/components/ui/delete-confirmation";
 
 import { deleteMenu, type MenuSummary } from "@/app/menus/actions";
 
@@ -34,25 +35,14 @@ export function MenuActions({
   onEdit,
   layout = "inline",
 }: MenuActionsProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [isPending, startTransition] = useTransition();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  function openDeleteDialog() {
-    dialogRef.current?.showModal();
-  }
+  function openDeleteDialog() { setDeleteOpen(true); }
 
-  function closeDeleteDialog() {
-    dialogRef.current?.close();
-  }
-
-  function handleDelete() {
+  async function handleDelete() {
     const formData = new FormData();
     formData.set("id", String(menu.id));
-
-    startTransition(async () => {
-      await deleteMenu(formData);
-      closeDeleteDialog();
-    });
+    return deleteMenu(formData);
   }
 
   const secondaryClass =
@@ -91,6 +81,7 @@ export function MenuActions({
           type="button"
           onClick={() => onEdit(menu)}
           aria-label={`Edit ${menu.name}`}
+          title={`Edit ${menu.name}`}
           className={`${editClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
         >
           <Pencil className="size-4" strokeWidth={1.75} aria-hidden />
@@ -102,6 +93,7 @@ export function MenuActions({
           type="button"
           onClick={openDeleteDialog}
           aria-label={`Delete ${menu.name}`}
+          title={`Delete ${menu.name}`}
           className={`${deleteClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
@@ -111,38 +103,14 @@ export function MenuActions({
         </button>
       </div>
 
-      <dialog
-        ref={dialogRef}
-        className="app-dialog"
-        onClose={closeDeleteDialog}
-      >
-        <form method="dialog" className="flex flex-col">
-          <div className="px-5 pt-5 pb-4">
-            <h2 className="text-base font-semibold text-foreground">
-              Delete menu?
-            </h2>
-            <p className="mt-2 text-sm text-muted text-pretty">
-              Delete &ldquo;{menu.name}&rdquo;? This cannot be undone.
-            </p>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-            <button
-              type="submit"
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isPending}
-              className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-error/20 bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50"
-            >
-              {isPending ? "Deleting…" : "Delete"}
-            </button>
-          </div>
-        </form>
-      </dialog>
+      <DeleteConfirmation
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete menu?"
+        message={`Delete "${menu.name}"? This cannot be undone.`}
+        action={handleDelete}
+        successMessage="Menu deleted"
+      />
     </>
   );
 }

@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 
 import { addExtraPlates, deleteOrder, type OrderRecord } from "@/app/orders/actions";
 import { CustomerConfirmationButton } from "@/components/orders/customer-confirmation-button";
+import { DeleteConfirmation } from "@/components/ui/delete-confirmation";
 import { formatCurrency } from "@/lib/utils";
 
 type OrderActionsProps = {
@@ -20,7 +21,7 @@ export function OrderActions({
   onFinance,
   layout = "inline",
 }: OrderActionsProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const extraPlatesDialogRef = useRef<HTMLDialogElement>(null);
   const [isPending, startTransition] = useTransition();
   const [additionalPlates, setAdditionalPlates] = useState("");
@@ -34,12 +35,9 @@ export function OrderActions({
     : null;
 
   function openDeleteDialog() {
-    dialogRef.current?.showModal();
+    setDeleteOpen(true);
   }
 
-  function closeDeleteDialog() {
-    dialogRef.current?.close();
-  }
 
   function openExtraPlatesDialog() {
     setAdditionalPlates("");
@@ -73,14 +71,11 @@ export function OrderActions({
     });
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     const formData = new FormData();
     formData.set("id", String(order.id));
 
-    startTransition(async () => {
-      await deleteOrder(formData);
-      closeDeleteDialog();
-    });
+    return deleteOrder(formData);
   }
 
   const secondaryClass =
@@ -112,6 +107,7 @@ export function OrderActions({
           type="button"
           onClick={() => onEdit(order)}
           aria-label={`Edit ${order.orderId}`}
+          title={`Edit ${order.orderId}`}
           className={`${editClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
         >
           <Pencil className="size-4" strokeWidth={1.75} aria-hidden />
@@ -135,6 +131,7 @@ export function OrderActions({
             type="button"
             onClick={() => onFinance(order)}
             aria-label={`Finance for ${order.orderId}`}
+          title={`Finance for ${order.orderId}`}
             className={`${financeClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
           >
             <IndianRupee className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
@@ -147,6 +144,7 @@ export function OrderActions({
           type="button"
           onClick={openDeleteDialog}
           aria-label={`Delete ${order.orderId}`}
+          title={`Delete ${order.orderId}`}
           className={`${deleteClass}${layout === "stacked" ? " min-w-11 flex-1" : " min-w-11"}`}
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
@@ -231,40 +229,14 @@ export function OrderActions({
         </form>
       </dialog>
 
-      <dialog
-        ref={dialogRef}
-        className="app-dialog"
-        onClose={closeDeleteDialog}
-      >
-        <form method="dialog" className="flex flex-col">
-          <div className="px-5 pt-5 pb-4">
-            <h2 className="text-base font-semibold text-foreground">
-              Delete order?
-            </h2>
-            <p className="mt-2 text-sm text-muted text-pretty">
-              Delete &ldquo;{order.orderId}&rdquo; at {order.venue}? This cannot
-              be undone.
-            </p>
-            <p className="mt-2 text-sm text-warning">Contact assigned vendors manually before deleting. No automatic cancellation message will be sent.</p>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-            <button
-              type="submit"
-              className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isPending}
-              className="inline-flex min-h-10 items-center rounded-lg border border-error/20 bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50"
-            >
-              {isPending ? "Deleting…" : "Delete"}
-            </button>
-          </div>
-        </form>
-      </dialog>
+      <DeleteConfirmation
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete order?"
+        message={`Delete "${order.orderId}" at ${order.venue}? This cannot be undone. Contact assigned vendors manually before deleting. No automatic cancellation message will be sent.`}
+        action={handleDelete}
+        successMessage="Order deleted"
+      />
     </>
   );
 }

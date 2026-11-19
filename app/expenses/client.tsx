@@ -541,7 +541,7 @@ export function ExpensesClient({
                               {vendorSpend.map((payment) => (
                                 <li
                                   key={payment.id}
-                                  className="flex items-start justify-between gap-3 py-3"
+                                  className="flex flex-wrap items-start justify-between gap-3 py-3"
                                 >
                                   <div className="min-w-0">
                                     <p className="text-sm font-medium text-foreground">
@@ -585,7 +585,7 @@ export function ExpensesClient({
                             <ul className="mt-3 divide-y divide-border">
                               {otherSpend.map((expense) => (
                                 <li key={expense.id} className="py-3">
-                                  <div className="flex items-start justify-between gap-3">
+                                  <div className="flex flex-wrap items-start justify-between gap-3">
                                     <div className="min-w-0">
                                       <p className="break-words text-sm font-medium text-foreground">
                                         {expense.description}
@@ -594,7 +594,7 @@ export function ExpensesClient({
                                         {displayDate(expense.date)}
                                       </p>
                                     </div>
-                                    <div className="flex shrink-0 items-center gap-1">
+                                    <div className="flex shrink-0 flex-wrap items-center gap-1">
                                       <span className="text-sm font-semibold tabular-nums text-foreground">
                                         {formatCurrency(expense.amount)}
                                       </span>
@@ -637,7 +637,7 @@ export function ExpensesClient({
                 {unallocatedVendorPayments.map((payment) => (
                   <li
                     key={payment.id}
-                    className="flex items-start justify-between gap-3 px-4 py-3 sm:px-5"
+                    className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-5"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-foreground">
@@ -700,7 +700,7 @@ export function ExpensesClient({
                 style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
               >
                 <div className="shrink-0 border-b border-border px-4 pt-4 pb-3 sm:px-5">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <div>
                       <h2
                         id={searchTitleId}

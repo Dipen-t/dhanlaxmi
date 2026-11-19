@@ -1,8 +1,8 @@
 "use client";
 
 import { Pencil, Trash2, IndianRupee } from "lucide-react";
-import { useEffect, useId, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
+import { DeleteConfirmation } from "@/components/ui/delete-confirmation";
 
 import { deleteVendor, type VendorWithMaterials } from "@/app/vendors/actions";
 
@@ -19,54 +19,23 @@ export function VendorActions({
   onFinance,
   layout = "inline",
 }: VendorActionsProps) {
-  const titleId = useId();
-  const [mounted, setMounted] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!deleteOpen) return;
-
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setDeleteOpen(false);
-      }
-    }
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [deleteOpen]);
-
-  function handleDelete() {
+  async function handleDelete() {
     const formData = new FormData();
     formData.set("id", String(vendor.id));
-
-    startTransition(async () => {
-      await deleteVendor(formData);
-      setDeleteOpen(false);
-    });
+    return deleteVendor(formData);
   }
 
   const buttonClass =
-    "inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-lg border border-border text-muted transition-colors hover:border-primary/30 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+    "inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center gap-1.5 rounded-lg border border-border px-2.5 text-muted transition-colors hover:border-primary/30 hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
 
   return (
     <>
       <div
         className={
           layout === "stacked"
-            ? "flex items-center gap-2"
+            ? "flex flex-wrap items-center gap-2"
             : "flex shrink-0 items-center gap-2"
         }
       >
@@ -74,23 +43,28 @@ export function VendorActions({
           type="button"
           onClick={() => onEdit(vendor)}
           aria-label={`Edit ${vendor.name}`}
+          title={`Edit ${vendor.name}`}
           className={buttonClass}
         >
           <Pencil className="size-4" strokeWidth={1.75} aria-hidden />
+          {layout === "stacked" ? <span className="text-sm">Edit</span> : null}
         </button>
         <button
           type="button"
           onClick={() => setDeleteOpen(true)}
           aria-label={`Delete ${vendor.name}`}
+          title={`Delete ${vendor.name}`}
           className={buttonClass}
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
+          {layout === "stacked" ? <span className="text-sm">Delete</span> : null}
         </button>
         {onFinance && (
           <button
             type="button"
             onClick={() => onFinance(vendor)}
             aria-label={`Finance for ${vendor.name}`}
+          title={`Finance for ${vendor.name}`}
             className={buttonClass}
           >
             <IndianRupee className="size-4 text-emerald-600" strokeWidth={1.75} aria-hidden />
@@ -98,58 +72,14 @@ export function VendorActions({
         )}
       </div>
 
-      {mounted && deleteOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-200 flex items-end justify-center p-0 sm:items-center sm:p-4">
-              <button
-                type="button"
-                aria-label="Close dialog"
-                className="absolute inset-0 bg-[oklch(0.22_0.02_175/0.45)]"
-                onClick={() => setDeleteOpen(false)}
-              />
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={titleId}
-                className="relative z-10 w-full max-w-sm overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl"
-                style={{
-                  paddingBottom: "env(safe-area-inset-bottom, 0px)",
-                }}
-              >
-                <div className="px-5 pt-5 pb-4">
-                  <h2
-                    id={titleId}
-                    className="text-base font-semibold text-foreground"
-                  >
-                    Delete vendor?
-                  </h2>
-                  <p className="mt-2 text-sm text-muted text-pretty">
-                    Delete &ldquo;{vendor.name}&rdquo;? Assigned materials will
-                    become unassigned.
-                  </p>
-                </div>
-                <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-                  <button
-                    type="button"
-                    onClick={() => setDeleteOpen(false)}
-                    className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={isPending}
-                    className="inline-flex min-h-11 touch-manipulation items-center rounded-lg border border-error/20 bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:bg-destructive/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error/40 disabled:opacity-50"
-                  >
-                    {isPending ? "Deleting…" : "Delete"}
-                  </button>
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
+      <DeleteConfirmation
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete vendor?"
+        message={`Delete "${vendor.name}"? Assigned materials will become unassigned. This cannot be undone.`}
+        action={handleDelete}
+        successMessage="Vendor deleted"
+      />
     </>
   );
 }

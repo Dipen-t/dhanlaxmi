@@ -1,7 +1,8 @@
 "use client";
 
 import { Pencil, Trash2, Truck } from "lucide-react";
-import { useRef, useTransition } from "react";
+import { useState } from "react";
+import { DeleteConfirmation } from "@/components/ui/delete-confirmation";
 
 import {
   deleteMaterial,
@@ -19,25 +20,14 @@ export function MaterialActions({
   onEdit,
   layout = "inline",
 }: MaterialActionsProps) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const [isPending, startTransition] = useTransition();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  function openDeleteDialog() {
-    dialogRef.current?.showModal();
-  }
+  function openDeleteDialog() { setDeleteOpen(true); }
 
-  function closeDeleteDialog() {
-    dialogRef.current?.close();
-  }
-
-  function handleDelete() {
+  async function handleDelete() {
     const formData = new FormData();
     formData.set("id", String(material.id));
-
-    startTransition(async () => {
-      await deleteMaterial(formData);
-      closeDeleteDialog();
-    });
+    return deleteMaterial(formData);
   }
 
   const buttonClass =
@@ -56,6 +46,7 @@ export function MaterialActions({
           type="button"
           onClick={() => onEdit(material)}
           aria-label={`Edit ${material.name}`}
+          title={`Edit ${material.name}`}
           className={`${buttonClass}${layout === "stacked" ? " flex-1" : ""}`}
         >
           <Pencil className="size-4" strokeWidth={1.75} aria-hidden />
@@ -67,6 +58,7 @@ export function MaterialActions({
           type="button"
           onClick={openDeleteDialog}
           aria-label={`Delete ${material.name}`}
+          title={`Delete ${material.name}`}
           className={`${buttonClass}${layout === "stacked" ? " flex-1" : ""}`}
         >
           <Trash2 className="size-4" strokeWidth={1.75} aria-hidden />
@@ -76,41 +68,14 @@ export function MaterialActions({
         </button>
       </div>
 
-      <dialog
-        ref={dialogRef}
-        className="app-dialog"
-        onClose={closeDeleteDialog}
-      >
-        <form method="dialog" className="flex flex-col">
-          <div className="px-5 pt-5 pb-4">
-            <h2 className="text-base font-semibold text-foreground">
-              Delete material?
-            </h2>
-            <p className="mt-2 text-sm text-muted text-pretty">
-              Delete &ldquo;{material.name}&rdquo;? This cannot be undone.
-              {material.rawMaterialVendors.length > 0
-                ? " It will be removed from the assigned vendors."
-                : null}
-            </p>
-          </div>
-          <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
-            <button
-              type="submit"
-              className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={isPending}
-              className="inline-flex min-h-10 items-center rounded-lg bg-destructive px-4 text-sm font-medium text-destructive-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
-            >
-              {isPending ? "Deleting…" : "Delete"}
-            </button>
-          </div>
-        </form>
-      </dialog>
+      <DeleteConfirmation
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete material?"
+        message={`Delete "${material.name}"? This cannot be undone. It will also be removed from assigned vendors.`}
+        action={handleDelete}
+        successMessage="Material deleted"
+      />
     </>
   );
 }

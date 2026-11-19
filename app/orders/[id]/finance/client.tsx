@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { ExpenseEntryActions } from "@/components/expenses/entry-actions";
 import { Plus, IndianRupee, HandCoins, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
 const dateFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -254,7 +256,8 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
             {payments.map((payment) => (
               <PaymentRow 
                 key={payment.id} 
-                payment={payment} 
+                payment={payment}
+                vendors={vendors}
                 openExpenseDialog={openExpenseDialog} 
                 openEditDialog={openEditDialog}
                 openDeleteDialog={openDeleteDialog}
@@ -451,16 +454,19 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
 }
 
 function PaymentRow({ 
-  payment, 
+  payment,
+  vendors,
   openExpenseDialog,
   openEditDialog,
   openDeleteDialog
 }: { 
   payment: OrderPaymentRecord, 
+  vendors: VendorDropdownItem[],
   openExpenseDialog: (id: number) => void,
   openEditDialog: (payment: OrderPaymentRecord) => void,
   openDeleteDialog: (payment: OrderPaymentRecord) => void
 }) {
+  const router = useRouter();
   const hasExpenses = payment.expenses && payment.expenses.length > 0;
   
   const content = (
@@ -484,28 +490,30 @@ function PaymentRow({
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); openExpenseDialog(payment.id); }}
-            className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+            className="inline-flex min-h-11 min-w-11 justify-center items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
             title="Add Expense"
           >
             <Plus className="size-3.5" />
-            <span className="hidden sm:inline">Expense</span>
+            <span>Expense</span>
           </button>
         )}
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); openEditDialog(payment); }}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
-          title="Edit"
+          className="inline-flex min-h-11 min-w-11 justify-center items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+          aria-label="Edit payment"
+          title="Edit payment"
         >
-          <Pencil className="size-3.5" />
+          <Pencil className="size-3.5" aria-hidden /><span>Edit</span>
         </button>
         <button
           type="button"
           onClick={(e) => { e.preventDefault(); openDeleteDialog(payment); }}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
-          title="Delete"
+          className="inline-flex min-h-11 min-w-11 justify-center items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
+          aria-label="Delete payment"
+          title="Delete payment"
         >
-          <Trash2 className="size-3.5" />
+          <Trash2 className="size-3.5" aria-hidden /><span>Delete</span>
         </button>
         {hasExpenses && (
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface">
@@ -526,12 +534,15 @@ function PaymentRow({
            <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted">Expenses against this payment</h4>
            <ul className="space-y-3">
              {payment.expenses!.map((expense) => (
-               <li key={expense.id} className="flex justify-between items-start text-sm">
+               <li key={expense.id} className="flex flex-wrap justify-between items-start gap-2 text-sm">
                  <div>
                    <p className="font-medium text-foreground">{expense.description}</p>
                    <p className="text-xs text-muted">{displayPaymentDate(expense.date)}</p>
                  </div>
-                 <span className="font-semibold text-error">-₹{expense.amount}</span>
+                 <div className="flex flex-wrap items-center gap-1">
+                   <span className="font-semibold text-error">-₹{expense.amount}</span>
+                   <ExpenseEntryActions orderId={payment.orderId} kind="expense" entry={expense} vendors={vendors} onChanged={async () => { router.refresh(); }} />
+                 </div>
                </li>
              ))}
            </ul>

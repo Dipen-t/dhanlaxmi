@@ -4,7 +4,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
-import { rawMaterials, vendors, rawMaterialVendors } from "@/db/schema";
+import { rawMaterials, vendors, rawMaterialVendors, vendorPayments } from "@/db/schema";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import { getMaterials } from "@/app/raw-materials/actions";
@@ -217,14 +217,17 @@ export async function deleteVendor(formData: FormData) {
     return { error: "Invalid vendor." };
   }
 
-  const [deleted] = await db
-    .delete(vendors)
-    .where(eq(vendors.id, id))
-    .returning({ id: vendors.id });
-
-  if (!deleted) {
-    return { error: "Vendor not found." };
-  }
+  const result = await db.transaction(async transaction => {
+    const [vendor] = await transaction.select({ id: vendors.id }).from(vendors)
+      .where(eq(vendors.id, id)).for("update");
+    if (!vendor) return { error: "Vendor not found." };
+    const [payment] = await transaction.select({ id: vendorPayments.id }).from(vendorPayments)
+      .where(eq(vendorPayments.vendorId, id)).limit(1);
+    if (payment) return { error: "This vendor has recorded payments. Edit the vendor instead to preserve your expense history." };
+    await transaction.delete(vendors).where(eq(vendors.id, id));
+    return { success: true as const };
+  });
+  if (result.error) return result;
 
   revalidateVendorPaths();
   return { success: true as const };

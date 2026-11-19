@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import type { CategoryWithDishes } from "@/app/menus/actions";
 import { saveCategory, deleteCategory, saveDish, deleteDish } from "@/app/menus/catalog/actions";
 
-const input = "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
-const button = "rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface disabled:opacity-50";
+const input = "min-h-11 min-w-0 w-full rounded-lg border border-border bg-background px-3 py-2 text-base focus:outline-none focus:ring-2 focus:ring-ring";
+const button = "min-h-11 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-surface disabled:opacity-50";
 const primary = `${button} bg-primary text-primary-foreground hover:bg-primary/90`;
 type Result = { error?: string; success?: boolean; id?: number };
 
@@ -66,9 +66,9 @@ export function MenuCatalogManager({ catalog }: { catalog: CategoryWithDishes[] 
         </form>
         {category && <div className="mt-6 border-t border-border pt-5">
           <h3 className="mb-3 font-semibold">Dishes <span className="text-muted">({category.dishes.length})</span></h3>
-          <form onSubmit={e => { e.preventDefault(); const element = e.currentTarget; const form = new FormData(element); run(() => saveDish(form), "Dish added.", () => element.reset()); }} className="mb-4 flex gap-2">
+          <form onSubmit={e => { e.preventDefault(); const element = e.currentTarget; const form = new FormData(element); run(() => saveDish(form), "Dish added.", () => element.reset()); }} className="mb-4 flex flex-wrap gap-2">
             <input type="hidden" name="categoryId" value={category.id} />
-            <input name="name" aria-label="New dish name" className={input} required maxLength={120} disabled={pending} placeholder="Add a dish…" />
+            <input name="name" aria-label="New dish name" className={`${input} flex-1 basis-40`} required maxLength={120} disabled={pending} placeholder="Add a dish…" />
             <button className={`${primary} shrink-0`} disabled={pending}>Add dish</button>
           </form>
           <ul className="divide-y divide-border">{category.dishes.map(dish => <li key={dish.id} className="py-3">
@@ -76,7 +76,7 @@ export function MenuCatalogManager({ catalog }: { catalog: CategoryWithDishes[] 
               <input type="hidden" name="id" value={dish.id} /><input type="hidden" name="categoryId" value={category.id} />
               <input aria-label="Edit dish name" name="name" className={`${input} min-w-40 flex-1`} defaultValue={dish.name} maxLength={120} required disabled={pending} autoFocus />
               <button className={primary} disabled={pending}>Save</button><button type="button" className={button} disabled={pending} onClick={() => setEditingDish(null)}>Cancel</button>
-            </form> : <div className="flex items-center justify-between gap-3"><span className="break-words text-sm">{dish.name}</span><div className="flex shrink-0 gap-2"><button type="button" className={button} disabled={pending} aria-label={`Edit ${dish.name}`} onClick={() => setEditingDish(dish.id)}>Edit</button><button type="button" className={`${button} text-error`} disabled={pending} aria-label={`Delete ${dish.name}`} onClick={() => setDeletion({ type: "dish", id: dish.id, name: dish.name })}>Delete</button></div></div>}
+            </form> : <div className="flex flex-wrap items-center justify-between gap-3"><span className="min-w-0 flex-1 basis-40 break-words text-sm">{dish.name}</span><div className="flex shrink-0 gap-2"><button type="button" className={button} disabled={pending} aria-label={`Edit ${dish.name}`} onClick={() => setEditingDish(dish.id)}>Edit</button><button type="button" className={`${button} text-error`} disabled={pending} aria-label={`Delete ${dish.name}`} onClick={() => setDeletion({ type: "dish", id: dish.id, name: dish.name })}>Delete</button></div></div>}
           </li>)}</ul>
           {!category.dishes.length && <p className="py-4 text-sm text-muted">No dishes yet. Add the first dish above.</p>}
         </div>}

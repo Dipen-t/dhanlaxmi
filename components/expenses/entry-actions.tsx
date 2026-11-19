@@ -37,8 +37,8 @@ export function ExpenseEntryActions({ orderId, kind, entry, vendors, onChanged }
   }
 
   return <>
-    <button type="button" onClick={() => open("edit")} aria-label={`Edit ${label}`} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Pencil className="size-4" aria-hidden /></button>
-    <button type="button" onClick={() => open("delete")} aria-label={`Delete ${label}`} className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Trash2 className="size-4" aria-hidden /></button>
+    <button type="button" onClick={() => open("edit")} aria-label={`Edit ${label}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 px-2 rounded-lg text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Pencil className="size-4" aria-hidden /><span className="text-sm">Edit</span></button>
+    <button type="button" onClick={() => open("delete")} aria-label={`Delete ${label}`} className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 px-2 rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><Trash2 className="size-4" aria-hidden /><span className="text-sm">Delete</span></button>
     <dialog ref={dialog} className="app-dialog" aria-labelledby={titleId} onCancel={event => { if (busyRef.current) event.preventDefault(); }}>
       <form key={formKey} onSubmit={submit} className="flex min-h-0 flex-col overflow-hidden">
         <div className="min-h-0 space-y-4 overflow-y-auto overscroll-contain px-5 pt-5 pb-4">
