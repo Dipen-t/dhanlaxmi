@@ -271,3 +271,59 @@ export async function createVendorPaymentsForExpenses(data: FormData) {
 export async function createVendorPaymentForExpenses(data: FormData) {
   return createVendorPaymentsForExpenses(data);
 }
+
+export async function updateLedgerEntry(data: FormData) {
+  const id = Number(data.get("id"));
+  const orderId = Number(data.get("orderId"));
+  const kind = data.get("kind");
+  const date = entryDate(data);
+  if (!validId(id) || !validId(orderId) || !["vendor", "expense"].includes(String(kind))) return { error: "Choose an entry from this order." };
+  if (!date) return { error: "Enter a valid date." };
+  try {
+    if (kind === "vendor") {
+      const parsed = parseVendorExpenseEntries(data);
+      if (!parsed.entries || parsed.entries.length !== 1) return { error: parsed.error || "Choose one vendor and amount." };
+      const notes = String(data.get("notes") || "").trim() || null;
+      if (notes && notes.length > 240) return { error: "Keep notes within 240 characters." };
+      const entry = parsed.entries[0];
+      const result = await db.transaction(async transaction => {
+        const [existing] = await transaction.select().from(vendorPayments).where(and(eq(vendorPayments.id, id), eq(vendorPayments.orderId, orderId))).for("update");
+        if (!existing) return { error: "That vendor payment is no longer available for this order." };
+        const vendor = await transaction.query.vendors.findFirst({ where: eq(vendors.id, entry.vendorId) });
+        if (!vendor) return { error: "That vendor is no longer available." };
+        await transaction.update(vendorPayments).set({ ...entry, date, notes, updatedAt: new Date() }).where(eq(vendorPayments.id, id));
+        return { oldVendorId: existing.vendorId };
+      });
+      if ("error" in result) return result;
+      revalidatePath(`/vendors/${result.oldVendorId}/finance`);
+      revalidatePath(`/vendors/${entry.vendorId}/finance`);
+    } else {
+      const parsed = parseOtherExpenseEntries(data);
+      if (!parsed.entries || parsed.entries.length !== 1) return { error: parsed.error || "Enter one expense description and amount." };
+      const result = await db.transaction(async transaction => {
+        const [existing] = await transaction.select({ id: orderPaymentExpenses.id }).from(orderPaymentExpenses)
+          .innerJoin(orderPayments, eq(orderPaymentExpenses.orderPaymentId, orderPayments.id))
+          .where(and(eq(orderPaymentExpenses.id, id), eq(orderPayments.orderId, orderId))).for("update");
+        if (!existing) return { error: "That expense is no longer available for this order." };
+        await transaction.update(orderPaymentExpenses).set({ ...parsed.entries![0], date }).where(eq(orderPaymentExpenses.id, id));
+        return { success: true };
+      });
+      if (result.error) return result;
+    }
+    refreshOrder(orderId);
+    return { success: true };
+  } catch { return { error: "Could not update the entry. Refresh the ledger and try again." }; }
+}
+
+export async function deleteVendorExpense(data: FormData) {
+  const id = Number(data.get("id"));
+  const orderId = Number(data.get("orderId"));
+  if (!validId(id) || !validId(orderId)) return { error: "Choose a vendor payment from this order." };
+  try {
+    const [removed] = await db.delete(vendorPayments).where(and(eq(vendorPayments.id, id), eq(vendorPayments.orderId, orderId))).returning({ vendorId: vendorPayments.vendorId });
+    if (!removed) return { error: "That vendor payment is no longer available for this order." };
+    refreshOrder(orderId);
+    revalidatePath(`/vendors/${removed.vendorId}/finance`);
+    return { success: true };
+  } catch { return { error: "Could not delete the vendor payment. Please try again." }; }
+}

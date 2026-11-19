@@ -1,5 +1,4 @@
 import { normalizeWhatsAppHubPhone } from "./whatsapp-phone";
-import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "./whatsapp-booking-config";
 export { normalizeWhatsAppHubPhone } from "./whatsapp-phone";
 
 type WhatsAppResult = { success: true } | { error: string };
@@ -225,6 +224,7 @@ export async function sendWhatsAppTemplateMessage(options: {
   template: string;
   params: string[];
   document?: { url: string; filename: string };
+  mode?: "template" | "text";
 }): Promise<WhatsAppResult> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
@@ -308,7 +308,7 @@ export async function sendWhatsAppTemplateMessage(options: {
     `text=${encodeURIComponent(options.template.trim())}`,
     "priority=wa",
     "stype=normal",
-    `Params=${safeParams.map((p) => encodeURIComponent(p.value)).join(",")}`,
+    ...(options.mode === "text" ? ["htype=normal"] : [`Params=${safeParams.map((p) => encodeURIComponent(p.value)).join(",")}`]),
     ...documentParams,
   ].join("&");
 
@@ -485,6 +485,13 @@ export async function sendMenuPdfViaWhatsApp(
   });
 }
 
+/** Provider's normal-text mode requires the recipient's active reply window. */
+export async function sendWhatsAppPlainText(phone: string, message: string): Promise<WhatsAppResult> {
+  if (!message.trim() || message.length > 30000) return { error: "The WhatsApp message is empty or too long." };
+  const result = await sendWhatsAppTemplateMessage({ phone, template: message, params: [], mode: "text" });
+  return "error" in result ? { error: `${result.error} Normal-text sending may require the recipient to reply to your WhatsApp business number first.` } : result;
+}
+
 /**
  * Customer notifications use the approved customerorder template only.
  *
@@ -554,16 +561,6 @@ export async function sendBookingConfirmation(options: {
 
   if (!ok) {
     return templateResult;
-  }
-  if (normalizeWhatsAppHubPhone(options.phone) !== BOOKING_MANAGER_PHONE) {
-    const managerResult = await sendWhatsAppTemplateMessage({
-      phone: BOOKING_MANAGER_PHONE,
-      template,
-      params: [eventDate, options.eventVenue, options.meal],
-    });
-    if ("error" in managerResult) {
-      return { success: true, warning: `Customer confirmation accepted, but the copy to manager ${BOOKING_MANAGER_NAME} (${BOOKING_MANAGER_PHONE}) failed: ${managerResult.error}` };
-    }
   }
   return { success: true };
 }

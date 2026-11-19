@@ -15,8 +15,7 @@ import {
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
-import { normalizeWhatsAppHubPhone, sendNewOrderVendorAlert, sendBookingConfirmation } from "@/lib/whatsapp";
-import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "@/lib/orders/vendor-timing";
+import { dispatchOrderMessages, ensureWhatsappOutbox, getMessageAttentionCounts, queueCustomerNotifications, queueVendorNotifications } from "@/lib/orders/whatsapp-outbox";
 
 
 export type MealType = "breakfast" | "lunch" | "dinner";
@@ -60,6 +59,7 @@ export type OrderRecord = {
   rawMaterials: OrderRawMaterialRecord[];
   dishIds: number[];
   vendors: string[];
+  whatsappAttention?: number;
 };
 
 function toDateString(date: Date) {
@@ -187,7 +187,8 @@ export async function getOrders(): Promise<OrderRecord[]> {
     with: orderDetailWith,
   });
 
-  return rows.map(serializeOrder).sort(compareOrdersAscending);
+  const attention = await getMessageAttentionCounts(rows.map(row => row.id));
+  return rows.map(row => ({ ...serializeOrder(row), whatsappAttention: attention.get(row.id) ?? 0 })).sort(compareOrdersAscending);
 }
 
 export async function getOrder(id: string): Promise<OrderRecord | null> {
@@ -350,144 +351,6 @@ async function syncOrderMenuDishes(
   }
 }
 
-async function notifyVendorsForOrder(params: {
-  orderId: string;
-  date: string;
-  venue: string;
-  numberOfPersons: number;
-  mealType: string;
-  customerPhone: string | null;
-  materials: OrderRawMaterialRecord[];
-  targetVendorIds?: number[];
-}) {
-  const {
-    orderId,
-    date,
-    venue,
-    numberOfPersons,
-    mealType,
-    customerPhone,
-    materials,
-    targetVendorIds,
-  } = params;
-
-  if (targetVendorIds && targetVendorIds.length === 0) {
-    console.log(`[WA-notify] order ${orderId}: no targeted vendors — skipping WhatsApp`);
-    return;
-  }
-
-  if (materials.length === 0) {
-    console.log(`[WA-notify] order ${orderId}: no materials — skipping WhatsApp`);
-    return;
-  }
-
-  try {
-    const targetSet = targetVendorIds ? new Set(targetVendorIds) : null;
-
-    console.log(
-      `[WA-notify] order ${orderId}: preparing vendor alerts (${materials.length} material rows, target vendors: ${targetSet ? [...targetSet].join(",") : "all"})`,
-    );
-
-    const materialIds = materials.map((m) => m.rawMaterialId);
-    const dbMaterials = await db.query.rawMaterials.findMany({
-      where: inArray(rawMaterials.id, materialIds),
-    });
-
-    const selectedVendorIds = materials
-      .map((m) => m.vendorId)
-      .filter((id): id is number => id != null)
-      .filter((id) => (targetSet ? targetSet.has(id) : true));
-
-    const uniqueVendorIds = [...new Set(selectedVendorIds)];
-    if (uniqueVendorIds.length === 0) {
-      console.log(`[WA-notify] order ${orderId}: no targeted vendors with materials found`);
-      return;
-    }
-
-    let dbVendors: { id: number; name: string; phone: string; deliveryLocation: string }[] = [];
-    if (uniqueVendorIds.length > 0) {
-      dbVendors = await db.query.vendors.findMany({
-        where: inArray(vendors.id, uniqueVendorIds),
-      });
-    }
-
-    const vendorGroups = groupMaterialsByVendorTiming(materials, mealType)
-      .filter((group) => !targetSet || targetSet.has(group.vendorId))
-      .flatMap((group) => {
-        const vendor = dbVendors.find((row) => row.id === group.vendorId);
-        if (!vendor) return [];
-        const items = group.items.flatMap((material) => {
-          const dbMaterial = dbMaterials.find((row) => row.id === material.rawMaterialId);
-          return dbMaterial ? [{ name: dbMaterial.name, qty: material.unitQty, unit: material.unitName, notes: material.notes }] : [];
-        });
-        return items.length > 0 ? [{ vendor, timing: group.timing, items }] : [];
-      });
-
-    console.log(
-      `[WA-notify] order ${orderId}: ${vendorGroups.length} vendor group(s) to notify`,
-      vendorGroups.map((g) => ({
-        vendorId: g.vendor.id,
-        name: g.vendor.name,
-        phone: g.vendor.phone,
-        items: g.items.length,
-      })),
-    );
-
-    const customerNumber = normalizeWhatsAppHubPhone(customerPhone ?? "");
-    let index = 0;
-    for (const group of vendorGroups) {
-      index += 1;
-      if (customerNumber && normalizeWhatsAppHubPhone(group.vendor.phone) === customerNumber) {
-        console.warn(`[WA-notify] order ${orderId}: skipped vendor ${group.vendor.id} because its phone matches the customer`);
-        continue;
-      }
-      const displayVenue = group.vendor.deliveryLocation === "godown" ? "Godown" : venue;
-      const eventSchedule = vendorScheduleLabel(date, group.timing);
-
-      const itemsWithNotes = group.items.filter(
-        (i) => i.notes && i.notes.trim().length > 0,
-      );
-      // Template {{4}} — optional line between venue and materials list.
-      const notesLine =
-        itemsWithNotes.length > 0
-          ? `High Tea details: ${itemsWithNotes
-              .map((i) => `${i.name} (${i.notes})`)
-              .join("; ")}`
-          : "Dhanlaxmi Caterer";
-
-      // Template {{3}} — raw materials list (separated cleanly for Meta template compliance)
-      const materialsLine = group.items
-        .map((item) => `• ${item.name}: ${item.qty} ${item.unit}`)
-        .join("  |  ");
-
-      let fallbackMessage = `*Dhanlaxmi Caterer*\n*New booking*\nDate & time: ${eventSchedule}\nVenue: ${displayVenue}\nMeal: ${mealType}\nPlates: ${numberOfPersons}\n\n*Main order*\n${materialsLine}`;
-      if (itemsWithNotes.length > 0) fallbackMessage += `\n\n*High Tea details*\n${itemsWithNotes.map((item) => `${item.name}: ${item.notes}`).join("\n")}`;
-      fallbackMessage += "\n\nThank you.";
-
-      console.log(
-        `[WA-notify] order ${orderId}: sending ${index}/${vendorGroups.length} → ${group.vendor.name} (${group.vendor.phone})`,
-      );
-
-      const result = await sendNewOrderVendorAlert({
-        phone: group.vendor.phone,
-        orderId,
-        dateLabel: eventSchedule,
-        venue: displayVenue,
-        notesLine,
-        materialsLine,
-        fallbackMessage,
-      });
-
-      console.log(
-        `[WA-notify] order ${orderId}: vendor ${group.vendor.name} result:`,
-        result,
-      );
-    }
-  } catch (error) {
-    console.error("Vendor WhatsApp notify failed (order already saved):", error);
-  }
-}
-
 export async function createOrder(data: OrderInput) {
   const preferredOrderId = normalizeText(data.orderId || "");
   const date = data.date || "";
@@ -548,6 +411,7 @@ export async function createOrder(data: OrderInput) {
   try {
     const eventDate = parseCalendarDate(date);
 
+    await ensureWhatsappOutbox();
     const newOrder = await db.transaction(async (transaction) => {
       const [newOrder] = await transaction.insert(orders).values({
         orderId,
@@ -581,40 +445,18 @@ export async function createOrder(data: OrderInput) {
       }
 
       await syncOrderMenuDishes(newOrder.id, dishIds, transaction);
+      const saved = await transaction.query.orders.findFirst({ where: eq(orders.id, newOrder.id), with: orderDetailWith });
+      if (!saved) throw new Error("Order not found");
+      const snapshot = serializeOrder(saved);
+      await queueCustomerNotifications(transaction, null, snapshot);
+      await queueVendorNotifications(transaction, null, snapshot);
       return newOrder;
     });
 
     revalidatePath("/orders");
 
-    after(async () => {
-      await notifyVendorsForOrder({ orderId, date, venue, numberOfPersons, mealType, customerPhone, materials });
-    });
-
-    // Wait for the customer result so the operator can see provider errors.
-    // Saving the booking remains successful even if WhatsApp rejects the send.
-    let whatsappError: string | undefined;
-    let whatsappWarning: string | undefined;
-    if (customerPhone) {
-      try {
-        const formattedDate = date.split("-").reverse().join("/");
-        const result = await sendBookingConfirmation({
-          phone: customerPhone,
-          customerName: customerName || "Customer",
-          eventDate: formattedDate,
-          eventVenue: venue,
-          meal: mealType,
-          menuDishes: "",
-          fallbackMessage: "",
-        });
-        if ("error" in result) whatsappError = result.error;
-        else whatsappWarning = result.warning;
-      } catch (err) {
-        whatsappError = err instanceof Error ? err.message : "Could not send customer confirmation.";
-      }
-      if (whatsappError) console.error("Customer booking confirmation failed:", whatsappError);
-    }
-
-    return { success: true as const, id: newOrder.id, orderId, whatsappError, whatsappWarning };
+    after(async () => { await dispatchOrderMessages(newOrder.id); });
+    return { success: true as const, id: newOrder.id, orderId, whatsappQueued: true, whatsappError: undefined, whatsappWarning: undefined };
   } catch (e: any) {
     console.error("Error creating order:", e);
     if (e?.code === "23505" || e?.message?.includes("unique constraint") || e?.message?.includes("already exists")) {
@@ -622,74 +464,6 @@ export async function createOrder(data: OrderInput) {
     }
     return { error: e?.message || "Failed to create order due to an unexpected error." };
   }
-}
-
-function getUpdatedVendorIds(
-  oldMaterials: OrderRawMaterialRecord[],
-  newMaterials: OrderRawMaterialRecord[],
-): number[] {
-  const oldByVendor = new Map<number, Map<number, { qty: string; unit: string; notes: string; timing: string }>>();
-  for (const m of oldMaterials) {
-    if (!m.vendorId) continue;
-    if (!oldByVendor.has(m.vendorId)) {
-      oldByVendor.set(m.vendorId, new Map());
-    }
-    oldByVendor.get(m.vendorId)!.set(m.rawMaterialId, {
-      qty: String(m.unitQty ?? "").trim(),
-      unit: String(m.unitName ?? "").trim().toLowerCase(),
-      notes: String(m.notes ?? "").trim(),
-      timing: m.timing?.trim() || "",
-    });
-  }
-
-  const newByVendor = new Map<number, OrderRawMaterialRecord[]>();
-  for (const m of newMaterials) {
-    if (!m.vendorId) continue;
-    if (!newByVendor.has(m.vendorId)) {
-      newByVendor.set(m.vendorId, []);
-    }
-    newByVendor.get(m.vendorId)!.push(m);
-  }
-
-  const updatedVendorIds: number[] = [];
-
-  for (const [vendorId, newItems] of newByVendor.entries()) {
-    const oldItemsMap = oldByVendor.get(vendorId);
-    if (!oldItemsMap) {
-      // Vendor newly assigned in this update
-      updatedVendorIds.push(vendorId);
-      continue;
-    }
-
-    if (newItems.length !== oldItemsMap.size) {
-      // Number of items changed for this vendor
-      updatedVendorIds.push(vendorId);
-      continue;
-    }
-
-    let hasDiff = false;
-    for (const item of newItems) {
-      const oldItem = oldItemsMap.get(item.rawMaterialId);
-      if (!oldItem) {
-        hasDiff = true;
-        break;
-      }
-      const newQty = String(item.unitQty ?? "").trim();
-      const newUnit = String(item.unitName ?? "").trim().toLowerCase();
-      const newNotes = String(item.notes ?? "").trim();
-
-      if (newQty !== oldItem.qty || newUnit !== oldItem.unit || newNotes !== oldItem.notes || (item.timing?.trim() || "") !== oldItem.timing) {
-        hasDiff = true;
-        break;
-      }
-    }
-
-    if (hasDiff) {
-      updatedVendorIds.push(vendorId);
-    }
-  }
-
-  return updatedVendorIds;
 }
 
 export async function updateOrder(data: OrderInput) {
@@ -713,7 +487,6 @@ export async function updateOrder(data: OrderInput) {
   const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
-  const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = (data.rawMaterials || []).map((material) => ({
     ...material,
     timing: material.timing?.trim() || null,
@@ -759,7 +532,13 @@ export async function updateOrder(data: OrderInput) {
   try {
     const eventDate = parseCalendarDate(date);
 
-    await db.transaction(async (transaction) => {
+    await ensureWhatsappOutbox();
+    const notifications = await db.transaction(async (transaction) => {
+      await transaction.select({ id: orders.id }).from(orders).where(eq(orders.id, id)).for("update");
+      const previous = await transaction.query.orders.findFirst({ where: eq(orders.id, id), with: orderDetailWith });
+      if (!previous) throw new Error("Order not found");
+      const currentTotalAmount = calculateTotalWithExtraPlates(numberOfPersons, previous.extraPlates, perPlateAmount);
+      if (currentTotalAmount === null) throw new Error("The combined plate count or amount is too large.");
       const [updated] = await transaction
         .update(orders)
         .set({
@@ -770,11 +549,11 @@ export async function updateOrder(data: OrderInput) {
           numberOfPersons,
           perPlateAmount,
           mealType: mealType as MealType,
-          totalAmount,
+          totalAmount: currentTotalAmount,
           discount,
           customerName,
           customerPhone,
-          isPaymentAmount,
+          isPaymentAmount: currentTotalAmount > 0,
           updatedAt: new Date(),
         })
         .where(eq(orders.id, id))
@@ -801,41 +580,19 @@ export async function updateOrder(data: OrderInput) {
       }
 
       await syncOrderMenuDishes(id, dishIds, transaction);
+      const saved = await transaction.query.orders.findFirst({ where: eq(orders.id, id), with: orderDetailWith });
+      if (!saved) throw new Error("Order not found");
+      const before = serializeOrder(previous);
+      const next = serializeOrder(saved);
+      const customer = await queueCustomerNotifications(transaction, before, next);
+      const vendor = await queueVendorNotifications(transaction, before, next);
+      return { count: customer.length + vendor.ids.length, manual: vendor.warnings.length };
     });
 
     revalidatePath("/orders");
 
-    // Only send WhatsApp message to vendors whose materials were actually added or edited
-    const scheduleChanged = toDateString(existingOrder.date) !== date || existingOrder.venue !== venue || existingOrder.mealType !== mealType;
-    const updatedVendorIds = scheduleChanged
-      ? [...new Set(materials.flatMap((material) => material.vendorId ? [material.vendorId] : []))]
-      : getUpdatedVendorIds(existingOrder.orderRawMaterials || [], materials);
-
-    if (updatedVendorIds.length > 0) {
-      console.log(
-        `[WA-notify] order ${orderId}: materials updated for vendor IDs [${updatedVendorIds.join(", ")}] — sending alerts`,
-      );
-      after(async () => {
-        await Promise.allSettled([
-          notifyVendorsForOrder({
-            orderId,
-            date,
-            venue,
-            numberOfPersons,
-            mealType,
-            customerPhone,
-            materials,
-            targetVendorIds: updatedVendorIds,
-          }),
-        ]);
-      });
-    } else {
-      console.log(
-        `[WA-notify] order ${orderId}: no vendor materials were updated — skipping vendor alerts`,
-      );
-    }
-
-    return { success: true as const };
+    if (notifications.count > 0) after(async () => { await dispatchOrderMessages(id); });
+    return { success: true as const, whatsappQueued: notifications.count > 0, whatsappWarning: notifications.manual ? "Vendor assignments were removed or moved. Contact those vendors manually; see WhatsApp history for details." : undefined };
   } catch (e: any) {
     console.error("Error updating order:", e);
     if (e?.message === "Order not found") {
@@ -871,52 +628,32 @@ export async function deleteOrder(formData: FormData) {
 export async function addExtraPlates(formData: FormData) {
   const id = Number(formData.get("id"));
   const additionalPlates = Number(formData.get("additionalPlates"));
-
-  if (!Number.isSafeInteger(id) || id <= 0) {
-    return { error: "Invalid order." };
-  }
-  if (!Number.isSafeInteger(additionalPlates) || additionalPlates < 1 || additionalPlates > 100000) {
-    return { error: "Enter between 1 and 100,000 extra plates." };
-  }
-
-  const order = await db.query.orders.findFirst({
-    where: eq(orders.id, id),
-    columns: {
-      numberOfPersons: true,
-      extraPlates: true,
-      perPlateAmount: true,
-    },
-  });
-
-  if (!order) return { error: "Order not found." };
-  if (!order.perPlateAmount) {
-    return { error: "Set the per-plate amount before adding extra plates." };
-  }
-
-  const newExtraPlates = order.extraPlates + additionalPlates;
-  const totalPlates = order.numberOfPersons + newExtraPlates;
-  const totalAmount = calculateTotalWithExtraPlates(
-    order.numberOfPersons,
-    newExtraPlates,
-    order.perPlateAmount,
-  );
-  if (totalAmount === null) {
-    return { error: "The updated plate count or total amount is too large." };
-  }
-
-  await db
-    .update(orders)
-    .set({
-      extraPlates: newExtraPlates,
-      totalAmount,
-      isPaymentAmount: true,
-      updatedAt: new Date(),
-    })
-    .where(eq(orders.id, id));
-
-  revalidatePath("/orders");
-  revalidatePath(`/orders/${id}/edit`);
-  revalidatePath(`/orders/${id}/finance`);
-  revalidatePath("/reports");
-  return { success: true as const, extraPlates: newExtraPlates, totalPlates, totalAmount };
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid order." };
+  if (!Number.isSafeInteger(additionalPlates) || additionalPlates < 1 || additionalPlates > 100000) return { error: "Enter between 1 and 100,000 extra plates." };
+  try {
+    await ensureWhatsappOutbox();
+    const result = await db.transaction(async transaction => {
+      await transaction.select({ id: orders.id }).from(orders).where(eq(orders.id, id)).for("update");
+      const order = await transaction.query.orders.findFirst({ where: eq(orders.id, id), with: orderDetailWith });
+      if (!order) return { error: "Order not found." };
+      if (!order.perPlateAmount) return { error: "Set the per-plate amount before adding extra plates." };
+      const newExtraPlates = order.extraPlates + additionalPlates;
+      const totalPlates = order.numberOfPersons + newExtraPlates;
+      const totalAmount = calculateTotalWithExtraPlates(order.numberOfPersons, newExtraPlates, order.perPlateAmount);
+      if (totalAmount === null) return { error: "The updated plate count or total amount is too large." };
+      await transaction.update(orders).set({ extraPlates: newExtraPlates, totalAmount, isPaymentAmount: true, updatedAt: new Date() }).where(eq(orders.id, id));
+      const before = serializeOrder(order);
+      const next = { ...before, extraPlates: newExtraPlates, totalAmount };
+      await queueCustomerNotifications(transaction, before, next);
+      await queueVendorNotifications(transaction, before, next);
+      return { success: true as const, extraPlates: newExtraPlates, totalPlates, totalAmount };
+    });
+    if (result.error) return result;
+    after(async () => { await dispatchOrderMessages(id); });
+    revalidatePath("/orders");
+    revalidatePath(`/orders/${id}/edit`);
+    revalidatePath(`/orders/${id}/finance`);
+    revalidatePath("/reports");
+    return result;
+  } catch { return { error: "Could not add extra plates. Please try again." }; }
 }

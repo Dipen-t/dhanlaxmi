@@ -3,6 +3,7 @@ import { boolean } from "drizzle-orm/pg-core";
 import {
   date,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   primaryKey,
@@ -64,6 +65,24 @@ export const orders = pgTable("orders", {
   customerPhone: text("customer_phone"),
   /** Client menu template used for dish selection (nullable). */
   menuId: integer("menu_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const orderWhatsappMessages = pgTable("order_whatsapp_messages", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
+  recipientKind: text("recipient_kind").notNull(),
+  vendorId: integer("vendor_id").references(() => vendors.id, { onDelete: "set null" }),
+  recipientName: text("recipient_name").notNull(),
+  phone: text("phone").notNull(),
+  kind: text("kind").notNull(),
+  payload: jsonb("payload").$type<{ mode: "template" | "text" | "manual"; template?: string; params?: string[]; text?: string }>().notNull(),
+  status: text("status").notNull().default("queued"),
+  lastError: text("last_error"),
+  attempts: integer("attempts").notNull().default(0),
+  attemptToken: text("attempt_token"),
+  dedupeKey: text("dedupe_key").notNull().unique(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

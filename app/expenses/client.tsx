@@ -12,6 +12,7 @@ import {
   useMemo,
 } from "react";
 import { createPortal } from "react-dom";
+import { ExpenseEntryActions } from "@/components/expenses/entry-actions";
 import {
   Plus,
   Trash2,
@@ -26,7 +27,6 @@ import { formatCurrency } from "@/lib/utils";
 import {
   getOrderExpenseLedger,
   createExpenses,
-  deleteExpense,
   createVendorPaymentsForExpenses,
   type OrderExpenseLedger,
   type OrderSelectionItem,
@@ -99,7 +99,6 @@ export function ExpensesClient({
     paymentId: number;
     kind: EntryFormKind;
   } | null>(null);
-  const [expenseToRemove, setExpenseToRemove] = useState<number | null>(null);
   const [orderQuery, setOrderQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -201,7 +200,7 @@ export function ExpensesClient({
     setLedger(null);
     setAwaitingLedger(true);
     setLoadError(null);
-    setExpenseToRemove(null);
+
     syncUrl(id);
     closeOrderPicker();
     closeForm();
@@ -214,7 +213,7 @@ export function ExpensesClient({
     setLedger(null);
     setAwaitingLedger(false);
     setLoadError(null);
-    setExpenseToRemove(null);
+
     syncUrl("");
     closeForm();
   }
@@ -222,7 +221,7 @@ export function ExpensesClient({
   function openForm(paymentId: number, kind: EntryFormKind) {
     setActiveForm({ paymentId, kind });
     setEntryError(null);
-    setExpenseToRemove(null);
+
   }
 
   function closeForm() {
@@ -273,28 +272,7 @@ export function ExpensesClient({
     });
   }
 
-  function removeExpense(id: number) {
-    if (selectedOrderId === "" || isSaving) return;
-    const orderId = selectedOrderId;
-    const data = new FormData();
-    data.set("id", String(id));
-    data.set("orderId", String(orderId));
-    startSaving(async () => {
-      try {
-        const result = await deleteExpense(data);
-        if (result.error) {
-          toast.error(result.error);
-          return;
-        }
-        toast.success("Expense removed");
-        setExpenseToRemove(null);
-        await refreshLedger(orderId);
-      } catch {
-        toast.error("Could not remove the expense. Please try again.");
-      }
-    });
-  }
-
+  const activeOrderId = ledger?.order.id ?? 0;
   const receipts = ledger?.payments.filter((payment) => !payment.isWaived) ?? [];
   const unallocatedVendorPayments =
     ledger?.vendorPayments.filter((payment) => !payment.orderPaymentId) ?? [];
@@ -576,9 +554,7 @@ export function ExpensesClient({
                                         : ""}
                                     </p>
                                   </div>
-                                  <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                                    {formatCurrency(payment.amount)}
-                                  </span>
+                                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(payment.amount)}</span><ExpenseEntryActions orderId={activeOrderId} kind="vendor" entry={payment} vendors={vendors} onChanged={() => refreshLedger(activeOrderId)} /></div>
                                 </li>
                               ))}
                             </ul>
@@ -622,49 +598,10 @@ export function ExpensesClient({
                                       <span className="text-sm font-semibold tabular-nums text-foreground">
                                         {formatCurrency(expense.amount)}
                                       </span>
-                                      <button
-                                        type="button"
-                                        aria-label={`Remove expense: ${expense.description}`}
-                                        disabled={isSaving}
-                                        onClick={() =>
-                                          setExpenseToRemove(expense.id)
-                                        }
-                                        className="inline-flex size-10 touch-manipulation items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                      >
-                                        <Trash2
-                                          className="size-4"
-                                          aria-hidden
-                                        />
-                                      </button>
+                                      <ExpenseEntryActions orderId={activeOrderId} kind="expense" entry={expense} vendors={vendors} onChanged={() => refreshLedger(activeOrderId)} />
                                     </div>
                                   </div>
-                                  {expenseToRemove === expense.id ? (
-                                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                                      <p className="mr-auto text-sm text-foreground">
-                                        Remove this expense?
-                                      </p>
-                                      <button
-                                        type="button"
-                                        disabled={isSaving}
-                                        className={secondaryButton}
-                                        onClick={() => setExpenseToRemove(null)}
-                                      >
-                                        Cancel
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={isSaving}
-                                        className="min-h-12 rounded-lg bg-error px-4 text-sm font-semibold text-white"
-                                        onClick={() =>
-                                          removeExpense(expense.id)
-                                        }
-                                      >
-                                        {isSaving
-                                          ? "Removing…"
-                                          : "Remove expense"}
-                                      </button>
-                                    </div>
-                                  ) : null}
+
                                 </li>
                               ))}
                             </ul>
@@ -711,9 +648,7 @@ export function ExpensesClient({
                         {payment.notes ? ` · ${payment.notes}` : ""}
                       </p>
                     </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
-                      {formatCurrency(payment.amount)}
-                    </span>
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(payment.amount)}</span><ExpenseEntryActions orderId={activeOrderId} kind="vendor" entry={payment} vendors={vendors} onChanged={() => refreshLedger(activeOrderId)} /></div>
                   </li>
                 ))}
               </ul>
@@ -908,7 +843,7 @@ function EntryForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex min-h-0 min-w-0 flex-col">
+    <form onSubmit={onSubmit} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" style={{ maxHeight: "inherit" }}>
       <div className="shrink-0 px-5 pt-5 pb-4">
         <h2 id={titleId} className="text-lg font-semibold text-foreground">
           {isVendor ? "Vendor expenses" : "Other expenses"}
@@ -916,7 +851,8 @@ function EntryForm({
         {receiptLabel ? <p className="mt-1 text-sm text-muted">Allocated against {receiptLabel}</p> : null}
       </div>
 
-      <fieldset disabled={isSaving} className="app-dialog-body min-h-0 min-w-0 space-y-4 overflow-y-auto overscroll-contain px-5 pb-5">
+      <div className="app-dialog-body min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
+      <fieldset disabled={isSaving} className="min-w-0 space-y-4">
         <label className="block min-w-0">
           <span className="mb-1.5 block text-sm font-medium text-foreground">Date</span>
           <input name="date" type="date" defaultValue={today()} required className={fieldClass} />
@@ -981,9 +917,10 @@ function EntryForm({
           </>
         )}
       </fieldset>
+      </div>
 
       {entryError ? <p role="alert" className="shrink-0 px-5 pb-4 text-sm text-error">{entryError}</p> : null}
-      <div className="shrink-0 border-t border-border bg-surface/50 px-5 py-4">
+      <div className="relative shrink-0 border-t border-border bg-background px-5 py-4">
         <div className="mb-3 flex items-center justify-between gap-3 text-sm">
           <span className="text-muted">{filledCount} {isVendor ? "vendor payments" : "expenses"}</span>
           <span className="font-semibold tabular-nums text-foreground">Total {formatCurrency(total)}</span>

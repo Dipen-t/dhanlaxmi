@@ -248,6 +248,7 @@ export function OrderForm({
         if ("whatsappWarning" in result && result.whatsappWarning) {
           toast.warning(`Order saved. ${result.whatsappWarning}`, { duration: Infinity, closeButton: true });
         }
+        if ("whatsappQueued" in result && result.whatsappQueued) toast.info("Order saved. WhatsApp messages are queued; check each recipient's status from the order's WhatsApp button.");
 
         router.push("/orders");
         router.refresh();

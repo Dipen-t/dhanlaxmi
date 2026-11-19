@@ -174,6 +174,7 @@ export function OrderActions({
             <p className="mt-1 text-sm text-muted">
               {order.orderId} currently has {currentPlateCount.toLocaleString("en-IN")} plates.
             </p>
+            <p className="mt-2 text-sm text-warning">This updates the bill and plate count. Kitchen quantities stay unchanged. Review kitchen items and edit quantities where needed; vendor alerts show the quantities currently saved.</p>
 
             <label className="mt-4 block text-sm font-medium text-foreground" htmlFor={`extra-plates-${order.id}`}>
               Number of extra plates
@@ -244,6 +245,7 @@ export function OrderActions({
               Delete &ldquo;{order.orderId}&rdquo; at {order.venue}? This cannot
               be undone.
             </p>
+            <p className="mt-2 text-sm text-warning">Contact assigned vendors manually before deleting. No automatic cancellation message will be sent.</p>
           </div>
           <div className="flex justify-end gap-2 border-t border-border px-5 py-4">
             <button

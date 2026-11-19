@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { sendBookingConfirmation, sendMenuPdfViaWhatsApp, sendWhatsAppTemplateMessage } from "./whatsapp";
+import { sendBookingConfirmation, sendMenuPdfViaWhatsApp, sendWhatsAppPlainText, sendWhatsAppTemplateMessage } from "./whatsapp";
 
 test("customer and PDF sends use exact templates and return provider errors without vendor fallback", async () => {
   const originalFetch = globalThis.fetch;
@@ -39,9 +39,7 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.equal(requests.length, 2);
     assert.equal(requests[1].searchParams.get("text"), "customerorder");
     assert.equal(requests[1].pathname, "/api/sendmsgutil.php");
-    assert.equal(managerRequests.length, 1);
-    assert.equal(managerRequests[0].searchParams.get("text"), "customerorder");
-    assert.equal(managerRequests[0].searchParams.get("Params"), "30/11/2026,Test venue,dinner");
+    assert.equal(managerRequests.length, 0, "Booking confirmation must never be copied to the manager");
     const documentUrl = "https://example.com/api/menus/1/pdf?theme=standard&inline=true";
     const missingName = await sendMenuPdfViaWhatsApp(options.phone, documentUrl, "dinner-menu", "   ");
     assert.ok("error" in missingName && missingName.error.includes("recipient name"));
@@ -65,16 +63,13 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.equal(requests[3].searchParams.get("Params"), [options.eventDate, options.eventVenue, options.menuDishes, "Test notes"].join(","));
     assert.deepEqual(await sendBookingConfirmation({ ...options, eventDate: "17/11/2026" }), { success: true });
     assert.equal(requests[4].searchParams.get("Params"), "17/11/2026,Test venue,dinner");
-    assert.equal(managerRequests.length, 2);
-    // Manager-only failure must not turn the already accepted customer send into a failure.
-    globalThis.fetch = async (input) => new URL(String(input)).searchParams.get("phone") === "8080200800"
-      ? new Response("Template rejected", { status: 400 }) : new Response("S. Message queued");
-    const partial = await sendBookingConfirmation(options);
-    assert.ok("success" in partial && partial.warning?.includes("8080200800"));
-    let duplicateRequests = 0;
-    globalThis.fetch = async () => { duplicateRequests++; return new Response("S. Message queued"); };
-    assert.deepEqual(await sendBookingConfirmation({ ...options, phone: "+91 80802 00800" }), { success: true });
-    assert.equal(duplicateRequests, 1, "Do not send a second copy when the saved customer number is the manager");
+    assert.equal(managerRequests.length, 0);
+    let plainRequest: URL | undefined;
+    globalThis.fetch = async input => { plainRequest = new URL(String(input)); return new Response("S. Message queued"); };
+    assert.deepEqual(await sendWhatsAppPlainText("8080200800", "Selected menu\nSoup\nPaneer"), { success: true });
+    assert.equal(plainRequest!.searchParams.get("htype"), "normal");
+    assert.equal(plainRequest!.searchParams.get("text"), "Selected menu\nSoup\nPaneer");
+    assert.equal(plainRequest!.searchParams.has("Params"), false);
     globalThis.fetch = async () => new Response("Document URL not accessible", { status: 422 });
     const documentError = await sendMenuPdfViaWhatsApp(options.phone, documentUrl, "dinner-menu", "Priya Sharma");
     assert.ok("error" in documentError && documentError.error.includes("Document URL not accessible"));
