@@ -42,7 +42,7 @@ test("customer and PDF sends use exact templates and return provider errors with
     assert.equal(requests.length, 2);
     assert.deepEqual(await sendMenuPdfViaWhatsApp("+91 99999 99999", documentUrl, "dinner-menu", "  Priya Sharma  "), { success: true });
     assert.equal(requests[2].pathname, "/api/sendmsgutil.php");
-    assert.equal(requests[2].searchParams.get("text"), "orderdoc");
+    assert.equal(requests[2].searchParams.get("text"), "orderdoc1");
     assert.equal(requests[2].searchParams.get("phone"), "9999999999");
     assert.equal(requests[2].searchParams.get("htype"), "document");
     assert.equal(requests[2].searchParams.get("fname"), "dinner-menu");
