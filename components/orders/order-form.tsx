@@ -245,6 +245,9 @@ export function OrderForm({
         if ("whatsappError" in result && result.whatsappError) {
           toast.error(`Order saved. Customer WhatsApp failed: ${result.whatsappError}`, { duration: Infinity, closeButton: true });
         }
+        if ("whatsappWarning" in result && result.whatsappWarning) {
+          toast.warning(`Order saved. ${result.whatsappWarning}`, { duration: Infinity, closeButton: true });
+        }
 
         router.push("/orders");
         router.refresh();

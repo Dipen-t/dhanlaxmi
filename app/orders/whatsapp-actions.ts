@@ -1,28 +1,13 @@
 "use server";
 
 import { getOrder } from "@/app/orders/actions";
-import { normalizeWhatsAppHubPhone, sendBookingConfirmation, sendWhatsAppMessage } from "@/lib/whatsapp";
+import { sendBookingConfirmation } from "@/lib/whatsapp";
+import { sendOrderCustomerConfirmation } from "@/lib/orders/customer-confirmation";
 
-export async function shareOrderViaWhatsApp(orderId: number, phone: string, text: string) {
-  const digits = normalizeWhatsAppHubPhone(phone);
-  if (!digits) return { error: "Enter a valid 10-digit Indian phone number." };
-
-  const order = await getOrder(String(orderId));
-  if (!order) return { error: "Order not found." };
-
-  if (digits === normalizeWhatsAppHubPhone(order.customerPhone ?? "")) {
-    const date = order.date.split("-").reverse().join("/");
-    return sendBookingConfirmation({
-      phone: digits,
-      customerName: order.customerName || "Customer",
-      eventDate: date,
-      eventVenue: order.venue,
-      meal: order.mealType,
-      menuDishes: "",
-      fallbackMessage: "",
-    });
+export async function shareOrderViaWhatsApp(orderId: number) {
+  try {
+    return await sendOrderCustomerConfirmation(orderId, getOrder, sendBookingConfirmation);
+  } catch {
+    return { error: "Could not send the customer confirmation. Please try again." };
   }
-
-  if (!text.trim() || text.length > 30000) return { error: "The order message is empty or too long." };
-  return sendWhatsAppMessage(digits, text);
 }

@@ -1,3 +1,7 @@
+import { normalizeWhatsAppHubPhone } from "./whatsapp-phone";
+import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "./whatsapp-booking-config";
+export { normalizeWhatsAppHubPhone } from "./whatsapp-phone";
+
 type WhatsAppResult = { success: true } | { error: string };
 
 type WhatsAppChannel = "smstechhub" | "hub-template" | "new-order-alert" | "booking-confirmation";
@@ -107,12 +111,6 @@ function formatWhatsAppPhone(receiver: string) {
     digits = `91${digits}`;
   }
   return digits;
-}
-
-export function normalizeWhatsAppHubPhone(value: string) {
-  const digits = value.replace(/\D/g, "");
-  const local = digits.length === 12 && digits.startsWith("91") ? digits.slice(2) : digits;
-  return /^\d{10}$/.test(local) ? local : null;
 }
 
 async function readResponseBody(response: Response) {
@@ -503,7 +501,7 @@ export async function sendBookingConfirmation(options: {
   pdfBase64?: string;
   pdfFilename?: string;
   fallbackMessage: string;
-}): Promise<WhatsAppResult> {
+}): Promise<{ success: true; warning?: string } | { error: string }> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
   logBanner(callId, "WhatsApp BOOKING CONFIRMATION (customerorder)", "booking-confirmation");
@@ -556,6 +554,16 @@ export async function sendBookingConfirmation(options: {
 
   if (!ok) {
     return templateResult;
+  }
+  if (normalizeWhatsAppHubPhone(options.phone) !== BOOKING_MANAGER_PHONE) {
+    const managerResult = await sendWhatsAppTemplateMessage({
+      phone: BOOKING_MANAGER_PHONE,
+      template,
+      params: [eventDate, options.eventVenue, options.meal],
+    });
+    if ("error" in managerResult) {
+      return { success: true, warning: `Customer confirmation accepted, but the copy to manager ${BOOKING_MANAGER_NAME} (${BOOKING_MANAGER_PHONE}) failed: ${managerResult.error}` };
+    }
   }
   return { success: true };
 }

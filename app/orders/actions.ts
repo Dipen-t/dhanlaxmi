@@ -593,6 +593,7 @@ export async function createOrder(data: OrderInput) {
     // Wait for the customer result so the operator can see provider errors.
     // Saving the booking remains successful even if WhatsApp rejects the send.
     let whatsappError: string | undefined;
+    let whatsappWarning: string | undefined;
     if (customerPhone) {
       try {
         const formattedDate = date.split("-").reverse().join("/");
@@ -606,13 +607,14 @@ export async function createOrder(data: OrderInput) {
           fallbackMessage: "",
         });
         if ("error" in result) whatsappError = result.error;
+        else whatsappWarning = result.warning;
       } catch (err) {
         whatsappError = err instanceof Error ? err.message : "Could not send customer confirmation.";
       }
       if (whatsappError) console.error("Customer booking confirmation failed:", whatsappError);
     }
 
-    return { success: true as const, id: newOrder.id, orderId, whatsappError };
+    return { success: true as const, id: newOrder.id, orderId, whatsappError, whatsappWarning };
   } catch (e: any) {
     console.error("Error creating order:", e);
     if (e?.code === "23505" || e?.message?.includes("unique constraint") || e?.message?.includes("already exists")) {

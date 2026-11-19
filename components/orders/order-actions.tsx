@@ -4,10 +4,8 @@ import { CirclePlus, Pencil, Trash2, IndianRupee } from "lucide-react";
 import { useRef, useState, useTransition } from "react";
 
 import { addExtraPlates, deleteOrder, type OrderRecord } from "@/app/orders/actions";
-import { WhatsappShareDialog } from "@/components/whatsapp/whatsapp-share-dialog";
+import { CustomerConfirmationButton } from "@/components/orders/customer-confirmation-button";
 import { formatCurrency } from "@/lib/utils";
-import { buildOrderShareText } from "@/lib/whatsapp-share";
-import { shareOrderViaWhatsApp } from "@/app/orders/whatsapp-actions";
 
 type OrderActionsProps = {
   order: OrderRecord;
@@ -109,28 +107,7 @@ export function OrderActions({
             : "flex shrink-0 items-center gap-2"
         }
       >
-        <WhatsappShareDialog
-          onServerSend={(phone, text) => shareOrderViaWhatsApp(order.id, phone, text)}
-          title="Share order details"
-          description="Send order and selected menu details directly to the recipient."
-          variant="icon"
-          className="contents"
-          buttonClassName={secondaryClass}
-          ariaLabel={`Share ${order.orderId} via WhatsApp`}
-          buildMessage={() =>
-            buildOrderShareText({
-              orderId: order.orderId,
-              date: order.date,
-              venue: order.venue,
-              customerName: order.customerName,
-              customerPhone: order.customerPhone,
-              mealType: order.mealType,
-              numberOfPersons: order.numberOfPersons,
-              menuName: order.menuName,
-              menuDishes: order.menuDishes,
-            })
-          }
-        />
+        <CustomerConfirmationButton order={order} className={secondaryClass} />
         <button
           type="button"
           onClick={() => onEdit(order)}
