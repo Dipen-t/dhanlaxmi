@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { listReturnTo } from "@/lib/navigation";
 import { ExpenseEntryActions } from "@/components/expenses/entry-actions";
 import { Plus, IndianRupee, HandCoins, ChevronDown, Pencil, Trash2 } from "lucide-react";
 
@@ -25,7 +27,11 @@ type OrderFinanceClientProps = {
 };
 
 export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceClientProps) {
+  const params = useSearchParams();
+  const returnTo = listReturnTo(params.get("returnTo"), "/orders");
   const [isPending, startTransition] = useTransition();
+  const savingRef = useRef(false);
+  const [formVersion, setFormVersion] = useState(0);
   const paymentDialogRef = useRef<HTMLDialogElement>(null);
   const waiveDialogRef = useRef<HTMLDialogElement>(null);
   const expenseDialogRef = useRef<HTMLDialogElement>(null);
@@ -35,7 +41,18 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
   const [editingPayment, setEditingPayment] = useState<OrderPaymentRecord | null>(null);
   const [activeExpenseTab, setActiveExpenseTab] = useState<"expense" | "vendor">("expense");
 
+  function runMutation(work: () => Promise<void>) {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    startTransition(async () => {
+      try { await work(); }
+      catch { toast.error("Could not confirm the change. Refresh this ledger before trying again."); }
+      finally { savingRef.current = false; }
+    });
+  }
+
   function openPaymentDialog() {
+    setFormVersion(version => version + 1);
     paymentDialogRef.current?.showModal();
   }
 
@@ -44,6 +61,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
   }
 
   function openWaiveDialog() {
+    setFormVersion(version => version + 1);
     waiveDialogRef.current?.showModal();
   }
 
@@ -52,6 +70,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
   }
 
   function openExpenseDialog(paymentId: number) {
+    setFormVersion(version => version + 1);
     setSelectedPaymentId(paymentId);
     expenseDialogRef.current?.showModal();
   }
@@ -62,6 +81,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
   }
 
   function openEditDialog(payment: OrderPaymentRecord) {
+    setFormVersion(version => version + 1);
     setEditingPayment(payment);
     editDialogRef.current?.showModal();
   }
@@ -72,6 +92,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
   }
 
   function openDeleteDialog(payment: OrderPaymentRecord) {
+    setFormVersion(version => version + 1);
     setEditingPayment(payment);
     deleteDialogRef.current?.showModal();
   }
@@ -83,7 +104,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
 
   async function handleAddPayment(formData: FormData) {
     formData.append("orderId", String(order.id));
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await createOrderPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -97,7 +118,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
   async function handleAddWaive(formData: FormData) {
     formData.append("orderId", String(order.id));
     formData.append("isWaived", "true");
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await createOrderPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -114,7 +135,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
     
     if (activeExpenseTab === "expense") {
       formData.append("orderPaymentId", String(selectedPaymentId));
-      startTransition(async () => {
+      runMutation(async () => {
         const res = await createOrderPaymentExpense(formData);
         if (res.error) {
           toast.error(res.error);
@@ -125,7 +146,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
       });
     } else {
       formData.append("orderPaymentId", String(selectedPaymentId));
-      startTransition(async () => {
+      runMutation(async () => {
         const res = await createVendorPaymentForOrderFinance(formData);
         if (res.error) {
           toast.error(res.error);
@@ -141,7 +162,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
     if (!editingPayment) return;
     formData.append("orderId", String(order.id));
     formData.append("id", String(editingPayment.id));
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await updateOrderPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -156,7 +177,7 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
     if (!editingPayment) return;
     formData.append("orderId", String(order.id));
     formData.append("id", String(editingPayment.id));
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await deleteOrderPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -244,7 +265,13 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
 
       {/* Right Panel: Ledger */}
       <div className="flex flex-col gap-4">
-        <h3 className="text-lg font-bold text-foreground px-1 lg:mt-2">Payment Ledger</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-1 lg:mt-2">
+          <h3 className="text-lg font-bold text-foreground">Payment Ledger</h3>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/orders/${order.id}/edit?returnTo=${encodeURIComponent(returnTo)}`} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 text-sm font-medium text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Edit order</Link>
+            <Link href={`/expenses?orderId=${order.id}`} className="inline-flex min-h-11 items-center rounded-lg border border-border px-3 text-sm font-medium text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Vendor &amp; other expenses</Link>
+          </div>
+        </div>
         
         {payments.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border bg-surface/30 px-6 py-16 text-center">
@@ -268,8 +295,8 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
       </div>
 
       {/* Add Payment Dialog */}
-      <dialog ref={paymentDialogRef} className="app-dialog" onClose={closePaymentDialog}>
-        <form action={handleAddPayment} className="flex flex-col">
+      <dialog ref={paymentDialogRef} className="app-dialog" onClose={closePaymentDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleAddPayment(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="text-lg font-semibold text-foreground mb-4">Record Payment</h2>
             <div className="space-y-4">
@@ -297,8 +324,8 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
       </dialog>
 
       {/* Add Waive Dialog */}
-      <dialog ref={waiveDialogRef} className="app-dialog" onClose={closeWaiveDialog}>
-        <form action={handleAddWaive} className="flex flex-col">
+      <dialog ref={waiveDialogRef} className="app-dialog" onClose={closeWaiveDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleAddWaive(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <input type="hidden" name="date" value={today} />
           <input type="hidden" name="notes" value="Waived remaining balance" />
           
@@ -331,8 +358,8 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
       </dialog>
 
       {/* Add Expense Dialog */}
-      <dialog ref={expenseDialogRef} className="app-dialog" onClose={closeExpenseDialog}>
-        <form action={handleAddExpense} className="flex flex-col">
+      <dialog ref={expenseDialogRef} className="app-dialog" onClose={closeExpenseDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleAddExpense(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="text-lg font-semibold text-foreground mb-4">Add Expense</h2>
             
@@ -404,8 +431,8 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
       </dialog>
 
       {/* Edit Payment Dialog */}
-      <dialog ref={editDialogRef} className="app-dialog" onClose={closeEditDialog}>
-        <form action={handleEditPayment} className="flex flex-col">
+      <dialog ref={editDialogRef} className="app-dialog" onClose={closeEditDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleEditPayment(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="text-lg font-semibold text-foreground mb-4">Edit {editingPayment?.isWaived ? "Waived Amount" : "Payment"}</h2>
             <div className="space-y-4">
@@ -433,13 +460,14 @@ export function OrderFinanceClient({ order, payments, vendors }: OrderFinanceCli
       </dialog>
 
       {/* Delete Payment Dialog */}
-      <dialog ref={deleteDialogRef} className="app-dialog" onClose={closeDeleteDialog}>
-        <form action={handleDeletePayment} className="flex flex-col">
+      <dialog ref={deleteDialogRef} className="app-dialog" onClose={closeDeleteDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleDeletePayment(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="text-lg font-semibold text-foreground mb-4">Delete {editingPayment?.isWaived ? "Waived Amount" : "Payment"}?</h2>
             <p className="text-sm text-muted">
               Are you sure you want to delete this {editingPayment?.isWaived ? "waived amount" : "payment"} of <span className="font-bold text-foreground">₹{editingPayment?.amount}</span>? This action cannot be undone and will affect the balance due.
             </p>
+            {!editingPayment?.isWaived ? <p className="mt-2 text-sm text-error">Other expenses recorded against this payment will also be deleted. Vendor payments stay recorded and become unallocated.</p> : null}
           </div>
           <div className="flex justify-end gap-2 border-t border-border px-5 py-4 bg-surface/50">
             <button type="button" onClick={closeDeleteDialog} className="inline-flex min-h-10 items-center rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Cancel</button>

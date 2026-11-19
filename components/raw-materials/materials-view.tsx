@@ -1,5 +1,7 @@
 "use client";
 
+import { useListQuery } from "@/components/use-list-query";
+
 import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -17,7 +19,7 @@ type MaterialsViewProps = {
 
 export function MaterialsView({ materials }: MaterialsViewProps) {
   const [view, setView] = useState<ViewMode>("list");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useListQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMaterial, setEditingMaterial] =
     useState<MaterialWithVendor | null>(null);

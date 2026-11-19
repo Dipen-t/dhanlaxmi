@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowDownAZ,
   ArrowUpAZ,
@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 import type { VendorWithMaterials } from "@/app/vendors/actions";
 import { formatCurrency, todayCalendarDateString } from "@/lib/utils";
@@ -60,6 +61,8 @@ export function VendorFinanceClient({
   orders,
 }: VendorFinanceClientProps) {
   const [isPending, startTransition] = useTransition();
+  const savingRef = useRef(false);
+  const [formVersion, setFormVersion] = useState(0);
   const paymentDialogRef = useRef<HTMLDialogElement>(null);
   const editDialogRef = useRef<HTMLDialogElement>(null);
   const deleteDialogRef = useRef<HTMLDialogElement>(null);
@@ -72,9 +75,20 @@ export function VendorFinanceClient({
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(10);
-  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ filterKey: "", page: 1 });
+
+  function runMutation(work: () => Promise<void>) {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    startTransition(async () => {
+      try { await work(); }
+      catch { toast.error("Could not confirm the change. Refresh this ledger before trying again."); }
+      finally { savingRef.current = false; }
+    });
+  }
 
   function openPaymentDialog() {
+    setFormVersion(version => version + 1);
     paymentDialogRef.current?.showModal();
   }
 
@@ -83,6 +97,7 @@ export function VendorFinanceClient({
   }
 
   function openEditDialog(payment: VendorPaymentRecord) {
+    setFormVersion(version => version + 1);
     setEditingPayment(payment);
     editDialogRef.current?.showModal();
   }
@@ -93,6 +108,7 @@ export function VendorFinanceClient({
   }
 
   function openDeleteDialog(payment: VendorPaymentRecord) {
+    setFormVersion(version => version + 1);
     setEditingPayment(payment);
     deleteDialogRef.current?.showModal();
   }
@@ -104,7 +120,7 @@ export function VendorFinanceClient({
 
   async function handleAddPayment(formData: FormData) {
     formData.append("vendorId", String(vendor.id));
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await createVendorPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -119,7 +135,7 @@ export function VendorFinanceClient({
     if (!editingPayment) return;
     formData.append("vendorId", String(vendor.id));
     formData.append("id", String(editingPayment.id));
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await updateVendorPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -134,7 +150,7 @@ export function VendorFinanceClient({
     if (!editingPayment) return;
     formData.append("vendorId", String(vendor.id));
     formData.append("id", String(editingPayment.id));
-    startTransition(async () => {
+    runMutation(async () => {
       const res = await deleteVendorPayment(formData);
       if (res.error) {
         toast.error(res.error);
@@ -208,19 +224,13 @@ export function VendorFinanceClient({
   }, [payments, query, linkFilter, sortKey, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filteredPayments.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
+  const filterKey = JSON.stringify([query, linkFilter, sortKey, sortDir, pageSize]);
+  const currentPage = pagination.filterKey === filterKey ? Math.min(pagination.page, totalPages) : 1;
+  function setPage(page: number) { setPagination({ filterKey, page }); }
   const pageStart = (currentPage - 1) * pageSize;
   const pagePayments = filteredPayments.slice(pageStart, pageStart + pageSize);
   const pageEnd = Math.min(pageStart + pageSize, filteredPayments.length);
   const filteredTotal = filteredPayments.reduce((acc, p) => acc + p.amount, 0);
-
-  useEffect(() => {
-    setPage(1);
-  }, [query, linkFilter, sortKey, sortDir, pageSize]);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
 
   const hasQuery = query.trim().length > 0;
   const hasActiveFilters = hasQuery || linkFilter !== "all";
@@ -483,7 +493,7 @@ export function VendorFinanceClient({
                     <button
                       type="button"
                       disabled={currentPage <= 1}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
+                      onClick={() => setPage(Math.max(1, currentPage - 1))}
                       className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <ChevronLeft className="size-4" strokeWidth={1.75} />
@@ -495,7 +505,7 @@ export function VendorFinanceClient({
                     <button
                       type="button"
                       disabled={currentPage >= totalPages}
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
                       className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors hover:bg-surface disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       Next
@@ -509,8 +519,8 @@ export function VendorFinanceClient({
         )}
       </div>
 
-      <dialog ref={paymentDialogRef} className="app-dialog" onClose={closePaymentDialog}>
-        <form action={handleAddPayment} className="flex flex-col">
+      <dialog ref={paymentDialogRef} className="app-dialog" onClose={closePaymentDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleAddPayment(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="mb-4 text-lg font-semibold text-foreground">Add Payment Out</h2>
             <div className="space-y-4">
@@ -587,8 +597,8 @@ export function VendorFinanceClient({
         </form>
       </dialog>
 
-      <dialog ref={editDialogRef} className="app-dialog" onClose={closeEditDialog}>
-        <form action={handleEditPayment} className="flex flex-col">
+      <dialog ref={editDialogRef} className="app-dialog" onClose={closeEditDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleEditPayment(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="mb-4 text-lg font-semibold text-foreground">Edit Payment Out</h2>
             <div className="space-y-4">
@@ -667,8 +677,8 @@ export function VendorFinanceClient({
         </form>
       </dialog>
 
-      <dialog ref={deleteDialogRef} className="app-dialog" onClose={closeDeleteDialog}>
-        <form action={handleDeletePayment} className="flex flex-col">
+      <dialog ref={deleteDialogRef} className="app-dialog" onClose={closeDeleteDialog} onCancel={event => { if (savingRef.current) event.preventDefault(); }}>
+        <form key={formVersion} onSubmit={event => { event.preventDefault(); handleDeletePayment(new FormData(event.currentTarget)); }} inert={isPending} aria-busy={isPending} className="flex flex-col">
           <div className="px-5 pt-5 pb-4">
             <h2 className="mb-4 text-lg font-semibold text-foreground">Delete Payment Out?</h2>
             <p className="text-sm text-muted">
@@ -730,9 +740,9 @@ function PaymentRow({
               {formatCurrency(payment.amount)}
             </p>
             {order ? (
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+              <Link href={`/orders/${order.id}/finance`} className="inline-flex min-h-11 items-center rounded-lg bg-primary/10 px-3 text-sm font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Open finance for ${order.orderNumber}`}>
                 {order.orderNumber}
-              </span>
+              </Link>
             ) : (
               <span className="inline-flex items-center rounded-full bg-muted/20 px-2 py-0.5 text-xs font-medium text-muted">
                 Unlinked
@@ -793,10 +803,11 @@ function PaymentRow({
             e.preventDefault();
             openEditDialog(payment);
           }}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
-          title="Edit"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/50"
+          aria-label="Edit vendor payment"
+          title="Edit vendor payment"
         >
-          <Pencil className="size-3.5" />
+          <Pencil className="size-3.5" aria-hidden /><span>Edit</span>
         </button>
         <button
           type="button"
@@ -804,10 +815,11 @@ function PaymentRow({
             e.preventDefault();
             openDeleteDialog(payment);
           }}
-          className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
-          title="Delete"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-lg border border-error/20 bg-error-soft px-2.5 py-1 text-xs font-medium text-error transition-colors hover:bg-error-soft/80"
+          aria-label="Delete vendor payment"
+          title="Delete vendor payment"
         >
-          <Trash2 className="size-3.5" />
+          <Trash2 className="size-3.5" aria-hidden /><span>Delete</span>
         </button>
       </div>
     </div>

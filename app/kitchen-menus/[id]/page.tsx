@@ -5,6 +5,7 @@ import { getKitchenMenuById } from "@/app/kitchen-menus/actions";
 import { KitchenMenuPdfDownload } from "@/components/kitchen-menus/kitchen-menu-pdf-download";
 import { KitchenMenuWhatsappShare } from "@/components/kitchen-menus/kitchen-menu-whatsapp-share";
 import { PageHeader } from "@/components/page-header";
+import { MenuDetailEditor } from "@/components/menus/menu-detail-editor";
 import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
 
 type KitchenMenuDetailPageProps = {
@@ -52,6 +53,7 @@ export default async function KitchenMenuDetailPage({ params }: KitchenMenuDetai
             {deliveryTime ? ` · Deliver by ${deliveryTime}` : ""}
           </p>
           <div className="flex flex-wrap items-center gap-2">
+            <MenuDetailEditor kind="kitchen" menu={menu} />
             <KitchenMenuWhatsappShare
               menu={menu}
               categories={menu.categories}

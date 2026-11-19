@@ -1,5 +1,7 @@
 "use client";
 
+import { useListQuery } from "@/components/use-list-query";
+
 import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -23,7 +25,7 @@ export function MenusView({ menus, catalog }: MenusViewProps) {
   const [view, setView] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<MenuSummary | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useListQuery();
 
   useEffect(() => {
     const stored = localStorage.getItem("menus-view");
@@ -55,7 +57,7 @@ export function MenusView({ menus, catalog }: MenusViewProps) {
   }
 
   function openView(menu: MenuSummary) {
-    router.push(`/menus/${menu.id}`);
+    router.push(`/menus/${menu.id}?returnTo=${encodeURIComponent(`/menus${window.location.search}`)}`);
   }
 
   function closeDialog() {
@@ -147,6 +149,7 @@ export function MenusView({ menus, catalog }: MenusViewProps) {
       ) : filteredMenus.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center">
           <p className="text-base text-muted">No menus match your search.</p>
+          <button type="button" onClick={() => setQuery("")} className="mt-4 min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Clear search</button>
         </div>
       ) : view === "list" ? (
         <MenuList

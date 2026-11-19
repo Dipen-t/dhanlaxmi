@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import type { CustomerReport } from "@/app/reports/actions";
 import { formatCurrency } from "@/lib/utils";
 
@@ -32,7 +34,7 @@ export function CustomerReportTable({ reports }: { reports: CustomerReport[] }) 
             return (
               <tr key={r.id} className="hover:bg-surface/30 transition-colors">
                 <td className="px-3 py-3 font-medium text-foreground truncate">
-                  {r.customerName}
+                  <Link href={`/orders?view=list&q=${encodeURIComponent(r.customerPhone || r.customerName)}`} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`View orders for ${r.customerName}`}>{r.customerName}</Link>
                 </td>
                 <td className="px-3 py-3 text-muted truncate">
                   {r.customerPhone || "—"}

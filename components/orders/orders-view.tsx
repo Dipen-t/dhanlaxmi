@@ -1,8 +1,10 @@
 "use client";
 
 import { CalendarDays, LayoutGrid, List, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { orderListState } from "@/lib/navigation";
+import { todayCalendarDateString } from "@/lib/utils";
 
 import type { OrderRecord } from "@/app/orders/actions";
 import { FloatingAddButton } from "@/components/floating-add-button";
@@ -24,8 +26,22 @@ function orderNumber(orderId: string) {
 
 export function OrdersView({ orders }: OrdersViewProps) {
   const router = useRouter();
-  const [view, setView] = useState<ViewMode>("calendar");
-  const [query, setQuery] = useState("");
+  const params = useSearchParams();
+  const { view, query, date, month } = orderListState(params, todayCalendarDateString());
+
+  function updateListState(patch: Record<string, string>) {
+    const next = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries(patch)) {
+      if (value) next.set(key, value); else next.delete(key);
+    }
+    window.history.replaceState(null, "", `/orders${next.size ? `?${next}` : ""}`);
+  }
+
+  function setQuery(value: string) { updateListState({ q: value }); }
+  function openOrderPage(path: string) {
+    const returnTo = `/orders${window.location.search}`;
+    router.push(`${path}?returnTo=${encodeURIComponent(returnTo)}`);
+  }
 
   const filteredOrders = useMemo(() => {
     let result = orders;
@@ -39,6 +55,8 @@ export function OrdersView({ orders }: OrdersViewProps) {
           order.mealType,
           order.date,
           order.customerName,
+          order.customerPhone,
+          order.customerPhone?.replace(/\D/g, ""),
           order.menuName,
           String(order.numberOfPersons),
           ...order.menuDishes.map((d) => `${d.categoryName} ${d.name}`),
@@ -61,19 +79,19 @@ export function OrdersView({ orders }: OrdersViewProps) {
   }, [orders, query]);
 
   function setViewMode(mode: ViewMode) {
-    setView(mode);
+    updateListState({ view: mode === "calendar" ? "" : mode });
   }
 
   function openCreate() {
-    router.push("/orders/new");
+    openOrderPage("/orders/new");
   }
 
   function openEdit(order: OrderRecord) {
-    router.push(`/orders/${order.id}/edit`);
+    openOrderPage(`/orders/${order.id}/edit`);
   }
 
   function openFinance(order: OrderRecord) {
-    router.push(`/orders/${order.id}/finance`);
+    openOrderPage(`/orders/${order.id}/finance`);
   }
 
   const hasQuery = query.trim().length > 0;
@@ -159,7 +177,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
         </div>
 
         {orders.length > 0 ? (
-          <p className="mt-2.5 text-sm text-muted">
+          <p className="mt-2.5 flex flex-wrap items-center gap-3 text-sm text-muted" role="status">
             {hasQuery ? (
               <>
                 {filteredOrders.length} match
@@ -170,6 +188,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
                 {orders.length} order{orders.length === 1 ? "" : "s"}
               </>
             )}
+            {hasQuery && view === "calendar" && filteredOrders.length > 0 ? <button type="button" onClick={() => setViewMode("list")} className="min-h-11 rounded-lg px-3 font-medium text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Show matching orders</button> : null}
           </p>
         ) : null}
       </div>
@@ -197,7 +216,7 @@ export function OrdersView({ orders }: OrdersViewProps) {
           </button>
         </div>
       ) : view === "calendar" ? (
-        <OrderCalendar orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
+        <OrderCalendar orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} month={month} selectedDate={date} onCalendarChange={updateListState} />
       ) : view === "grid" ? (
         <OrderGrid orders={filteredOrders} onEdit={openEdit} onFinance={openFinance} />
       ) : (

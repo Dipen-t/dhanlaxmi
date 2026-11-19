@@ -2,6 +2,7 @@
 
 import type { EventProfitability } from "@/app/reports/actions";
 import { formatCurrency } from "@/lib/utils";
+import Link from "next/link";
 
 export function EventProfitabilityTable({ reports }: { reports: EventProfitability[] }) {
   if (reports.length === 0) {
@@ -38,7 +39,7 @@ export function EventProfitabilityTable({ reports }: { reports: EventProfitabili
                   </div>
                   <div className="text-xs text-muted mt-0.5 truncate">
                     {r.customerPhone ? `${r.customerPhone} • ` : ""}
-                    {r.orderId}
+                    <Link href={`/orders/${r.id}/finance`} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{r.orderId}</Link>
                   </div>
                   <div className="text-xs text-muted mt-0.5 truncate">
                     {r.venue} • {r.date}

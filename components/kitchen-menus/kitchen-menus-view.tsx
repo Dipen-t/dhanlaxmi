@@ -1,5 +1,7 @@
 "use client";
 
+import { useListQuery } from "@/components/use-list-query";
+
 import { LayoutGrid, List, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,13 +24,16 @@ export function KitchenMenusView({ menus, catalog }: KitchenMenusViewProps) {
   const [view, setView] = useState<ViewMode>("list");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingMenu, setEditingMenu] = useState<KitchenMenuSummary | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useListQuery();
 
   useEffect(() => {
-    const stored = localStorage.getItem("menus-view");
-    if (stored === "grid" || stored === "list") {
-      setView(stored);
-    }
+    const frame = requestAnimationFrame(() => {
+      try {
+        const stored = localStorage.getItem("menus-view");
+        if (stored === "grid" || stored === "list") setView(stored);
+      } catch { /* Keep the default view when browser storage is unavailable. */ }
+    });
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   const filteredMenus = useMemo(() => {
@@ -39,7 +44,7 @@ export function KitchenMenusView({ menus, catalog }: KitchenMenusViewProps) {
 
   function setViewMode(mode: ViewMode) {
     setView(mode);
-    localStorage.setItem("menus-view", mode);
+    try { localStorage.setItem("menus-view", mode); } catch { /* The view still changes for this visit. */ }
   }
 
   function openCreate() {
@@ -53,7 +58,7 @@ export function KitchenMenusView({ menus, catalog }: KitchenMenusViewProps) {
   }
 
   function openView(menu: KitchenMenuSummary) {
-    router.push(`/kitchen-menus/${menu.id}`);
+    router.push(`/kitchen-menus/${menu.id}?returnTo=${encodeURIComponent(`/kitchen-menus${window.location.search}`)}`);
   }
 
   function closeDialog() {
@@ -140,6 +145,7 @@ export function KitchenMenusView({ menus, catalog }: KitchenMenusViewProps) {
       ) : filteredMenus.length === 0 ? (
         <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center">
           <p className="text-base text-muted">No menus match your search.</p>
+          <button type="button" onClick={() => setQuery("")} className="mt-4 min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Clear search</button>
         </div>
       ) : view === "list" ? (
         <KitchenMenuList

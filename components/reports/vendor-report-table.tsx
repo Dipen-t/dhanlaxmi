@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import React, { useState } from "react";
 import { formatCurrency } from "@/lib/utils";
 import { ChevronDown, ChevronRight, Package, ReceiptText } from "lucide-react";
@@ -41,10 +43,10 @@ export function VendorReportTable({ reports }: { reports: VendorOrderReport[] })
                   onClick={() => toggleOrder(report.orderDbId)}
                 >
                   <td className="px-3 py-3 whitespace-nowrap text-center">
-                    {isExpanded ? <ChevronDown className="size-4 text-muted-foreground inline-block" /> : <ChevronRight className="size-4 text-muted-foreground inline-block" />}
+                    <button type="button" aria-expanded={isExpanded} aria-label={`${isExpanded ? "Hide" : "Show"} vendors for ${report.orderId}`} onClick={event => { event.stopPropagation(); toggleOrder(report.orderDbId); }} className="inline-flex size-11 items-center justify-center rounded-lg hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{isExpanded ? <ChevronDown className="size-4" aria-hidden /> : <ChevronRight className="size-4" aria-hidden />}</button>
                   </td>
                   <td className="px-3 py-3 truncate">
-                    <div className="font-medium text-foreground truncate">{report.orderId}</div>
+                    <Link href={`/orders/${report.orderDbId}/finance`} onClick={event => event.stopPropagation()} className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{report.orderId}</Link>
                     <div className="text-xs text-muted-foreground truncate">{report.date}</div>
                   </td>
                   <td className="px-3 py-3 truncate">{report.venue}</td>
@@ -65,7 +67,7 @@ export function VendorReportTable({ reports }: { reports: VendorOrderReport[] })
                             <div key={v.vendorId} className="bg-background rounded-lg border border-border overflow-hidden">
                               <div className="px-4 py-3 bg-surface border-b border-border flex justify-between items-center">
                                 <div>
-                                  <span className="font-semibold">{v.vendorName}</span>
+                                  <Link href={`/vendors/${v.vendorId}/finance`} className="inline-flex min-h-11 items-center font-semibold text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{v.vendorName}</Link>
                                   <span className="text-muted-foreground text-xs ml-2">{v.vendorPhone}</span>
                                 </div>
                                 <div className="text-sm font-medium">

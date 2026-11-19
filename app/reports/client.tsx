@@ -1,22 +1,25 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
+import { toast } from "sonner";
 import type { EventProfitability, LedgerTransaction, CustomerReport, VendorOrderReport } from "./actions";
 import { EventProfitabilityTable } from "@/components/reports/event-profitability-table";
 import { MasterLedgerTable } from "@/components/reports/master-ledger-table";
 import { CustomerReportTable } from "@/components/reports/customer-report-table";
 import { VendorReportTable } from "@/components/reports/vendor-report-table";
 import { BarChart3, ReceiptText, FileSpreadsheet, FileText, Users, Store, Search, X } from "lucide-react";
-import { 
-  exportProfitabilityToExcel, 
-  exportLedgerToExcel, 
-  exportCustomerReportToExcel,
-  exportVendorReportToExcel,
-  exportProfitabilityToPDF, 
-  exportLedgerToPDF,
-  exportCustomerReportToPDF,
-  exportVendorReportToPDF
-} from "@/lib/export-utils";
+
+
+function isDateInRange(dateStr: string, fromDate: string, toDate: string) {
+    if (!fromDate && !toDate) return true;
+    if (!dateStr) return true;
+    const [d, m, y] = dateStr.split("/");
+    if (!d || !m || !y) return true;
+    const recordDate = `${y}-${m}-${d}`;
+    if (fromDate && recordDate < fromDate) return false;
+    if (toDate && recordDate > toDate) return false;
+    return true;
+}
 
 export function ReportsClient({
   profitabilityReports,
@@ -35,19 +38,17 @@ export function ReportsClient({
   const [toDate, setToDate] = useState("");
   const [sortOrder, setSortOrder] = useState<"default" | "date-desc" | "date-asc">("default");
 
-  const isDateInRange = (dateStr: string) => {
-    if (!fromDate && !toDate) return true;
-    if (!dateStr) return true;
-    const [d, m, y] = dateStr.split("/");
-    if (!d || !m || !y) return true;
-    const recordDate = `${y}-${m}-${d}`;
-    if (fromDate && recordDate < fromDate) return false;
-    if (toDate && recordDate > toDate) return false;
-    return true;
-  };
+  const [exporting, setExporting] = useState<"PDF" | "Excel" | null>(null);
+  const exportingRef = useRef(false);
+  const datedTab = activeTab === "profitability" || activeTab === "ledger";
+  const invalidDateRange = datedTab && Boolean(fromDate && toDate && fromDate > toDate);
+  const hasFilters = Boolean(query.trim() || (datedTab && (fromDate || toDate)));
+  function clearFilters() { setQuery(""); setFromDate(""); setToDate(""); setSortOrder("default"); }
+
+
 
   const filteredProfitability = useMemo(() => {
-    let result = profitabilityReports.filter(r => isDateInRange(r.date));
+    let result = profitabilityReports.filter(r => isDateInRange(r.date, fromDate, toDate));
     const normalized = query.trim().toLowerCase();
     if (normalized) {
       result = result.filter(r => 
@@ -69,7 +70,7 @@ export function ReportsClient({
   }, [profitabilityReports, query, fromDate, toDate, sortOrder]);
 
   const filteredLedger = useMemo(() => {
-    let result = ledger.filter(t => isDateInRange(t.date));
+    let result = ledger.filter(t => isDateInRange(t.date, fromDate, toDate));
     const normalized = query.trim().toLowerCase();
     if (normalized) {
       result = result.filter(t => 
@@ -121,13 +122,36 @@ export function ReportsClient({
     return result;
   }, [vendorReports, query, sortOrder]);
 
+  const resultCount = activeTab === "profitability" ? filteredProfitability.length : activeTab === "ledger" ? filteredLedger.length : activeTab === "customers" ? filteredCustomers.length : filteredVendors.length;
+  async function exportReport(format: "PDF" | "Excel") {
+    if (exportingRef.current || invalidDateRange || resultCount === 0) return;
+    exportingRef.current = true;
+    setExporting(format);
+    try {
+      const exports = await import("@/lib/export-utils");
+      if (format === "Excel") {
+        if (activeTab === "profitability") await exports.exportProfitabilityToExcel(filteredProfitability);
+        else if (activeTab === "ledger") await exports.exportLedgerToExcel(filteredLedger);
+        else if (activeTab === "customers") await exports.exportCustomerReportToExcel(filteredCustomers);
+        else await exports.exportVendorReportToExcel(filteredVendors);
+      } else {
+        if (activeTab === "profitability") await exports.exportProfitabilityToPDF(filteredProfitability);
+        else if (activeTab === "ledger") await exports.exportLedgerToPDF(filteredLedger);
+        else if (activeTab === "customers") await exports.exportCustomerReportToPDF(filteredCustomers);
+        else await exports.exportVendorReportToPDF(filteredVendors);
+      }
+    } catch { toast.error("Could not export this report. Please try again."); }
+    finally { exportingRef.current = false; setExporting(null); }
+  }
+
   return (
-    <div className="flex flex-col h-[calc(100vh-8rem)]">
-      <div className="flex justify-between items-end mb-6 border-b border-border">
-        <div className="flex gap-4">
+    <div className="flex min-h-[60dvh] min-w-0 flex-col">
+      <div className="mb-6 flex min-w-0 flex-wrap items-end justify-between gap-3 border-b border-border">
+        <div className="flex min-w-0 max-w-full gap-4 overflow-x-auto">
         <button
           onClick={() => setActiveTab("profitability")}
-          className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+          aria-pressed={activeTab === "profitability"}
+          className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "profitability"
               ? "border-primary text-primary"
               : "border-transparent text-muted hover:text-foreground"
@@ -138,7 +162,8 @@ export function ReportsClient({
         </button>
         <button
           onClick={() => setActiveTab("ledger")}
-          className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+          aria-pressed={activeTab === "ledger"}
+          className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "ledger"
               ? "border-primary text-primary"
               : "border-transparent text-muted hover:text-foreground"
@@ -149,7 +174,8 @@ export function ReportsClient({
         </button>
         <button
           onClick={() => setActiveTab("customers")}
-          className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+          aria-pressed={activeTab === "customers"}
+          className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "customers"
               ? "border-primary text-primary"
               : "border-transparent text-muted hover:text-foreground"
@@ -160,7 +186,8 @@ export function ReportsClient({
         </button>
         <button
           onClick={() => setActiveTab("vendors")}
-          className={`flex items-center gap-2 pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
+          aria-pressed={activeTab === "vendors"}
+          className={`flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap pb-3 px-1 text-sm font-medium border-b-2 transition-colors ${
             activeTab === "vendors"
               ? "border-primary text-primary"
               : "border-transparent text-muted hover:text-foreground"
@@ -170,46 +197,14 @@ export function ReportsClient({
           Vendor Report
         </button>
         </div>
-        <div className="flex gap-2 pb-2">
-          <button
-            onClick={() => {
-              if (activeTab === "profitability") {
-                exportProfitabilityToExcel(profitabilityReports);
-              } else if (activeTab === "ledger") {
-                exportLedgerToExcel(ledger);
-              } else if (activeTab === "customers") {
-                exportCustomerReportToExcel(customerReports);
-              } else if (activeTab === "vendors") {
-                exportVendorReportToExcel(vendorReports);
-              }
-            }}
-            className="flex items-center gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm font-medium border border-border hover:border-primary/50 transition-colors"
-          >
-            <FileSpreadsheet className="size-4" />
-            Excel
-          </button>
-          <button
-            onClick={async () => {
-              if (activeTab === "profitability") {
-                await exportProfitabilityToPDF(profitabilityReports);
-              } else if (activeTab === "ledger") {
-                await exportLedgerToPDF(ledger);
-              } else if (activeTab === "customers") {
-                await exportCustomerReportToPDF(customerReports);
-              } else if (activeTab === "vendors") {
-                await exportVendorReportToPDF(vendorReports);
-              }
-            }}
-            className="flex items-center gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm font-medium border border-border hover:border-primary/50 transition-colors"
-          >
-            <FileText className="size-4" />
-            PDF
-          </button>
+        <div className="flex shrink-0 gap-2 pb-2">
+          <button type="button" disabled={exporting !== null || resultCount === 0 || invalidDateRange} onClick={() => exportReport("Excel")} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"><FileSpreadsheet className="size-4" aria-hidden />{exporting === "Excel" ? "Exporting..." : "Excel"}</button>
+          <button type="button" disabled={exporting !== null || resultCount === 0 || invalidDateRange} onClick={() => exportReport("PDF")} className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-border bg-surface px-3 text-sm font-medium hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"><FileText className="size-4" aria-hidden />{exporting === "PDF" ? "Exporting..." : "PDF"}</button>
         </div>
       </div>
 
-      <div className="mb-4 flex flex-col sm:flex-row gap-4">
-        <label className="relative block flex-1 max-w-md">
+      <div className="mb-4 flex flex-wrap items-center gap-4">
+        <label className="relative block min-w-0 flex-1 basis-60 max-w-md">
           <span className="sr-only">Search reports</span>
           <Search
             className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
@@ -240,7 +235,8 @@ export function ReportsClient({
           <div className="flex flex-wrap items-center gap-2">
             <select
               value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value as any)}
+              onChange={(e) => setSortOrder(e.target.value as typeof sortOrder)}
+              aria-label="Sort reports"
               className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
             >
               <option value="default">Sort: Default</option>
@@ -251,12 +247,14 @@ export function ReportsClient({
         )}
         
         {(activeTab === "profitability" || activeTab === "ledger") && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <input
               type="date"
               value={fromDate}
               onChange={(e) => setFromDate(e.target.value)}
               className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+              aria-label="From date"
+              max={toDate || undefined}
               title="From Date"
             />
             <span className="text-muted">to</span>
@@ -265,14 +263,21 @@ export function ReportsClient({
               value={toDate}
               onChange={(e) => setToDate(e.target.value)}
               className="min-h-11 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
+              aria-label="To date"
+              min={fromDate || undefined}
               title="To Date"
             />
           </div>
         )}
       </div>
 
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm text-muted">
+        <p role="status">{resultCount} record{resultCount === 1 ? "" : "s"} shown. Exports include these records.</p>
+        {hasFilters ? <button type="button" onClick={clearFilters} className="min-h-11 rounded-lg px-3 font-medium text-primary hover:bg-primary-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Clear filters</button> : null}
+      </div>
+      {invalidDateRange ? <p role="alert" className="mb-4 text-sm text-error">From date must be on or before To date.</p> : null}
       <div className="flex-1 bg-background border border-border rounded-xl shadow-sm overflow-hidden flex flex-col">
-        {activeTab === "profitability" ? (
+        {hasFilters && resultCount === 0 ? <div className="p-8 text-center"><p className="font-medium">No matching records</p><p className="mt-1 text-sm text-muted">Change your search or dates, or clear the filters.</p><button type="button" onClick={clearFilters} className="mt-3 min-h-11 rounded-lg border border-border px-4 text-sm font-medium hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Clear filters</button></div> : activeTab === "profitability" ? (
           <EventProfitabilityTable reports={filteredProfitability} />
         ) : activeTab === "ledger" ? (
           <MasterLedgerTable ledger={filteredLedger} />

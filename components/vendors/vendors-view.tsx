@@ -1,5 +1,7 @@
 "use client";
 
+import { useListQuery } from "@/components/use-list-query";
+
 import { Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -21,7 +23,7 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
   const [editingVendor, setEditingVendor] = useState<VendorWithMaterials | null>(
     null,
   );
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useListQuery();
 
   const filteredVendors = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -57,7 +59,7 @@ export function VendorsView({ vendors, materials }: VendorsViewProps) {
   }
 
   function openFinance(vendor: VendorWithMaterials) {
-    router.push(`/vendors/${vendor.id}/finance`);
+    router.push(`/vendors/${vendor.id}/finance?returnTo=${encodeURIComponent(`/vendors${window.location.search}`)}`);
   }
 
   const hasQuery = query.trim().length > 0;

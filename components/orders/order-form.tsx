@@ -9,7 +9,8 @@ import {
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { listReturnTo } from "@/lib/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -57,10 +58,14 @@ export function OrderForm({
   menuCatalog,
 }: OrderFormProps) {
   const router = useRouter();
+  const params = useSearchParams();
+  const returnTo = listReturnTo(params.get("returnTo"), "/orders");
+  const dirtyRef = useRef(false);
+  const savingRef = useRef(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   /** Blocks accidental submits when a footer button swaps under the same tap (common on Android). */
-  const ignoreSubmitUntilRef = useRef(0);
+  const ignoreSubmitRef = useRef(false);
   const [footerLocked, setFooterLocked] = useState(false);
   const footerUnlockTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -146,15 +151,16 @@ export function OrderForm({
 
   function switchTab(tab: OrderFormSection) {
     // Ignore submit / residual clicks while the footer primary action swaps roles.
-    ignoreSubmitUntilRef.current = Date.now() + 500;
+    ignoreSubmitRef.current = true;
     setFooterLocked(true);
     if (footerUnlockTimerRef.current) {
       clearTimeout(footerUnlockTimerRef.current);
     }
     footerUnlockTimerRef.current = setTimeout(() => {
+      ignoreSubmitRef.current = false;
       setFooterLocked(false);
       footerUnlockTimerRef.current = null;
-    }, 450);
+    }, 500);
 
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -174,14 +180,43 @@ export function OrderForm({
     };
   }, []);
 
+  useEffect(() => {
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    const warnBeforeLink = (event: MouseEvent) => {
+      if (!dirtyRef.current || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
+      if (!link || link.download || (link.target && link.target !== "_self")) return;
+      const url = new URL(link.href, window.location.href);
+      if (url.origin !== window.location.origin || (url.pathname === window.location.pathname && url.search === window.location.search)) return;
+      if (savingRef.current || !window.confirm("Discard your unsaved order changes?")) {
+        event.preventDefault();
+        event.stopPropagation();
+      } else dirtyRef.current = false;
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    document.addEventListener("click", warnBeforeLink, true);
+    return () => {
+      window.removeEventListener("beforeunload", warnBeforeUnload);
+      document.removeEventListener("click", warnBeforeLink, true);
+    };
+  }, []);
+
   function handleCancel() {
-    router.push("/orders");
+    if (savingRef.current) return;
+    if (dirtyRef.current && !window.confirm("Discard your unsaved order changes?")) return;
+    dirtyRef.current = false;
+    router.push(returnTo);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (savingRef.current) return;
 
-    if (Date.now() < ignoreSubmitUntilRef.current || footerLocked) {
+    if (ignoreSubmitRef.current || footerLocked) {
       return;
     }
 
@@ -230,6 +265,7 @@ export function OrderForm({
         .filter((dishId) => selectedDishIds.includes(dishId)),
     };
 
+    savingRef.current = true;
     startTransition(async () => {
       try {
         const result = isEditing
@@ -250,11 +286,15 @@ export function OrderForm({
         }
         if ("whatsappQueued" in result && result.whatsappQueued) toast.info("Order saved. WhatsApp messages are queued; check each recipient's status from the order's WhatsApp button.");
 
-        router.push("/orders");
+        toast.success(isEditing ? "Order updated" : "Order created");
+        dirtyRef.current = false;
+        router.push(returnTo);
         router.refresh();
       } catch {
         setError("The order could not be saved. Check your connection and try again. If this continues, check the server log.");
         window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        savingRef.current = false;
       }
     });
   }
@@ -263,6 +303,7 @@ export function OrderForm({
     rawMaterialId: number,
     updates: Partial<OrderMaterialDraft>,
   ) {
+    dirtyRef.current = true;
     setSelectedMaterials((prev) => {
       const next = prev.map((item) =>
         item.rawMaterialId === rawMaterialId ? { ...item, ...updates } : item,
@@ -276,6 +317,7 @@ export function OrderForm({
   return (
     <form
       onSubmit={handleSubmit}
+      onChangeCapture={event => { const field = event.target; if ((field instanceof HTMLInputElement || field instanceof HTMLSelectElement || field instanceof HTMLTextAreaElement) && field.name) dirtyRef.current = true; }}
       noValidate
       className={
         fullScreenMode
@@ -440,7 +482,7 @@ export function OrderForm({
                 min={1}
                 max={100000}
                 label="number of plates"
-                onValueChange={setPlateCount}
+                onValueChange={value => { dirtyRef.current = true; setPlateCount(value); }}
               />
             </div>
 
@@ -459,6 +501,7 @@ export function OrderForm({
                   required
                   value={perPlateAmountDisplay}
                   onChange={(e) => {
+                    dirtyRef.current = true;
                     const raw = e.target.value.replace(/\D/g, "");
                     setPerPlateAmountDisplay(raw ? Number(raw).toLocaleString("en-IN") : "");
                   }}
@@ -543,7 +586,7 @@ export function OrderForm({
                       type="button"
                       role="radio"
                       aria-checked={selected}
-                      onClick={() => setMealType(option.value)}
+                      onClick={() => { dirtyRef.current = true; setMealType(option.value); }}
                       className={`inline-flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border px-3 py-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-h-16 ${
                         selected
                           ? "border-primary bg-primary text-primary-foreground"
@@ -586,7 +629,7 @@ export function OrderForm({
         <OrderDishesPanel
           catalog={orderedMenuCatalog}
           selectedDishIds={selectedDishIds}
-          onDishChange={setSelectedDishIds}
+          onDishChange={ids => { dirtyRef.current = true; setSelectedDishIds(ids); }}
         />
       </div>
 

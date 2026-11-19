@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Check, GripVertical } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { MenuDetailEditor } from "@/components/menus/menu-detail-editor";
 
 import {
   reorderMenuCategories,
@@ -165,6 +166,7 @@ export function MenuDetailView({ menu }: MenuDetailViewProps) {
 
   useEffect(() => {
     const nextIds = menu.categories.map((category) => category.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Synchronize the preview after a saved menu changes.
     setOrderedIds(nextIds);
     setSelectedIds((prev) => {
       const retained = prev.filter((id) => nextIds.includes(id));
@@ -255,6 +257,7 @@ export function MenuDetailView({ menu }: MenuDetailViewProps) {
               {isPending ? " · saving order…" : ""}
             </p>
             <div className="flex flex-wrap items-center gap-2">
+              <MenuDetailEditor kind="client" menu={menu} />
               <MenuWhatsappShare
                 menuId={menu.id}
                 menuName={menu.name}

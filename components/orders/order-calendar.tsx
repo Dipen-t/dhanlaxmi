@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, MapPin } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import type { OrderRecord } from "@/app/orders/actions";
 import { isMenuPending } from "@/lib/orders/menu-status";
@@ -15,6 +15,9 @@ type OrderCalendarProps = {
   orders: OrderRecord[];
   onEdit: (order: OrderRecord) => void;
   onFinance: (order: OrderRecord) => void;
+  month: string;
+  selectedDate: string;
+  onCalendarChange: (state: { month: string; date: string }) => void;
 };
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -52,13 +55,10 @@ function formatSelectedDate(dateKey: string) {
   }).format(parseDateKey(dateKey));
 }
 
-export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps) {
+export function OrderCalendar({ orders, onEdit, onFinance, month, selectedDate, onCalendarChange }: OrderCalendarProps) {
   const today = useMemo(() => new Date(), []);
   const todayKey = toDateKey(today);
-  const [anchor, setAnchor] = useState(
-    () => new Date(today.getFullYear(), today.getMonth(), 1),
-  );
-  const [selectedDate, setSelectedDate] = useState(todayKey);
+  const anchor = useMemo(() => parseDateKey(`${month}-01`), [month]);
 
   const ordersByDate = useMemo(() => {
     const grouped = new Map<string, OrderRecord[]>();
@@ -78,12 +78,12 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
   }).format(anchor);
 
   function changeMonth(offset: number) {
-    setAnchor((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+    const date = toDateKey(new Date(anchor.getFullYear(), anchor.getMonth() + offset, 1));
+    onCalendarChange({ month: date.slice(0, 7), date });
   }
 
   function goToToday() {
-    setAnchor(new Date(today.getFullYear(), today.getMonth(), 1));
-    setSelectedDate(todayKey);
+    onCalendarChange({ month: todayKey.slice(0, 7), date: todayKey });
   }
 
   return (
@@ -158,7 +158,7 @@ export function OrderCalendar({ orders, onEdit, onFinance }: OrderCalendarProps)
                 role="gridcell"
                 aria-selected={isSelected}
                 aria-label={`${accessibleDate}, ${dayOrders.length} order${dayOrders.length === 1 ? "" : "s"}${pendingLabel}`}
-                onClick={() => setSelectedDate(dateKey)}
+                onClick={() => onCalendarChange({ month: dateKey.slice(0, 7), date: dateKey })}
                 className={`min-h-20 min-w-0 touch-manipulation border-r border-b border-border p-1.5 text-left transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:min-h-24 sm:p-2 ${
                   isSelected ? "bg-primary-soft" : "hover:bg-surface"
                 } ${isCurrentMonth ? "text-foreground" : "bg-surface/35 text-muted/70"} ${

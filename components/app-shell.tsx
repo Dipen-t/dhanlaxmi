@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { Suspense } from "react";
 
 import { BackButton } from "@/components/back-button";
 import { ClickSoundProvider } from "@/components/click-sound-provider";
@@ -21,7 +22,7 @@ export function AppShell({ children }: AppShellProps) {
     >
       <ClickSoundProvider />
       {children}
-      {pathname !== "/expired" ? <BackButton /> : null}
+      {pathname !== "/expired" ? <Suspense fallback={null}><BackButton /></Suspense> : null}
       {showFloatingActions ? <ScrollToTopButton /> : null}
     </div>
   );

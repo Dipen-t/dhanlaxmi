@@ -53,7 +53,7 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        if (!savingRef.current) onClose();
       }
     }
 

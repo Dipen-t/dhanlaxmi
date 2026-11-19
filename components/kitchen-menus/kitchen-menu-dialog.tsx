@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, useTransition } from "react";
+import { useEffect, useId, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import { ChevronDown, ChevronRight, GripVertical, X } from "lucide-react";
 import {
   closestCenter,
@@ -86,6 +87,7 @@ function SortableSelectedDish({
 
 export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuDialogProps) {
   const titleId = useId();
+  const savingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -159,7 +161,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        if (!savingRef.current) onClose();
       }
     }
 
@@ -173,6 +175,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
   }, [open]);
 
   function handleClose() {
+    if (savingRef.current) return;
     setError(null);
     onClose();
   }
@@ -241,6 +244,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
+    if (savingRef.current) return;
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -262,6 +266,8 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
     }));
     formData.append("dishes", JSON.stringify(dishesArray));
 
+    savingRef.current = true;
+    setError(null);
     startTransition(async () => {
       try {
         const result = isEditing
@@ -273,10 +279,12 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
           return;
         }
 
+        toast.success(isEditing ? "Kitchen menu updated" : "Kitchen menu created");
+        savingRef.current = false;
         handleClose();
       } catch {
-        setError("Something went wrong. Please try again.");
-      }
+        setError("Could not save. Check your connection and try again.");
+      } finally { savingRef.current = false; }
     });
   }
 

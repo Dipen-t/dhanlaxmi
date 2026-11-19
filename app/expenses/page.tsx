@@ -27,6 +27,7 @@ async function ExpensesContent({
 
   return (
     <ExpensesClient
+      key={initialOrderId ?? "choose-order"}
       orders={orders}
       vendors={vendors}
       initialOrderId={initialOrderId}

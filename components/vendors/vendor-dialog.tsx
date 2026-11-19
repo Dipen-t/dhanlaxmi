@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 
 import type { MaterialWithVendor } from "@/app/raw-materials/actions";
 import {
@@ -25,6 +26,7 @@ export function VendorDialog({
   onClose,
 }: VendorDialogProps) {
   const titleId = useId();
+  const savingRef = useRef(false);
   const [mounted, setMounted] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +62,7 @@ export function VendorDialog({
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        if (!savingRef.current) onClose();
       }
     }
 
@@ -73,6 +75,7 @@ export function VendorDialog({
   }, [open]);
 
   function handleClose() {
+    if (savingRef.current) return;
     setError(null);
     onClose();
   }
@@ -88,6 +91,7 @@ export function VendorDialog({
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
+    if (savingRef.current) return;
 
     const formData = new FormData(event.currentTarget);
 
@@ -95,6 +99,8 @@ export function VendorDialog({
       formData.append("materialIds", String(id));
     });
 
+    savingRef.current = true;
+    setError(null);
     startTransition(async () => {
       try {
         const result = isEditing
@@ -106,10 +112,12 @@ export function VendorDialog({
           return;
         }
 
+        toast.success(isEditing ? "Vendor updated" : "Vendor created");
+        savingRef.current = false;
         handleClose();
       } catch {
-        setError("Something went wrong. Please try again.");
-      }
+        setError("Could not save. Check your connection and try again.");
+      } finally { savingRef.current = false; }
     });
   }
 
