@@ -1,6 +1,6 @@
 "use server";
 
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
@@ -8,6 +8,7 @@ import { categoryImageKeyById } from "@/lib/menus/category-images";
 import { sendMenuPdfViaWhatsApp } from "@/lib/whatsapp";
 import { sanitizeFilename } from "@/lib/menus/sanitize-filename";
 import { getWhatsAppPdfUrl } from "@/lib/whatsapp-pdf-url";
+import { parseMenuDishSelection, selectedMenuDishes } from "@/lib/menus/dish-selection";
 import {
   dishCategories,
   menuCategories,
@@ -29,7 +30,7 @@ function isMissingSortOrderError(error: unknown) {
     break;
   }
   const text = parts.join("\n").toLowerCase();
-  return text.includes("sort_order") && text.includes("does not exist");
+  return (text.includes("sort_order") || text.includes("selected_dish_ids")) && text.includes("does not exist");
 }
 
 /** Termux / older DBs may lack this column until migrate/push — create it on demand. */
@@ -37,7 +38,7 @@ function ensureMenuCategorySortOrder() {
   if (!menuCategorySortOrderReady) {
     menuCategorySortOrderReady = db
       .execute(
-        sql`ALTER TABLE menu_categories ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0`,
+        sql`ALTER TABLE menu_categories ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS selected_dish_ids integer[]`,
       )
       .then(() => undefined)
       .catch((error) => {
@@ -80,6 +81,7 @@ export type MenuSummary = {
   categoryCount: number;
   dishCount: number;
   categoryIds: number[];
+  dishIds: number[];
 };
 
 export type MenuDetail = {
@@ -123,7 +125,7 @@ export async function getMenus(): Promise<MenuSummary[]> {
     });
 
     return rows.map((menu) => {
-      const categories = menu.menuCategories.map((link) => link.category);
+      const categories = menu.menuCategories.map((link) => ({ ...link.category, dishes: selectedMenuDishes(link.category.dishes, link.selectedDishIds) }));
       const categoryIds = categories.map((category) => category.id);
       const dishCount = categories.reduce(
         (sum, category) => sum + category.dishes.length,
@@ -136,6 +138,7 @@ export async function getMenus(): Promise<MenuSummary[]> {
         categoryCount: categories.length,
         dishCount,
         categoryIds,
+        dishIds: categories.flatMap((category) => category.dishes.map((dish) => dish.id)),
       };
     });
   });
@@ -174,7 +177,7 @@ export async function getMenuById(id: number): Promise<MenuDetail | null> {
           name: category.name,
           selectionRule: category.selectionRule,
           imageKey: categoryImageKeyById(category.id),
-          dishes: category.dishes
+          dishes: selectedMenuDishes(category.dishes, link.selectedDishIds)
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((dish) => ({ id: dish.id, name: dish.name })),
         };
@@ -192,27 +195,11 @@ function normalizeName(name: string) {
   return name.trim();
 }
 
-function parseCategoryIds(formData: FormData) {
-  return formData
-    .getAll("categoryIds")
-    .map((value) => Number(value))
-    .filter((id) => !Number.isNaN(id));
-}
+type MenuTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-async function syncMenuCategories(menuId: number, categoryIds: number[]) {
-  const uniqueIds = [...new Set(categoryIds)];
-
-  if (uniqueIds.length > 0) {
-    const found = await db.query.dishCategories.findMany({
-      where: inArray(dishCategories.id, uniqueIds),
-    });
-
-    if (found.length !== uniqueIds.length) {
-      return { error: "One or more selected categories no longer exist." };
-    }
-  }
-
-  const existing = await db.query.menuCategories.findMany({
+async function syncMenuCategories(transaction: MenuTransaction, menuId: number, entries: { categoryId: number; selectedDishIds: number[] | null }[]) {
+  const uniqueIds = entries.map((entry) => entry.categoryId);
+  const existing = await transaction.query.menuCategories.findMany({
     where: eq(menuCategories.menuId, menuId),
   });
   const existingOrder = new Map(
@@ -225,14 +212,15 @@ async function syncMenuCategories(menuId: number, categoryIds: number[]) {
   const addedIds = uniqueIds.filter((id) => !existingOrder.has(id));
   const orderedIds = [...keptIds, ...addedIds];
 
-  await db.delete(menuCategories).where(eq(menuCategories.menuId, menuId));
+  await transaction.delete(menuCategories).where(eq(menuCategories.menuId, menuId));
 
   if (orderedIds.length > 0) {
-    await db.insert(menuCategories).values(
+    await transaction.insert(menuCategories).values(
       orderedIds.map((categoryId, index) => ({
         menuId,
         categoryId,
         sortOrder: index,
+        selectedDishIds: entries.find((entry) => entry.categoryId === categoryId)!.selectedDishIds,
       })),
     );
   }
@@ -290,68 +278,40 @@ export async function reorderMenuCategories(
 }
 
 export async function createMenu(formData: FormData) {
-  const name = normalizeName(String(formData.get("name") ?? ""));
-  const categoryIds = parseCategoryIds(formData);
-
-  if (!name) {
-    return { error: "Menu name is required." };
-  }
-  if (name.length > 120) {
-    return { error: "Menu name must be 120 characters or less." };
-  }
-  if (categoryIds.length === 0) {
-    return { error: "Select at least one category." };
-  }
-
-  const [created] = await db
-    .insert(menus)
-    .values({ name })
-    .returning({ id: menus.id });
-
-  const syncResult = await syncMenuCategories(created.id, categoryIds);
-  if (syncResult.error) {
-    await db.delete(menus).where(eq(menus.id, created.id));
-    return { error: syncResult.error };
-  }
-
-  revalidatePath("/menus");
-  revalidatePath(`/menus/${created.id}`);
-  return { success: true as const, id: created.id };
+  return saveMenu(formData);
 }
 
 export async function updateMenu(formData: FormData) {
   const id = Number(formData.get("id"));
+  if (!Number.isSafeInteger(id) || id <= 0) return { error: "Invalid menu." };
+  return saveMenu(formData, id);
+}
+
+async function saveMenu(formData: FormData, id?: number) {
   const name = normalizeName(String(formData.get("name") ?? ""));
-  const categoryIds = parseCategoryIds(formData);
-
-  if (!id || Number.isNaN(id)) {
-    return { error: "Invalid menu." };
+  if (!name) return { error: "Menu name is required." };
+  if (name.length > 120) return { error: "Menu name must be 120 characters or less." };
+  try {
+    await ensureMenuCategorySortOrder();
+    const result = await db.transaction(async (transaction) => {
+      const catalog = await transaction.query.dishCategories.findMany({ with: { dishes: true } });
+      const selection = parseMenuDishSelection(formData, catalog);
+      if (!selection.entries) return { error: selection.error };
+      const [saved] = id
+        ? await transaction.update(menus).set({ name, updatedAt: new Date() }).where(eq(menus.id, id)).returning({ id: menus.id })
+        : await transaction.insert(menus).values({ name }).returning({ id: menus.id });
+      if (!saved) return { error: "Menu not found." };
+      await syncMenuCategories(transaction, saved.id, selection.entries);
+      return { success: true as const, id: saved.id };
+    });
+    if ("error" in result) return result;
+    revalidatePath("/menus");
+    revalidatePath(`/menus/${result.id}`);
+    return result;
+  } catch (error) {
+    console.error("Menu save failed:", error);
+    return { error: "Could not save the menu. Please try again." };
   }
-  if (!name) {
-    return { error: "Menu name is required." };
-  }
-  if (categoryIds.length === 0) {
-    return { error: "Select at least one category." };
-  }
-
-  const [updated] = await db
-    .update(menus)
-    .set({ name, updatedAt: new Date() })
-    .where(eq(menus.id, id))
-    .returning({ id: menus.id });
-
-  if (!updated) {
-    return { error: "Menu not found." };
-  }
-
-  const syncResult = await syncMenuCategories(id, categoryIds);
-  if (syncResult.error) {
-    return { error: syncResult.error };
-  }
-
-  revalidatePath("/menus");
-  revalidatePath(`/menus/${id}`);
-  return { success: true as const };
 }
 
 export async function deleteMenu(formData: FormData) {

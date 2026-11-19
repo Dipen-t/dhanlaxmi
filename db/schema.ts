@@ -177,6 +177,8 @@ export const menuCategories = pgTable(
       .notNull()
       .references(() => dishCategories.id, { onDelete: "cascade" }),
     sortOrder: integer("sort_order").notNull().default(0),
+    // Null preserves legacy menus that include the category's entire catalog.
+    selectedDishIds: integer("selected_dish_ids").array(),
   },
   (table) => [primaryKey({ columns: [table.menuId, table.categoryId] })],
 );

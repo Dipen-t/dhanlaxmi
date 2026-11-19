@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 
 import {
@@ -24,19 +24,24 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState(0);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [selectedDishIds, setSelectedDishIds] = useState<number[]>([]);
+  const savingRef = useRef(false);
 
   const isEditing = menu !== null;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Mount the portal after hydration.
     setMounted(true);
   }, []);
 
   useEffect(() => {
     if (!open) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- Initialize a newly opened create/edit session.
     setFormKey((key) => key + 1);
     setError(null);
     setSelectedCategoryIds(menu?.categoryIds ?? catalog.map((c) => c.id));
+    setSelectedDishIds(menu?.dishIds ?? catalog.flatMap((category) => category.dishes.map((dish) => dish.id)));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- reset only when opening / menu changes
   }, [open, menu?.id]);
 
@@ -62,11 +67,16 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
   }, [open]);
 
   function handleClose() {
+    if (savingRef.current) return;
     setError(null);
     onClose();
   }
 
   function toggleCategory(id: number) {
+    const dishes = catalog.find((category) => category.id === id)?.dishes ?? [];
+    const dishIds = dishes.map((dish) => dish.id);
+    const removing = selectedCategoryIds.includes(id);
+    setSelectedDishIds((current) => removing ? current.filter((dishId) => !dishIds.includes(dishId)) : [...new Set([...current, ...dishIds])]);
     setSelectedCategoryIds((current) =>
       current.includes(id)
         ? current.filter((value) => value !== id)
@@ -76,15 +86,24 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
 
   function selectAll() {
     setSelectedCategoryIds(catalog.map((category) => category.id));
+    setSelectedDishIds(catalog.flatMap((category) => category.dishes.map((dish) => dish.id)));
   }
 
   function clearAll() {
     setSelectedCategoryIds([]);
+    setSelectedDishIds([]);
+  }
+
+  function toggleDish(category: CategoryWithDishes, dishId: number) {
+    const next = selectedDishIds.includes(dishId) ? selectedDishIds.filter((id) => id !== dishId) : [...selectedDishIds, dishId];
+    setSelectedDishIds(next);
+    setSelectedCategoryIds((current) => category.dishes.some((dish) => next.includes(dish.id)) ? [...new Set([...current, category.id])] : current.filter((id) => id !== category.id));
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     event.stopPropagation();
+    if (savingRef.current) return;
 
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -103,21 +122,27 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
     selectedCategoryIds.forEach((id) => {
       formData.append("categoryIds", String(id));
     });
+    formData.set("dishSelection", "custom");
+    selectedDishIds.forEach((id) => formData.append("dishIds", String(id)));
 
+    savingRef.current = true;
     startTransition(async () => {
       try {
         const result = isEditing
           ? await updateMenu(formData)
           : await createMenu(formData);
 
-        if (result.error) {
+        if ("error" in result && result.error) {
           setError(result.error);
           return;
         }
 
+        savingRef.current = false;
         handleClose();
       } catch {
         setError("Something went wrong. Please try again.");
+      } finally {
+        savingRef.current = false;
       }
     });
   }
@@ -165,6 +190,7 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
                 <input
                   id="menu-name"
                   name="name"
+                  aria-label="Menu name"
                   type="text"
                   required
                   maxLength={120}
@@ -176,10 +202,10 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
                 />
               </div>
 
-              <fieldset>
+              <fieldset disabled={isPending}>
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-muted">
-                    {selectedCategoryIds.length} of {catalog.length} selected
+                    {selectedCategoryIds.length} categories · {selectedDishIds.length} dishes selected
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -208,6 +234,7 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-0 border border-border rounded overflow-hidden">
                       {catalog.map((category) => {
                         const checked = selectedCategoryIds.includes(category.id);
+                        const dishCount = category.dishes.filter((dish) => selectedDishIds.includes(dish.id)).length;
 
                         return (
                           <div
@@ -216,20 +243,34 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
                               checked ? "bg-primary-soft/20 font-medium" : "text-foreground"
                             }`}
                           >
-                            <label className="flex cursor-pointer items-center gap-2 w-full min-w-0">
+                            <label className="flex min-h-11 cursor-pointer items-center gap-2 w-full min-w-0">
                               <input
                                 type="checkbox"
                                 checked={checked}
+                                ref={(input) => { if (input) input.indeterminate = checked && dishCount > 0 && dishCount < category.dishes.length; }}
                                 onChange={() => toggleCategory(category.id)}
                                 className="size-3.5 rounded-sm border-border text-primary accent-primary shrink-0"
                               />
                               <div className="flex flex-col min-w-0 flex-1">
                                 <span className="truncate leading-tight text-sm font-semibold">{category.name}</span>
                                 <span className="truncate text-xs text-muted font-normal mt-0.5">
-                                  {category.selectionRule} · {category.dishes.length} dishes
+                                  {category.selectionRule} · {dishCount}/{category.dishes.length} dishes
                                 </span>
                               </div>
                             </label>
+                            {category.dishes.length > 0 ? (
+                              <details className="font-normal">
+                                <summary className="min-h-11 cursor-pointer py-3 text-xs font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">Choose dishes</summary>
+                                <div className="border-t border-border/40">
+                                  {category.dishes.map((dish) => (
+                                    <label key={dish.id} className="flex min-h-11 cursor-pointer items-center gap-2 py-2 text-sm">
+                                      <input type="checkbox" checked={selectedDishIds.includes(dish.id)} onChange={() => toggleDish(category, dish.id)} className="size-4 shrink-0 accent-primary" />
+                                      <span className="min-w-0 break-words">{dish.name}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </details>
+                            ) : <p className="text-xs font-normal text-muted">No dishes in this category yet.</p>}
                           </div>
                         );
                       })}
@@ -249,6 +290,7 @@ export function MenuDialog({ open, menu, catalog, onClose }: MenuDialogProps) {
             <button
               type="button"
               onClick={handleClose}
+              disabled={isPending}
               className="inline-flex min-h-9 touch-manipulation items-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-surface"
             >
               Cancel

@@ -1,5 +1,5 @@
 /**
- * Adds menu_categories.sort_order if missing.
+ * Adds menu category ordering and dish selection columns if missing.
  * Run on Termux / any host before starting the app:
  *   node scripts/ensure-menu-category-sort-order.mjs
  */
@@ -40,7 +40,8 @@ const sql = postgres(url, { prepare: false });
 try {
   await sql`
     ALTER TABLE menu_categories
-    ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0
+    ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0,
+    ADD COLUMN IF NOT EXISTS selected_dish_ids integer[]
   `;
 
   await sql`
