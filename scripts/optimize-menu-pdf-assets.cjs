@@ -20,6 +20,6 @@ async function main() {
     await sharp(`${folder}/${cover}`).jpeg({ quality: 88, mozjpeg: true }).toFile(`${folder}/background-pdf.jpg`);
     await sharp(`${folder}/background-content-v1.png`).jpeg({ quality: 88, mozjpeg: true }).toFile(`${folder}/background-content-pdf.jpg`);
   }
-  console.log('Prepared 20 transparent print PNGs and 8 compressed background JPEGs.');
+  console.log(`Prepared ${catalog.length} transparent print PNGs and 8 compressed background JPEGs.`);
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

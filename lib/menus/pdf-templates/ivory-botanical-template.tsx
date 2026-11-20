@@ -304,7 +304,8 @@ function ArtworkMenuPdfDocument({ menu, logo, background, contentBackground, cat
       const pageSections = sections.filter((section) => section.pageIndex === page);
       return <Page key={page} size={[WIDTH, HEIGHT]} style={styles.page} wrap={false}>
       <PageArtwork background={contentBackground} panel={panel} />
-      <Text style={[styles.note, { left: panel === 1 ? 166 : 153 }]}>{panel === 1 ? (artDeco ? "REFRESH · REJOICE\nREPEAT" : "SMALL BITES\nBIG CELEBRATIONS") : "GOOD FOOD\nGOOD COMPANY\nGREAT MEMORIES"}</Text>
+      {/* Long category headings need the corner space occupied by this decorative note. */}
+      <Text style={[styles.note, { left: pageSections[0]?.headingLines.length === 1 ? (panel === 1 ? 166 : 153) : -WIDTH }]}>{panel === 1 ? (artDeco ? "REFRESH · REJOICE\nREPEAT" : "SMALL BITES\nBIG CELEBRATIONS") : "GOOD FOOD\nGOOD COMPANY\nGREAT MEMORIES"}</Text>
       {pageSections.map((section, row) => <CategorySection key={`${section.number}-${section.continued ? "cont" : "start"}-${page}-${row}`} section={section} categoryPhotos={categoryPhotos} styles={styles} />)}
       <Text style={[styles.bottomCaption, { left: panel === 1 ? 107 : 95 }]}>{panel === 1 ? middleCaption : "Sweet Endings\nTo Beautiful Beginnings"}</Text>
       <Text style={styles.pageNumber}>{page + 2} / {pageCount}</Text>

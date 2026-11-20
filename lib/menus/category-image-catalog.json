@@ -138,5 +138,53 @@
     "catalogId": 20,
     "original": "IMG_2346.PNG",
     "backgroundCleaned": false
+  },
+  {
+    "key": "paan-mukhwas",
+    "name": "Pan & Mukhwas",
+    "catalogId": null,
+    "original": "Generated with built-in imagegen",
+    "backgroundCleaned": false,
+    "generated": true
+  },
+  {
+    "key": "mineral-water",
+    "name": "Mineral water",
+    "catalogId": null,
+    "original": "Generated with built-in imagegen",
+    "backgroundCleaned": false,
+    "generated": true
+  },
+  {
+    "key": "chinese-rice",
+    "name": "Chinese rice",
+    "catalogId": null,
+    "original": "Generated with built-in imagegen",
+    "backgroundCleaned": false,
+    "generated": true
+  },
+  {
+    "key": "fruit-milk-ice-gola",
+    "name": "Fresh Fruits,Hot kadai, Cold Masala Milk,Malai Ice gola",
+    "catalogId": null,
+    "original": "Generated with built-in imagegen",
+    "backgroundCleaned": false,
+    "generated": true
+  },
+  {
+    "key": "tawa-bahar",
+    "name": "Tawa Bahar",
+    "catalogId": null,
+    "original": "Generated with built-in imagegen",
+    "backgroundCleaned": false,
+    "generated": true
+  },
+  {
+    "key": "assorted-extras",
+    "name": "Extra",
+    "catalogId": null,
+    "original": "Generated with built-in imagegen",
+    "backgroundCleaned": false,
+    "generated": true
   }
 ]

@@ -101,7 +101,7 @@ export async function getCatalogCategories(): Promise<CategoryWithDishes[]> {
       id: category.id,
       name: category.name,
       selectionRule: category.selectionRule,
-      imageKey: categoryImageKeyById(category.id),
+      imageKey: categoryImageKeyById(category.id, category.name),
       dishes: category.dishes
         .sort((a, b) => a.sortOrder - b.sortOrder)
         .map((dish) => ({ id: dish.id, name: dish.name })),
@@ -176,7 +176,7 @@ export async function getMenuById(id: number): Promise<MenuDetail | null> {
           id: category.id,
           name: category.name,
           selectionRule: category.selectionRule,
-          imageKey: categoryImageKeyById(category.id),
+          imageKey: categoryImageKeyById(category.id, category.name),
           dishes: selectedMenuDishes(category.dishes, link.selectedDishIds)
             .sort((a, b) => a.sortOrder - b.sortOrder)
             .map((dish) => ({ id: dish.id, name: dish.name })),
