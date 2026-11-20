@@ -82,7 +82,23 @@ const artDecoStyles: typeof styles = StyleSheet.create({
 });
 
 type Category = MenuDetail["categories"][number];
-type Section = { category: Category; number: number; continued: boolean; dishes: string[][]; columns: number; lineBudget: number; headingLines: string[]; selectionLines: string[]; headingSize: number; headerHeight: number; headerWidth: number; top: number; photoHeight: number };
+type Section = {
+  category: Category;
+  number: number;
+  continued: boolean;
+  dishes: string[][];
+  columns: number;
+  lineBudget: number;
+  headingLines: string[];
+  selectionLines: string[];
+  headingSize: number;
+  headerHeight: number;
+  headerWidth: number;
+  top: number;
+  photoHeight: number;
+  pageIndex: number;
+  showPhoto: boolean;
+};
 
 // Explicit wrapping makes capacity predictable before laying out the fixed panels.
 function wrapName(name: string, width: number): string[] {
@@ -111,20 +127,24 @@ function wrapName(name: string, width: number): string[] {
 }
 
 export function createBotanicalSections(categories: Category[], artDeco = false): Section[] {
+  // Flow top-to-bottom instead of 3 fixed slots — that fixed grid caused empty gaps
+  // under short categories and leaf overlaps under long ones.
+  const contentTop = artDeco ? 36 : 50;
+  const contentBottom = artDeco ? 540 : 520;
+  const sectionGap = 12;
+  const contTopPad = 10;
+  const lineStep = artDeco ? 10 : LINE_HEIGHT;
+  const headerWidth = 268;
   const sections: Section[] = [];
-  const tops = artDeco ? [32, 232, 403] : [52, 224, 388];
-  const heights = artDeco ? [181, 160, 152] : [160, 160, 167];
-  categories.forEach((category, index) => {
-    const remaining = category.dishes.map(dish => dish.name);
-    let continued = false;
-    do {
-      const slot = sections.length % 6;
-      const row = slot % 3;
-      const columns = 1;
-      const headerWidth = 268;
-      const headingSize = category.name.length > 20 ? 10.2 : 11.6;
+  let pageIndex = 0;
+  let cursorY = contentTop;
 
-      // First chunk: number + title + photo. Continuations: dishes only (no blank header gap).
+  categories.forEach((category, index) => {
+    const remaining = category.dishes.map((dish) => dish.name);
+    let continued = false;
+
+    while (remaining.length) {
+      const headingSize = category.name.length > 20 ? 10.2 : 11.6;
       const headingLines = continued
         ? []
         : wrapName(category.name.toUpperCase(), (headerWidth - 43) * BODY_SIZE / headingSize * 0.93);
@@ -135,16 +155,19 @@ export function createBotanicalSections(categories: Category[], artDeco = false)
         ? 0
         : Math.max(32, headingLines.length * headingSize * 1.1 + (selectionLines.length ? selectionLines.length * 10 + 3 : 0) + 6) + 7;
 
-      // Continuations skip the photo and use small edge insets so lists fill the old header hole
-      // without colliding with corner leaf artwork.
-      const hasPhoto = !continued && !!getCategoryImageKey(category);
-      const textWidth = hasPhoto ? 118 : 252;
-      const topInset = continued && row === 0 ? 14 : 0;
-      const bottomInset = continued && row === 2 ? 24 : 0;
-      const top = tops[row] + topInset;
-      const availableHeight = heights[row] - topInset - bottomInset;
-      const lineBudget = Math.max(1, Math.floor((availableHeight - headerHeight) / (artDeco ? 10 : LINE_HEIGHT)));
-      const photoHeight = Math.max(40, Math.min(94, availableHeight - headerHeight));
+      const showPhoto = !continued && !!getCategoryImageKey(category);
+      const textWidth = showPhoto ? 118 : 252;
+      const atPageTop = cursorY <= contentTop + 0.5;
+      const top = atPageTop && continued ? contentTop + contTopPad : cursorY;
+      const availableForDishes = contentBottom - top - headerHeight;
+
+      if (availableForDishes < lineStep) {
+        pageIndex += 1;
+        cursorY = contentTop;
+        continue;
+      }
+
+      const lineBudget = Math.max(1, Math.floor(availableForDishes / lineStep));
       const chosen: string[][] = [];
       let used = 0;
       while (remaining.length) {
@@ -152,28 +175,65 @@ export function createBotanicalSections(categories: Category[], artDeco = false)
         const cost = Math.min(lines.length, lineBudget);
         if (used + cost > lineBudget) break;
         chosen.push(lines.slice(0, lineBudget));
-        // Preserve very long names across continuation blocks as well.
         if (lines.length > lineBudget) remaining[0] = lines.slice(lineBudget).join(" ");
         else remaining.shift();
         used += cost;
       }
-      sections.push({ category, number: index + 1, continued, dishes: chosen, columns, lineBudget, headingLines, selectionLines, headingSize, headerHeight, headerWidth, top, photoHeight });
+
+      if (!chosen.length) {
+        // Safety: force one dish so we cannot spin forever on an empty page.
+        const lines = wrapName(remaining[0], textWidth);
+        chosen.push(lines.slice(0, 1));
+        if (lines.length > 1) remaining[0] = lines.slice(1).join(" ");
+        else remaining.shift();
+        used = 1;
+      }
+
+      const dishHeight = used * lineStep;
+      const photoHeight = showPhoto ? Math.max(40, Math.min(94, dishHeight)) : 0;
+      sections.push({
+        category,
+        number: index + 1,
+        continued,
+        dishes: chosen,
+        columns: 1,
+        lineBudget: used,
+        headingLines,
+        selectionLines,
+        headingSize,
+        headerHeight,
+        headerWidth,
+        top,
+        photoHeight,
+        pageIndex,
+        showPhoto,
+      });
+
+      cursorY = top + headerHeight + dishHeight + sectionGap;
       continued = true;
-    } while (remaining.length);
+      if (remaining.length && cursorY + lineStep > contentBottom) {
+        pageIndex += 1;
+        cursorY = contentTop;
+      }
+    }
   });
+
   return sections;
 }
 
 function CategorySection({ section, styles, categoryPhotos }: { section: Section; styles: typeof burgundyStyles; categoryPhotos: CategoryPhotoSources }) {
-  const key = !section.continued ? getCategoryImageKey(section.category) : null;
+  const key = section.showPhoto ? getCategoryImageKey(section.category) : null;
   const photo = key ? categoryPhotos[key] : undefined;
   const width = photo ? 134 : 268;
-  // Lists read down each column, matching the printed reference.
   const columnLists: string[][][] = [[]];
   let used = 0;
   for (const lines of section.dishes) {
-    if (section.columns === 2 && used + lines.length > section.lineBudget && columnLists.length === 1) { columnLists.push([]); used = 0; }
-    columnLists[columnLists.length - 1].push(lines); used += lines.length;
+    if (section.columns === 2 && used + lines.length > section.lineBudget && columnLists.length === 1) {
+      columnLists.push([]);
+      used = 0;
+    }
+    columnLists[columnLists.length - 1].push(lines);
+    used += lines.length;
   }
   return <View style={[styles.section, { left: 15, top: section.top, width: 268 }]}>
     {!section.continued ? (
@@ -219,7 +279,7 @@ export function IvoryBotanicalPdfDocument({ menu, logo, background, contentBackg
 function ArtworkMenuPdfDocument({ menu, logo, background, contentBackground, categoryPhotos, styles, middleCaption, emerald, artDeco }: { menu: MenuDetail; logo: PdfLogoAssets; background: string; contentBackground: string; categoryPhotos: CategoryPhotoSources; styles: typeof burgundyStyles; middleCaption: string; emerald: boolean; artDeco: boolean }) {
   const sections = createBotanicalSections(menu.categories, artDeco);
   const logoWidth = emerald ? 228 : 252;
-  const contentPageCount = Math.ceil(sections.length / 3);
+  const contentPageCount = sections.reduce((max, section) => Math.max(max, section.pageIndex + 1), 0);
   const pageCount = 1 + contentPageCount;
   return <Document title={menu.name} author="Dhanlaxmi Catering Service">
     <Page size={[WIDTH, HEIGHT]} style={styles.page} wrap={false}>
@@ -241,10 +301,11 @@ function ArtworkMenuPdfDocument({ menu, logo, background, contentBackground, cat
     </Page>
     {Array.from({ length: contentPageCount }, (_, page) => {
       const panel = page % 2 === 0 ? 1 : 2;
+      const pageSections = sections.filter((section) => section.pageIndex === page);
       return <Page key={page} size={[WIDTH, HEIGHT]} style={styles.page} wrap={false}>
       <PageArtwork background={contentBackground} panel={panel} />
       <Text style={[styles.note, { left: panel === 1 ? 166 : 153 }]}>{panel === 1 ? (artDeco ? "REFRESH · REJOICE\nREPEAT" : "SMALL BITES\nBIG CELEBRATIONS") : "GOOD FOOD\nGOOD COMPANY\nGREAT MEMORIES"}</Text>
-      {sections.slice(page * 3, page * 3 + 3).map((section, row) => <CategorySection key={`${section.number}-${section.continued ? "cont" : "start"}-${row}`} section={section} categoryPhotos={categoryPhotos} styles={styles} />)}
+      {pageSections.map((section, row) => <CategorySection key={`${section.number}-${section.continued ? "cont" : "start"}-${page}-${row}`} section={section} categoryPhotos={categoryPhotos} styles={styles} />)}
       <Text style={[styles.bottomCaption, { left: panel === 1 ? 107 : 95 }]}>{panel === 1 ? middleCaption : "Sweet Endings\nTo Beautiful Beginnings"}</Text>
       <Text style={styles.pageNumber}>{page + 2} / {pageCount}</Text>
     </Page>;
