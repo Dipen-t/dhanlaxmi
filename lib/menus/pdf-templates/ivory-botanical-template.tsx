@@ -119,22 +119,26 @@ export function createBotanicalSections(categories: Category[], artDeco = false)
       const slot = sections.length % 6;
       // Each category owns its photograph; reserve the right side for it.
       const columns = 1;
-      // Continuations skip the photo so more dish lines fit on overflow slots.
-      const hasPhoto = !continued && !!getCategoryImageKey(category);
+      const hasPhoto = !!getCategoryImageKey(category);
       const textWidth = hasPhoto ? 118 : 252;
       // Headings use the complete band above each category photo.
       const headerWidth = 268;
       const headingSize = category.name.length > 20 ? 10.2 : 11.6;
-      // Only the first chunk shows number + title; overflow chunks continue the list only.
-      const headingLines = continued
-        ? []
-        : wrapName(category.name.toUpperCase(), (headerWidth - 43) * BODY_SIZE / headingSize * 0.93);
-      const selectionLines = !continued && category.selectionRule
+      // Keep original packing math so overflow slots do not gain/lose dish capacity.
+      const packingHeadingLines = wrapName(category.name.toUpperCase(), (headerWidth - 43) * BODY_SIZE / headingSize * 0.93);
+      const packingSelectionLines = category.selectionRule
         ? wrapName(`(${category.selectionRule.toUpperCase()})`, (headerWidth - 43) * 0.86)
         : [];
-      const headerHeight = continued
-        ? 4
-        : Math.max(32, headingLines.length * headingSize * 1.1 + (selectionLines.length ? selectionLines.length * 10 + 3 : 0) + 6) + 7;
+      const headerHeight = Math.max(
+        32,
+        packingHeadingLines.length * headingSize * 1.1
+          + (packingSelectionLines.length ? packingSelectionLines.length * 10 + 3 : 0)
+          + 6,
+      ) + 7;
+      // First chunk shows number + title; continuations keep the same reserved height
+      // but render without repeating the label (avoids 02 / CONT. spam without layout drift).
+      const headingLines = continued ? [] : packingHeadingLines;
+      const selectionLines = continued ? [] : packingSelectionLines;
       const top = (artDeco ? [32, 232, 403] : [52, 224, 388])[slot % 3];
       const availableHeight = (artDeco ? [181, 160, 152] : [160, 160, 167])[slot % 3];
       const lineBudget = Math.max(1, Math.floor((availableHeight - headerHeight) / (artDeco ? 10 : LINE_HEIGHT)));
@@ -159,7 +163,7 @@ export function createBotanicalSections(categories: Category[], artDeco = false)
 }
 
 function CategorySection({ section, styles, categoryPhotos }: { section: Section; styles: typeof burgundyStyles; categoryPhotos: CategoryPhotoSources }) {
-  const key = !section.continued ? getCategoryImageKey(section.category) : null;
+  const key = getCategoryImageKey(section.category);
   const photo = key ? categoryPhotos[key] : undefined;
   const width = photo ? 134 : 268;
   // Lists read down each column, matching the printed reference.
@@ -170,21 +174,23 @@ function CategorySection({ section, styles, categoryPhotos }: { section: Section
     columnLists[columnLists.length - 1].push(lines); used += lines.length;
   }
   return <View style={[styles.section, { left: 15, top: section.top, width: 268 }]}>
-    {!section.continued ? (
-      <View style={[styles.header, { width: section.headerWidth, height: section.headerHeight - 7 }]}>
-        <Text style={styles.number}>{String(section.number).padStart(2, "0")}</Text>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.heading, { fontSize: section.headingSize }]}>{section.headingLines.join("\n")}</Text>
-          {section.selectionLines.length ? <Text style={[styles.selection, { lineHeight: 10 / 9 }]}>{section.selectionLines.join("\n")}</Text> : null}
-          <View style={styles.headingRule} />
-        </View>
-      </View>
-    ) : null}
+    <View style={[styles.header, { width: section.headerWidth, height: section.headerHeight - 7 }]}>
+      {!section.continued ? (
+        <>
+          <Text style={styles.number}>{String(section.number).padStart(2, "0")}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.heading, { fontSize: section.headingSize }]}>{section.headingLines.join("\n")}</Text>
+            {section.selectionLines.length ? <Text style={[styles.selection, { lineHeight: 10 / 9 }]}>{section.selectionLines.join("\n")}</Text> : null}
+            <View style={styles.headingRule} />
+          </View>
+        </>
+      ) : null}
+    </View>
     {photo ? <View style={{ position: "absolute", left: 138, top: section.headerHeight, width: 130, height: section.photoHeight }}>
       {/* eslint-disable-next-line jsx-a11y/alt-text -- react-pdf Image is not an HTML element. */}
       <Image src={photo} style={{ width: 130, height: section.photoHeight, objectFit: "contain" }} />
     </View> : null}
-    <View style={{ flexDirection: "row", width, marginTop: section.continued ? section.headerHeight : 0 }}>
+    <View style={{ flexDirection: "row", width }}>
       {columnLists.map((list, column) => <View key={column} style={{ width: width / section.columns }}>
         {list.map((lines, index) => <View key={index} style={styles.dish}>
           <Text style={styles.bullet}>•</Text>
