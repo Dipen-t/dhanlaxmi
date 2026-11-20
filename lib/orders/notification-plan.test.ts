@@ -23,11 +23,19 @@ test("schedule and plate-count changes notify all vendors without scaling quanti
   assert.equal(before.rawMaterials[0].unitQty, "100");
 });
 
-test("High Tea parameter contains notes only, while the date includes vendor timing", () => {
+test("materials stay numbered and plates-first; update banner moves to notes param", () => {
   const params = vendorTemplateParams(before, "18:00", before.rawMaterials, new Map([[1, "Paneer"], [2, "Rice"]]), before.venue, true);
   assert.equal(params[0], "18/12/2026 at 6:00 PM");
-  assert.equal(params[3], "Serve warm");
+  assert.equal(params[2], "Plates: 100 · 1) Paneer: 100 plates · 2) Rice: 20 kg");
+  assert.equal(params[3], "UPDATED ORDER — replaces previous details · Serve warm");
+  assert.ok(!params[2].includes("UPDATED"));
   assert.ok(!params[3].includes("Paneer") && !params[3].includes("Customer"));
+});
+
+test("fresh orders keep notes clean without an update banner", () => {
+  const params = vendorTemplateParams(before, "18:00", [before.rawMaterials[0]], new Map([[1, "Paneer"]]), before.venue, false);
+  assert.equal(params[2], "Plates: 100 · 1) Paneer: 100 plates");
+  assert.equal(params[3], "Serve warm");
 });
 
 test("changed selected dishes trigger customer/manager menu text without a booking confirmation or time", () => {

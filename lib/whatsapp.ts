@@ -398,7 +398,7 @@ export async function sendWhatsAppTemplateMessage(options: {
  *   Thankyou.
  *
  * {{1}} = date + time label   {{2}} = venue
- * {{3}} = materials list      {{4}} = optional High Tea / notes line (or "-")
+ * {{3}} = plates + numbered materials   {{4}} = update banner and/or notes (or "—")
  */
 export async function sendNewOrderVendorAlert(options: {
   phone: string;

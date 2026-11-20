@@ -43,9 +43,21 @@ export function menuNotificationChanged(before: NotificationOrder, next: Notific
 }
 
 export function vendorTemplateParams(order: NotificationOrder, timing: string, items: NotificationMaterial[], names: Map<number, string>, venue: string, updated: boolean) {
-  const list = items.map(item => `• ${names.get(item.rawMaterialId) || "Kitchen item"}: ${item.unitQty} ${item.unitName}`).join("  |  ");
-  const details = `${updated ? "UPDATED ORDER — replaces previous details. " : ""}Plates: ${order.numberOfPersons + order.extraPlates}  |  ${list}`;
-  // The fourth template parameter is High Tea details: only the entered notes belong here.
-  const notes = [...new Set(items.flatMap(item => item.notes?.trim() ? [item.notes.trim()] : []))].join("; ") || "—";
+  // WhatsApp Hub/Meta strip real newlines in template params and turn them into " | ".
+  // Keep this param readable as one line: plates first, then numbered items.
+  const plates = `Plates: ${order.numberOfPersons + order.extraPlates}`;
+  const list = items.map((item, index) => {
+    const name = names.get(item.rawMaterialId) || "Kitchen item";
+    return `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
+  });
+  const details = [plates, ...list].join(" · ");
+
+  // Put the update banner in {{4}} so {{3}} stays a clean materials list.
+  const noteParts: string[] = [];
+  if (updated) noteParts.push("UPDATED ORDER — replaces previous details");
+  const itemNotes = [...new Set(items.flatMap((item) => (item.notes?.trim() ? [item.notes.trim()] : [])))];
+  if (itemNotes.length) noteParts.push(itemNotes.join("; "));
+  const notes = noteParts.join(" · ") || "—";
+
   return [vendorScheduleLabel(order.date, timing), venue, details, notes];
 }
