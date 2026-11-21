@@ -89,8 +89,18 @@ test("missing sections remain in their reference positions and custom dishes sta
   ]);
   assert.deepEqual(grouped.slice(0, 20).map((category) => category.name), printedHeadings);
   assert.equal(grouped[0].dishes.length, 0);
-  assert.deepEqual(grouped[19].dishes, [{ id: 1, name: "Custom dish" }]);
+  assert.deepEqual(grouped[19].dishes, [], "custom categories must not be merged into Extras");
+  assert.deepEqual(grouped[20], { id: 1, name: "Custom Counter", selectionRule: "Any two", dishes: [{ id: 1, name: "Custom dish" }] });
   assert.equal(grouped.at(-1)?.name, "Non-Veg Specials");
-  assert.match(grouped[19].selectionRule, /Custom Counter \(Any two\)/);
   assert.deepEqual(buildOrderDishCatalog([]), []);
+});
+
+test("Hi-tea keeps its own category and original dishes, including dishes shared with reference sections", () => {
+  for (const name of ["Hi Tea", "Hi-Tea Starters", "High Tea", "Hightea"]) {
+    const hiTea = { id: 50, name, selectionRule: "Any two", dishes: [{ id: 501, name: "Espresso Coffee" }, { id: 502, name: "Cheese Pizza" }] };
+    const grouped = buildOrderDishCatalog([hiTea, { id: 51, name: "Extras", selectionRule: "", dishes: [{ id: 503, name: "Live Pasta Counter" }] }]);
+    assert.deepEqual(grouped.find(category => category.id === hiTea.id), hiTea);
+    assert.ok(!grouped.find(category => category.name === "Extras")!.dishes.some(dish => dish.id === 501));
+    assert.equal(grouped.flatMap(category => category.dishes).filter(dish => dish.id === 502).length, 1);
+  }
 });

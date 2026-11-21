@@ -220,7 +220,7 @@ const referenceSections: ReferenceSection[] = [
   },
   {
     name: "Mithas Ki Bahar",
-    matches: /sweet|mithas|mithai/,
+    matches: /sweet|mithas|mitas|mithai/,
     dishOrder: [
       "Gajar Halwa",
       "Moong Daal Halwa",
@@ -427,9 +427,17 @@ export function buildOrderDishCatalog(categories: CategoryWithDishes[]): Categor
     sourceRules: new Map<number, string>(),
   }));
   const nonVegCategories: CategoryWithDishes[] = [];
+  const customCategories: CategoryWithDishes[] = [];
   for (const category of categories) {
     if (isNonVeg(category.name)) {
       nonVegCategories.push(category);
+      continue;
+    }
+    const name = normalizedName(category.name);
+    // Reference ordering must not swallow user-created categories into Extras,
+    // or move familiar dishes out of an explicitly separate Hi-tea selection.
+    if (/\bhi(?:gh)?\s*tea\b/.test(name) || !referenceSections.some(section => section.matches.test(name))) {
+      customCategories.push(category);
       continue;
     }
     for (const dish of category.dishes) {
@@ -449,5 +457,5 @@ export function buildOrderDishCatalog(categories: CategoryWithDishes[]): Categor
       dishes: [...section.dishes].sort((a, b) => rank(a) - rank(b)),
     };
   });
-  return [...grouped, ...nonVegCategories];
+  return [...grouped, ...customCategories, ...nonVegCategories];
 }

@@ -4,9 +4,8 @@ import { db } from "@/db";
 import { orders, orderWhatsappMessages as messages, rawMaterials, vendors } from "@/db/schema";
 import { sendWhatsAppPlainText, sendWhatsAppTemplateMessage } from "@/lib/whatsapp";
 import { normalizeWhatsAppHubPhone } from "@/lib/whatsapp-phone";
-import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "@/lib/whatsapp-booking-config";
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
-import { menuNotificationChanged, planVendorChanges, selectedMenuText, vendorTemplateParams, type NotificationOrder } from "./notification-plan";
+import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, vendorTemplateParams, type NotificationOrder } from "./notification-plan";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Message = typeof messages.$inferSelect;
@@ -35,16 +34,7 @@ export async function queueCustomerNotifications(transaction: Transaction, befor
   if (before && !menuNotificationChanged(before, next)) return [];
   await transaction.select({ id: orders.id }).from(orders).where(eq(orders.id, next.id)).for("update");
   await transaction.update(messages).set({ status: "superseded", updatedAt: new Date() }).where(and(eq(messages.orderId, next.id), inArray(messages.recipientKind, ["customer", "manager"]), inArray(messages.status, ["queued", "failed", "unknown"])));
-  const text = selectedMenuText(next);
-  const drafts: Draft[] = [];
-  const customerPhone = normalizeWhatsAppHubPhone(next.customerPhone ?? "");
-  if (next.customerPhone && customerPhone !== BOOKING_MANAGER_PHONE) {
-    drafts.push({ orderId: next.id, recipientKind: "customer", recipientName: next.customerName || "Customer", phone: next.customerPhone,
-      kind: before ? "menu_update" : "confirmation", payload: before ? { mode: "text", text } : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] } });
-  }
-  drafts.push({ orderId: next.id, recipientKind: "manager", recipientName: `Manager ${BOOKING_MANAGER_NAME}`, phone: BOOKING_MANAGER_PHONE,
-    kind: before ? "menu_update" : "selected_menu", payload: { mode: "text", text } });
-  return insertDrafts(transaction, drafts);
+  return insertDrafts(transaction, planCustomerNotifications(before, next));
 }
 
 export async function queueVendorNotifications(transaction: Transaction, before: NotificationOrder | null, next: NotificationOrder) {

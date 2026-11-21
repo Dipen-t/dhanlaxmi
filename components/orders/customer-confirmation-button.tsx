@@ -64,7 +64,7 @@ export function CustomerConfirmationButton({ order, className }: { order: OrderR
         <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-5 pb-4">
           <h2 id={titleId} className="text-base font-semibold text-foreground">Order WhatsApp</h2>
           <p className="mt-2 break-words text-sm text-muted">To: {order.customerName || "Customer"}{phone ? ` · ${phone}` : " · No valid phone number"}</p>
-          <p className="mt-1 text-sm text-muted">Manager {BOOKING_MANAGER_NAME} · {BOOKING_MANAGER_PHONE} receives the selected menu as text, not the booking confirmation.</p>
+          <p className="mt-1 text-sm text-muted">Manager {BOOKING_MANAGER_NAME} · {BOOKING_MANAGER_PHONE} receives the selected menu when dishes are selected. Booking confirmation is sent to the customer.</p>
           <details className="mt-4 border-t border-border pt-2 text-sm text-foreground"><summary className="min-h-11 cursor-pointer py-3 font-medium">Preview customer confirmation</summary>
           <div className="space-y-1">
             <p>Your order has been confirmed</p>

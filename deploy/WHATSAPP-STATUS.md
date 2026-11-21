@@ -6,9 +6,10 @@ message history. Records start with this release; earlier sends are not imported
 ## Sending rules
 
 - Creating an order queues `customerorder` for the saved customer number only.
-  Sunny receives the selected menu as normal text, not a booking confirmation.
-- Editing selected dishes or the displayed menu details sends updated menu text
-  to the customer and Sunny. Identical saves do not send again.
+  Sunny receives `customer_menu` when dishes are selected.
+- Editing selected dishes or the displayed menu details sends `customer_menu`
+  to the customer and Sunny when the order has selected dishes. Identical saves
+  do not send again. Empty selections do not send a selected-menu template.
 - Editing kitchen quantities, units, notes, timings or assignments notifies only
   affected vendors. Date, venue, meal or plate-count changes affect all assigned
   vendors. Reordering kitchen items alone does not send messages.
@@ -19,9 +20,12 @@ message history. Records start with this release; earlier sends are not imported
 - Removed or reassigned vendor work is flagged for manual contact. No automatic
   cancellation is sent because no approved cancellation template is available.
 
-Normal-text messages use the provider's existing `htype=normal` mode. The provider
-may require the recipient to reply to the business first. Errors are shown; the
-app never substitutes the vendor template for customer or manager menu text.
+The `customer_menu` variables are: customer name, date only, venue, meal, total
+plates including extra plates, and the complete selected categories/dishes.
+Both recipients get the customer's name in the template. There are no separate
+Hi-tea variables or event-time variables. The gateway cannot accept raw newlines
+inside template parameters, so the menu uses `Category: Dish / Dish | Category: Dish`.
+Provider errors remain visible in message history; no vendor-template fallback is used.
 
 ## Status and Retry
 

@@ -1,4 +1,8 @@
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
+import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "../whatsapp-booking-config";
+import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
+
+export const CUSTOMER_MENU_TEMPLATE = "customer_menu";
 
 export type NotificationMaterial = { rawMaterialId: number; vendorId?: number | null; timing?: string | null; unitQty: string; unitName: string; notes?: string | null };
 export type NotificationOrder = {
@@ -40,6 +44,39 @@ export function selectedMenuText(order: NotificationOrder) {
 
 export function menuNotificationChanged(before: NotificationOrder, next: NotificationOrder) {
   return selectedMenuText(before) !== selectedMenuText(next) || before.customerPhone !== next.customerPhone;
+}
+
+export function selectedMenuTemplateParams(order: NotificationOrder): string[] {
+  const categories = new Map<number, { name: string; dishes: string[] }>();
+  for (const dish of order.menuDishes) {
+    const group = categories.get(dish.categoryId) ?? { name: dish.categoryName, dishes: [] };
+    group.dishes.push(dish.name);
+    categories.set(dish.categoryId, group);
+  }
+  // The gateway's template variables cannot contain raw newlines. Keep every
+  // category and dish, using clear inline separators rather than truncating.
+  const menu = [...categories.values()].map(category => `${category.name}: ${category.dishes.join(" / ")}`).join(" | ");
+  return [order.customerName?.trim() || "Customer", order.date.split("-").reverse().join("/"), order.venue, order.mealType, String(order.numberOfPersons + order.extraPlates), menu];
+}
+
+export type CustomerNotificationDraft = {
+  orderId: number; recipientKind: "customer" | "manager"; recipientName: string; phone: string;
+  kind: "confirmation" | "menu_update" | "selected_menu";
+  payload: { mode: "template"; template: string; params: string[] };
+};
+
+export function planCustomerNotifications(before: NotificationOrder | null, next: NotificationOrder): CustomerNotificationDraft[] {
+  if (before && !menuNotificationChanged(before, next)) return [];
+  const drafts: CustomerNotificationDraft[] = [];
+  const hasMenu = next.menuDishes.length > 0;
+  const menuPayload = { mode: "template" as const, template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next) };
+  if (next.customerPhone && normalizeWhatsAppHubPhone(next.customerPhone) !== BOOKING_MANAGER_PHONE && (!before || hasMenu)) {
+    drafts.push({ orderId: next.id, recipientKind: "customer", recipientName: next.customerName || "Customer", phone: next.customerPhone,
+      kind: before ? "menu_update" : "confirmation", payload: before ? menuPayload : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] } });
+  }
+  if (hasMenu) drafts.push({ orderId: next.id, recipientKind: "manager", recipientName: `Manager ${BOOKING_MANAGER_NAME}`, phone: BOOKING_MANAGER_PHONE,
+    kind: before ? "menu_update" : "selected_menu", payload: menuPayload });
+  return drafts;
 }
 
 export function vendorTemplateParams(order: NotificationOrder, timing: string, items: NotificationMaterial[], names: Map<number, string>, venue: string, updated: boolean) {
