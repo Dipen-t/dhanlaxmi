@@ -4,6 +4,7 @@ import { Check, Search, UtensilsCrossed, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { CategoryWithDishes } from "@/app/menus/actions";
+import { searchDishCatalog } from "@/lib/orders/dish-search";
 
 type Props = {
   catalog: CategoryWithDishes[];
@@ -14,15 +15,8 @@ type Props = {
 export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Props) {
   const [query, setQuery] = useState("");
   const selectedSet = useMemo(() => new Set(selectedDishIds), [selectedDishIds]);
-  const categories = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return catalog
-      .map((category) => ({
-        ...category,
-        dishes: normalized ? category.dishes.filter((dish) => dish.name.toLowerCase().includes(normalized)) : category.dishes,
-      }))
-      .filter((category) => !normalized || category.dishes.length > 0);
-  }, [catalog, query]);
+  const categories = useMemo(() => searchDishCatalog(catalog, query), [catalog, query]);
+  const matchingDishCount = categories.reduce((total, category) => total + category.dishes.length, 0);
 
   function toggleDish(dishId: number) {
     const next = new Set(selectedSet);
@@ -55,11 +49,11 @@ export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Pro
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-background">
-      <div className="flex shrink-0 items-center gap-2 border-b border-border p-2.5 sm:p-3">
-        <label className="relative min-w-0 flex-1">
-          <span className="sr-only">Search dishes</span>
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border p-2.5 sm:p-3">
+        <label className="relative min-w-0 basis-full sm:flex-1 sm:basis-auto">
+          <span className="sr-only">Search dishes or categories</span>
           <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-muted" strokeWidth={1.75} aria-hidden />
-          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search all dishes" className="min-h-12 w-full rounded-lg border border-border bg-background py-2.5 pr-11 pl-11 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30" />
+          <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search dishes or categories" className="min-h-12 w-full rounded-lg border border-border bg-background py-2.5 pr-11 pl-11 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30" />
           {query ? (
             <button type="button" onClick={() => setQuery("")} className="absolute top-1/2 right-2 inline-flex size-9 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground" aria-label="Clear dish search">
               <X className="size-5" aria-hidden />
@@ -71,6 +65,8 @@ export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Pro
           <button type="button" onClick={() => onDishChange([])} className="inline-flex min-h-12 shrink-0 items-center rounded-lg border border-border px-3.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground">Clear all</button>
         ) : null}
       </div>
+
+      {query.trim() ? <p role="status" className="shrink-0 px-3 py-2 text-sm text-muted">{matchingDishCount} dishes in {categories.length} categories</p> : null}
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2.5 sm:p-3">
         {categories.length === 0 ? <p className="py-10 text-center text-sm text-muted">No dishes match “{query.trim()}”.</p> : (
@@ -87,7 +83,7 @@ export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Pro
                       {category.selectionRule ? <p className="mt-1 text-xs text-muted">{category.selectionRule}</p> : null}
                       <p className="text-xs text-muted">{selectedCount} of {category.dishes.length} selected</p>
                     </div>
-                    <button type="button" disabled={dishIds.length === 0} onClick={() => toggleCategory(dishIds)} className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:bg-surface disabled:cursor-default disabled:opacity-40">{allSelected ? "Clear category" : "Select all"}</button>
+                    <button type="button" disabled={dishIds.length === 0} onClick={() => toggleCategory(dishIds)} className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:bg-surface disabled:cursor-default disabled:opacity-40">{query.trim() ? (allSelected ? "Clear matches" : "Select matches") : (allSelected ? "Clear category" : "Select all")}</button>
                   </div>
                   {category.dishes.length === 0 ? <p className="py-2 text-sm text-muted">No dishes added to this section yet.</p> : null}
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">

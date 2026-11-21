@@ -70,8 +70,8 @@ function SortableSelectedDish({
         <GripVertical className="size-5" aria-hidden />
       </button>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-semibold text-foreground">{name}</span>
-        <span className="block truncate text-xs text-muted">{category}</span>
+        <span className="block break-words py-1 text-sm font-semibold text-foreground">{name}</span>
+        <span className="block break-words pb-1 text-xs text-muted">{category}</span>
       </span>
       <button
         type="button"
@@ -305,11 +305,11 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="relative z-10 flex max-h-[min(100dvh,72rem)] w-full max-w-[72rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:rounded-xl"
+        className="relative z-10 flex h-[100dvh] min-h-0 w-full max-w-[72rem] flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground shadow-none sm:h-[calc(100dvh-2rem)] sm:rounded-xl"
         style={{
           paddingBottom: "env(safe-area-inset-bottom, 0px)",
           maxHeight:
-            "min(100dvh - env(safe-area-inset-top, 0px), 72rem)",
+            "calc(100dvh - env(safe-area-inset-top, 0px))",
         }}
       >
         <form
@@ -317,7 +317,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
           onSubmit={handleSubmit}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pt-3 pb-2 [-webkit-overflow-scrolling:touch] sm:px-4">
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-3 pt-3 pb-4 [-webkit-overflow-scrolling:touch] sm:px-4">
             <h2
               id={titleId}
               className="text-lg font-semibold text-foreground"
@@ -327,63 +327,43 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
             {isEditing ? <input type="hidden" name="id" value={menu.id} /> : null}
 
             <div className="mt-3 space-y-3">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-6">
-                <input
-                  id="menu-name"
-                  name="name"
-                  type="text"
-                  required
-                  maxLength={120}
-                  defaultValue={menu?.name ?? ""}
-                  autoComplete="off"
-                  enterKeyHint="done"
-                  className="col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-sm text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30 sm:col-span-6"
-                  placeholder="Menu name"
-                />
-                <input
-                  name="venue"
-                  type="text"
-                  defaultValue={menu?.venue ?? ""}
-                  placeholder="Venue"
-                  className="col-span-2 sm:col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
-                />
-                <input
-                  name="date"
-                  type="date"
-                  defaultValue={menu?.date ? new Date(menu.date).toISOString().split('T')[0] : ""}
-                  className="col-span-2 sm:col-span-2 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
-                />
-                <label className="col-span-1 min-w-0">
-                  <span className="sr-only">Deliver by time</span>
-                  <input
-                    name="deliveryTime"
-                    type="time"
-                    defaultValue={menu?.deliveryTime ?? ""}
-                    aria-label="Deliver by time"
-                    className="min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
-                  />
+              <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 [&_input]:min-h-11 [&_input]:min-w-0 [&_input]:w-full [&_input]:rounded-md [&_input]:border [&_input]:border-border [&_input]:bg-background [&_input]:px-3 [&_input]:text-base [&_input]:text-foreground [&_input]:outline-none [&_input:focus]:border-primary [&_select]:min-h-11 [&_select]:w-full [&_select]:rounded-md [&_select]:border [&_select]:border-border [&_select]:bg-background [&_select]:px-3 [&_select]:text-base">
+                <label className="min-w-0 space-y-1 text-sm font-medium sm:col-span-2 lg:col-span-3">
+                  <span>Menu name</span>
+                  <input name="name" type="text" required maxLength={120} defaultValue={menu?.name ?? ""} autoComplete="off" placeholder="Menu name" />
                 </label>
-                <input
-                  name="numberOfPersons"
-                  type="number"
-                  placeholder="Persons"
-                  defaultValue={menu?.numberOfPersons ?? ""}
-                  className="col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-1 focus:ring-ring/30"
-                />
-                <select
-                  name="mealType"
-                  defaultValue={menu?.mealType ?? ""}
-                  className="sm:col-span-1 min-h-9 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
-                >
-                  <option value="">Meal</option>
-                  <option value="Lunch">Lunch</option>
-                  <option value="Dinner">Dinner</option>
-                </select>
+                <label className="min-w-0 space-y-1 text-sm font-medium">
+                  <span>Venue</span>
+                  <input name="venue" type="text" defaultValue={menu?.venue ?? ""} placeholder="Venue" />
+                </label>
+                <label className="min-w-0 space-y-1 text-sm font-medium">
+                  <span>Event date</span>
+                  <input name="date" type="date" defaultValue={menu?.date ? new Date(menu.date).toISOString().split("T")[0] : ""} />
+                </label>
+                <label className="min-w-0 space-y-1 text-sm font-medium">
+                  <span>Deliver by</span>
+                  <input name="deliveryTime" type="time" defaultValue={menu?.deliveryTime ?? ""} />
+                </label>
+                <label className="min-w-0 space-y-1 text-sm font-medium">
+                  <span>Persons</span>
+                  <input name="numberOfPersons" type="number" min="0" defaultValue={menu?.numberOfPersons ?? ""} placeholder="Persons" />
+                </label>
+                <label className="min-w-0 space-y-1 text-sm font-medium">
+                  <span>Meal</span>
+                  <select name="mealType" defaultValue={menu?.mealType ?? ""}>
+                    <option value="">Select meal</option>
+                    <option value="Lunch">Lunch</option>
+                    <option value="Dinner">Dinner</option>
+                  </select>
+                </label>
               </div>
 
               {selectedDishOrder.length > 0 ? (
-                <section aria-labelledby="selected-dishes-heading" className="rounded-xl border border-border bg-surface/35 p-3">
-                  <div className="mb-2 flex items-start justify-between gap-3">
+                <details className="rounded-xl border border-border bg-surface/35 p-3">
+                  <summary className="min-h-11 cursor-pointer text-sm font-semibold text-foreground">
+                    Arrange selected dishes ({selectedDishOrder.length})
+                  </summary>
+                  <div className="mb-2 mt-2 flex items-start justify-between gap-3">
                     <div>
                       <h3 id="selected-dishes-heading" className="text-sm font-semibold text-foreground">
                         Selected dish order
@@ -394,7 +374,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   </div>
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                     <SortableContext items={selectedDishOrder} strategy={verticalListSortingStrategy}>
-                      <ol className="grid max-h-64 grid-cols-1 gap-1.5 overflow-y-auto overscroll-contain sm:grid-cols-2">
+                      <ol className="grid grid-cols-1 gap-1.5">
                         {selectedDishOrder.map((dishId) => {
                           const dish = dishMetaById.get(dishId);
                           if (!dish) return null;
@@ -411,7 +391,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                       </ol>
                     </SortableContext>
                   </DndContext>
-                </section>
+                </details>
               ) : null}
 
               <fieldset>
@@ -422,13 +402,13 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                   <button
                     type="button"
                     onClick={clearAll}
-                    className="text-xs font-medium text-muted hover:text-foreground"
+                    className="min-h-11 px-2 text-sm font-medium text-muted hover:text-foreground"
                   >
                     Clear All
                   </button>
                 </div>
 
-                <div className="mt-1.5 max-h-[min(45rem,75dvh)] space-y-1 overflow-y-auto overscroll-contain rounded-md border border-border p-1 [-webkit-overflow-scrolling:touch]">
+                <div className="mt-1.5 space-y-2 rounded-md border border-border p-1">
                   {catalog.length === 0 ? (
                     <p className="px-3 py-6 text-center text-sm text-muted">
                       No categories in the catalog yet.
@@ -445,14 +425,15 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                             <button
                               type="button"
                               onClick={() => toggleCategoryExpansion(category.id)}
-                              className="flex flex-1 items-center gap-1.5 text-left min-w-0"
+                              className="flex min-h-11 min-w-0 flex-1 items-center gap-2 text-left"
+                              aria-expanded={isExpanded}
                             >
                               {isExpanded ? (
                                 <ChevronDown className="size-3 text-muted shrink-0" />
                               ) : (
                                 <ChevronRight className="size-3 text-muted shrink-0" />
                               )}
-                              <span className="font-semibold text-foreground text-xs truncate">
+                              <span className="min-w-0 break-words text-sm font-semibold text-foreground">
                                 {category.name}
                               </span>
                               <span className="text-[10px] text-muted shrink-0">
@@ -463,7 +444,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                               <button
                                 type="button"
                                 onClick={() => toggleAllInCategory(category)}
-                                className="text-[10px] font-medium text-primary hover:text-primary/80 shrink-0 ml-1"
+                                className="ml-2 min-h-11 shrink-0 px-2 text-sm font-medium text-primary hover:text-primary/80"
                               >
                                 {allSelected ? "None" : "All"}
                               </button>
@@ -471,7 +452,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                           </div>
                           
                           {isExpanded && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-0 border-t border-border">
+                            <div className="grid grid-cols-1 gap-0 border-t border-border sm:grid-cols-2 lg:grid-cols-3">
                               {category.dishes.length === 0 ? (
                                 <p className="col-span-full px-3 py-2 text-sm text-muted italic">Empty</p>
                               ) : (
@@ -484,14 +465,14 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                                         checked ? "bg-primary-soft/20 font-medium" : "text-foreground"
                                       }`}
                                     >
-                                      <label className="flex cursor-pointer items-center gap-1 w-full min-w-0">
+                                      <label className="flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-3">
                                         <input
                                           type="checkbox"
                                           checked={checked}
                                           onChange={() => toggleDish(dish.id)}
-                                          className="size-3 rounded-sm border-border text-primary accent-primary shrink-0"
+                                          className="size-5 shrink-0 rounded-sm border-border text-primary accent-primary"
                                         />
-                                        <span className="truncate leading-tight">{dish.name}</span>
+                                        <span className="min-w-0 break-words leading-snug">{dish.name}</span>
                                       </label>
                                       {checked && category.isQtyField && (
                                         <input
@@ -499,6 +480,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                                           value={quantities[dish.id] || ""}
                                           onChange={(e) => setQuantities(q => ({ ...q, [dish.id]: e.target.value }))}
                                           placeholder="Quantity (e.g. 20 pcs)"
+                                          aria-label={`Quantity for ${dish.name}`}
                                           className="w-full mt-1 min-h-8 rounded border border-border px-2.5 text-xs bg-background font-normal placeholder:text-muted outline-none focus:border-primary focus:ring-1 focus:ring-ring/30"
                                           onClick={(e) => e.stopPropagation()}
                                         />
@@ -524,18 +506,18 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
             ) : null}
           </div>
 
-          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-3 py-2 sm:px-4">
+          <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-3 py-3 sm:px-4">
             <button
               type="button"
               onClick={handleClose}
-              className="inline-flex min-h-9 touch-manipulation items-center rounded-md border border-border px-3 text-xs font-medium text-foreground hover:bg-surface"
+              className="inline-flex min-h-11 touch-manipulation items-center rounded-md border border-border px-4 text-sm font-medium text-foreground hover:bg-surface"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isPending}
-              className="inline-flex min-h-9 touch-manipulation items-center rounded-md bg-primary px-4 text-xs font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
+              className="inline-flex min-h-11 touch-manipulation items-center rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-50"
             >
               {isPending ? "Saving…" : isEditing ? "Save" : "Create"}
             </button>
