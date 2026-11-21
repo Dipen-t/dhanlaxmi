@@ -5,14 +5,17 @@ import { useMemo, useState } from "react";
 
 import type { CategoryWithDishes } from "@/app/menus/actions";
 import { searchDishCatalog } from "@/lib/orders/dish-search";
+import { HI_TEA_NOTES_LIMIT, isHiTeaCategory } from "@/lib/orders/hi-tea";
 
 type Props = {
   catalog: CategoryWithDishes[];
   selectedDishIds: number[];
   onDishChange: (dishIds: number[]) => void;
+  hiTeaNotes: string;
+  onHiTeaNotesChange: (notes: string) => void;
 };
 
-export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Props) {
+export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange, hiTeaNotes, onHiTeaNotesChange }: Props) {
   const [query, setQuery] = useState("");
   const selectedSet = useMemo(() => new Set(selectedDishIds), [selectedDishIds]);
   const categories = useMemo(() => searchDishCatalog(catalog, query), [catalog, query]);
@@ -85,6 +88,12 @@ export function OrderDishesPanel({ catalog, selectedDishIds, onDishChange }: Pro
                     </div>
                     <button type="button" disabled={dishIds.length === 0} onClick={() => toggleCategory(dishIds)} className="inline-flex min-h-10 shrink-0 items-center rounded-lg border border-border px-3 text-xs font-semibold text-foreground hover:bg-surface disabled:cursor-default disabled:opacity-40">{query.trim() ? (allSelected ? "Clear matches" : "Select matches") : (allSelected ? "Clear category" : "Select all")}</button>
                   </div>
+                  {isHiTeaCategory(category.name) ? (
+                    <label className="mb-3 block space-y-1.5">
+                      <span className="text-sm font-medium text-foreground">Hi-tea notes <span className="font-normal text-muted">(optional)</span></span>
+                      <textarea value={hiTeaNotes} onChange={event => onHiTeaNotesChange(event.target.value)} rows={3} maxLength={HI_TEA_NOTES_LIMIT} placeholder="Add Hi-tea details or special instructions…" className="min-h-24 w-full resize-y rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30" />
+                    </label>
+                  ) : null}
                   {category.dishes.length === 0 ? <p className="py-2 text-sm text-muted">No dishes added to this section yet.</p> : null}
                   <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
                     {category.dishes.map((dish) => {

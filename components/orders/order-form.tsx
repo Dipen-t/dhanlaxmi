@@ -87,6 +87,7 @@ export function OrderForm({
   const totalPlateCount = plateCount + extraPlates;
   const calculatedTotal = calculateTotalWithExtraPlates(plateCount, extraPlates, perPlateAmount);
   const [selectedDishIds, setSelectedDishIds] = useState<number[]>(order?.dishIds ?? []);
+  const [hiTeaNotes, setHiTeaNotes] = useState(order?.hiTeaNotes ?? "");
   const orderedMenuCatalog = useMemo(() => buildOrderDishCatalog(menuCatalog), [menuCatalog]);
 
   const [selectedMaterials, setSelectedMaterials] = useState<OrderMaterialDraft[]>(
@@ -258,6 +259,7 @@ export function OrderForm({
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
       rawMaterials: itemsToSubmit,
+      hiTeaNotes,
       materialOrder: orderedMaterialIds,
       dishIds: orderedMenuCatalog
         .flatMap((category) => category.dishes)
@@ -628,6 +630,8 @@ export function OrderForm({
       >
         <OrderDishesPanel
           catalog={orderedMenuCatalog}
+          hiTeaNotes={hiTeaNotes}
+          onHiTeaNotesChange={notes => { dirtyRef.current = true; setHiTeaNotes(notes); }}
           selectedDishIds={selectedDishIds}
           onDishChange={ids => { dirtyRef.current = true; setSelectedDishIds(ids); }}
         />

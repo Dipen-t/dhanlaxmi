@@ -52,6 +52,7 @@ export const orders = pgTable("orders", {
   orderId: text("order_id").notNull().unique(),
   date: timestamp("date", { mode: "date" }).notNull(),
   eventTime: text("event_time"),
+  hiTeaNotes: text("hi_tea_notes"),
   materialOrder: integer("material_order").array(),
   venue: text("venue").notNull(),
   numberOfPersons: integer("number_of_persons").notNull(),

@@ -80,6 +80,12 @@ export function SelectedMenuDialog({ order, className = "" }: SelectedMenuDialog
                 </li>
               ))}
             </ul>
+            {order.hiTeaNotes?.trim() ? (
+              <section className="mt-5 border-t border-border pt-4">
+                <h3 className="text-sm font-semibold text-foreground">Hi-tea notes</h3>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-foreground">{order.hiTeaNotes}</p>
+              </section>
+            ) : null}
           </div>
 
           <div className="flex shrink-0 justify-end border-t border-border px-5 py-4">

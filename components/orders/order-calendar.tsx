@@ -279,7 +279,7 @@ export function OrderCalendar({ orders, onEdit, onFinance, month, selectedDate, 
                     </div>
                   ) : null}
                 </button>
-                {!pending && order.menuDishes.length > 0 ? (
+                {order.menuDishes.length > 0 || order.hiTeaNotes?.trim() ? (
                   <div className="mt-3 border-t border-border pt-3">
                     <SelectedMenuDialog order={order} className="w-full" />
                   </div>

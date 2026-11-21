@@ -120,7 +120,7 @@ export function OrdersCalendar({ orders, onEdit }: OrdersCalendarProps) {
                     ) : null}
                   </button>
                   <div className="mt-3 border-t border-border pt-3">
-                    {order.menuDishes.length > 0 ? (
+                    {order.menuDishes.length > 0 || order.hiTeaNotes?.trim() ? (
                       <SelectedMenuDialog order={order} />
                     ) : (
                       <p className="text-sm text-muted">No menu items selected yet.</p>

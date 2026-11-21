@@ -13,6 +13,7 @@ import {
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
 import { eventDateString, parseEventDate } from "@/lib/orders/event-date";
+import { HI_TEA_NOTES_LIMIT, normalizeHiTeaNotes } from "@/lib/orders/hi-tea";
 import { dispatchOrderMessages, ensureWhatsappOutbox, getMessageAttentionCounts, queueCustomerNotifications, queueVendorNotifications } from "@/lib/orders/whatsapp-outbox";
 
 
@@ -40,6 +41,7 @@ export type OrderRecord = {
   orderId: string;
   date: string;
   eventTime: string | null;
+  hiTeaNotes?: string | null;
   materialOrder: number[];
   venue: string;
   numberOfPersons: number;
@@ -69,6 +71,7 @@ function serializeOrder(order: {
   orderId: string;
   date: Date;
   eventTime: string | null;
+  hiTeaNotes?: string | null;
   materialOrder?: number[] | null;
   venue: string;
   numberOfPersons: number;
@@ -125,6 +128,7 @@ function serializeOrder(order: {
     orderId: order.orderId,
     date: toDateString(order.date),
     eventTime: order.eventTime,
+    hiTeaNotes: order.hiTeaNotes ?? null,
     materialOrder: order.materialOrder ?? (order.orderRawMaterials ?? []).map((material) => material.rawMaterialId),
     venue: order.venue,
     numberOfPersons: order.numberOfPersons,
@@ -307,6 +311,7 @@ export type OrderInput = {
   customerPhone?: string;
   rawMaterials: OrderRawMaterialRecord[];
   dishIds?: number[];
+  hiTeaNotes?: string;
   materialOrder?: number[];
 };
 
@@ -350,6 +355,8 @@ async function syncOrderMenuDishes(
 }
 
 export async function createOrder(data: OrderInput) {
+  const hiTeaNotes = normalizeHiTeaNotes(data.hiTeaNotes);
+  if (hiTeaNotes.length > HI_TEA_NOTES_LIMIT) return { error: `Hi-tea notes must be ${HI_TEA_NOTES_LIMIT} characters or fewer.` };
   const preferredOrderId = normalizeText(data.orderId || "");
   const date = data.date || "";
   const venue = normalizeText(data.venue || "");
@@ -414,6 +421,7 @@ export async function createOrder(data: OrderInput) {
       const [newOrder] = await transaction.insert(orders).values({
         orderId,
         date: eventDate,
+        hiTeaNotes: hiTeaNotes || null,
         materialOrder,
         venue,
         numberOfPersons,
@@ -466,6 +474,8 @@ export async function createOrder(data: OrderInput) {
 }
 
 export async function updateOrder(data: OrderInput) {
+  const hiTeaNotes = normalizeHiTeaNotes(data.hiTeaNotes);
+  if (hiTeaNotes.length > HI_TEA_NOTES_LIMIT) return { error: `Hi-tea notes must be ${HI_TEA_NOTES_LIMIT} characters or fewer.` };
   const id = Number(data.id);
   const orderId = normalizeText(data.orderId || "");
   const date = data.date || "";
@@ -543,6 +553,7 @@ export async function updateOrder(data: OrderInput) {
         .set({
           orderId,
           date: eventDate,
+          hiTeaNotes: data.hiTeaNotes === undefined ? previous.hiTeaNotes : hiTeaNotes || null,
           materialOrder,
           venue,
           numberOfPersons,

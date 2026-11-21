@@ -10,9 +10,10 @@ try {
   await sql.begin(async (transaction) => {
     await transaction`ALTER TABLE order_raw_materials ADD COLUMN IF NOT EXISTS timing text`;
     await transaction`ALTER TABLE orders ADD COLUMN IF NOT EXISTS material_order integer[]`;
+    await transaction`ALTER TABLE orders ADD COLUMN IF NOT EXISTS hi_tea_notes text`;
     await transaction`ALTER TABLE raw_materials ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 2147483647`;
   });
-  console.log("Kitchen item timing and saved arrangement are ready.");
+  console.log("Kitchen item timing, saved arrangement and Hi-tea notes are ready.");
 } catch (error) {
   console.error("Could not prepare kitchen item settings:", error);
   process.exitCode = 1;

@@ -1,6 +1,7 @@
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
 import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "../whatsapp-booking-config";
 import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
+import { normalizeHiTeaNotes } from "./hi-tea";
 
 export const CUSTOMER_MENU_TEMPLATE = "customer_menu";
 
@@ -8,6 +9,7 @@ export type NotificationMaterial = { rawMaterialId: number; vendorId?: number | 
 export type NotificationOrder = {
   id: number; date: string; venue: string; mealType: string; numberOfPersons: number; extraPlates: number;
   customerName: string | null; customerPhone: string | null;
+  hiTeaNotes?: string | null;
   rawMaterials: NotificationMaterial[];
   menuDishes: { dishId: number; name: string; categoryId: number; categoryName: string }[];
 };
@@ -39,6 +41,8 @@ export function selectedMenuText(order: NotificationOrder) {
     lines.push(`• ${dish.name}`);
   }
   if (!order.menuDishes.length) lines.push("Menu not selected yet.");
+  const hiTeaNotes = normalizeHiTeaNotes(order.hiTeaNotes);
+  if (hiTeaNotes) lines.push("", "Hi-tea notes", hiTeaNotes);
   return lines.join("\n");
 }
 
@@ -55,7 +59,10 @@ export function selectedMenuTemplateParams(order: NotificationOrder): string[] {
   }
   // The gateway's template variables cannot contain raw newlines. Keep every
   // category and dish, using clear inline separators rather than truncating.
-  const menu = [...categories.values()].map(category => `${category.name}: ${category.dishes.join(" / ")}`).join(" | ");
+  const sections = [...categories.values()].map(category => `${category.name}: ${category.dishes.join(" / ")}`);
+  const hiTeaNotes = normalizeHiTeaNotes(order.hiTeaNotes);
+  if (hiTeaNotes) sections.push(`Hi-tea notes: ${hiTeaNotes}`);
+  const menu = sections.join(" | ");
   return [order.customerName?.trim() || "Customer", order.date.split("-").reverse().join("/"), order.venue, order.mealType, String(order.numberOfPersons + order.extraPlates), menu];
 }
 
@@ -68,7 +75,7 @@ export type CustomerNotificationDraft = {
 export function planCustomerNotifications(before: NotificationOrder | null, next: NotificationOrder): CustomerNotificationDraft[] {
   if (before && !menuNotificationChanged(before, next)) return [];
   const drafts: CustomerNotificationDraft[] = [];
-  const hasMenu = next.menuDishes.length > 0;
+  const hasMenu = next.menuDishes.length > 0 || !!normalizeHiTeaNotes(next.hiTeaNotes);
   const menuPayload = { mode: "template" as const, template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next) };
   if (next.customerPhone && normalizeWhatsAppHubPhone(next.customerPhone) !== BOOKING_MANAGER_PHONE && (!before || hasMenu)) {
     drafts.push({ orderId: next.id, recipientKind: "customer", recipientName: next.customerName || "Customer", phone: next.customerPhone,
