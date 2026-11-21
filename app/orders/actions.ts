@@ -10,11 +10,9 @@ import {
   orderMenuDishes,
   orders,
   orderRawMaterials,
-  rawMaterials,
-  vendors,
 } from "@/db/schema";
 import { calculatePlateTotal, calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
-import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
+import { eventDateString, parseEventDate } from "@/lib/orders/event-date";
 import { dispatchOrderMessages, ensureWhatsappOutbox, getMessageAttentionCounts, queueCustomerNotifications, queueVendorNotifications } from "@/lib/orders/whatsapp-outbox";
 
 
@@ -63,7 +61,7 @@ export type OrderRecord = {
 };
 
 function toDateString(date: Date) {
-  return toCalendarDateString(date);
+  return eventDateString(date);
 }
 
 function serializeOrder(order: {
@@ -409,7 +407,7 @@ export async function createOrder(data: OrderInput) {
   }
 
   try {
-    const eventDate = parseCalendarDate(date);
+    const eventDate = parseEventDate(date);
 
     await ensureWhatsappOutbox();
     const newOrder = await db.transaction(async (transaction) => {
@@ -457,12 +455,13 @@ export async function createOrder(data: OrderInput) {
 
     after(async () => { await dispatchOrderMessages(newOrder.id); });
     return { success: true as const, id: newOrder.id, orderId, whatsappQueued: true, whatsappError: undefined, whatsappWarning: undefined };
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const error = e as { code?: string; message?: string } | null;
     console.error("Error creating order:", e);
-    if (e?.code === "23505" || e?.message?.includes("unique constraint") || e?.message?.includes("already exists")) {
+    if (error?.code === "23505" || error?.message?.includes("unique constraint") || error?.message?.includes("already exists")) {
       return { error: "An order with this ID already exists. Refresh and try again." };
     }
-    return { error: e?.message || "Failed to create order due to an unexpected error." };
+    return { error: error?.message || "Failed to create order due to an unexpected error." };
   }
 }
 
@@ -530,7 +529,7 @@ export async function updateOrder(data: OrderInput) {
   if (dishError) return { error: dishError };
 
   try {
-    const eventDate = parseCalendarDate(date);
+    const eventDate = parseEventDate(date);
 
     await ensureWhatsappOutbox();
     const notifications = await db.transaction(async (transaction) => {
@@ -593,15 +592,16 @@ export async function updateOrder(data: OrderInput) {
 
     if (notifications.count > 0) after(async () => { await dispatchOrderMessages(id); });
     return { success: true as const, whatsappQueued: notifications.count > 0, whatsappWarning: notifications.manual ? "Vendor assignments were removed or moved. Contact those vendors manually; see WhatsApp history for details." : undefined };
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const error = e as { code?: string; message?: string } | null;
     console.error("Error updating order:", e);
-    if (e?.message === "Order not found") {
+    if (error?.message === "Order not found") {
       return { error: "Order not found." };
     }
-    if (e?.code === "23505" || e?.message?.includes("unique constraint") || e?.message?.includes("already exists")) {
+    if (error?.code === "23505" || error?.message?.includes("unique constraint") || error?.message?.includes("already exists")) {
       return { error: "An order with this ID already exists." };
     }
-    return { error: e?.message || "Failed to update order due to an unexpected error." };
+    return { error: error?.message || "Failed to update order due to an unexpected error." };
   }
 }
 

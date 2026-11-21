@@ -29,7 +29,7 @@ import {
 } from "@/components/orders/order-materials-panel";
 import { PersonsStepper } from "@/components/orders/persons-stepper";
 import { calculateTotalWithExtraPlates } from "@/lib/orders/pricing";
-import { todayCalendarDateString } from "@/lib/utils";
+import { eventDateString } from "@/lib/orders/event-date";
 import { buildOrderDishCatalog } from "@/lib/orders/dish-category-order";
 
 type OrderFormProps = {
@@ -405,7 +405,7 @@ export function OrderForm({
                 name="date"
                 type="date"
                 required
-                defaultValue={order?.date ?? todayCalendarDateString()}
+                defaultValue={order?.date ?? eventDateString(new Date())}
                 className="w-full min-w-0 max-w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-ring/30"
               />
             </div>

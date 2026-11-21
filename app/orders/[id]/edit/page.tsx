@@ -38,6 +38,7 @@ export default async function EditOrderPage({ params }: EditOrderPageProps) {
   return (
     <div className="mx-auto w-full max-w-[1600px] px-4 py-2 sm:px-6">
       <OrderForm
+        key={`${order.id}:${order.date}`}
         order={order}
         suggestedOrderId={suggestedOrderId}
         rawMaterials={rawMaterials}

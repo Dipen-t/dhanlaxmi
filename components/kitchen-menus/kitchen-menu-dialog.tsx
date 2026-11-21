@@ -22,6 +22,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { eventDateString } from "@/lib/orders/event-date";
 
 import {
   createKitchenMenu,
@@ -338,7 +339,7 @@ export function KitchenMenuDialog({ open, menu, catalog, onClose }: KitchenMenuD
                 </label>
                 <label className="min-w-0 space-y-1 text-sm font-medium">
                   <span>Event date</span>
-                  <input name="date" type="date" defaultValue={menu?.date ? new Date(menu.date).toISOString().split("T")[0] : ""} />
+                  <input name="date" type="date" defaultValue={menu?.date ? eventDateString(new Date(menu.date)) : ""} />
                 </label>
                 <label className="min-w-0 space-y-1 text-sm font-medium">
                   <span>Deliver by</span>

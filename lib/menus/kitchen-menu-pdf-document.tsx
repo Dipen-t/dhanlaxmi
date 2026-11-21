@@ -1,360 +1,97 @@
-import {
-  Document,
-  Image,
-  Page,
-  StyleSheet,
-  Text,
-  View,
-} from "@react-pdf/renderer";
+import { Document, Image as PdfImage, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 
 import type { KitchenMenuDetail } from "@/app/kitchen-menus/actions";
 import type { PdfLogoAssets } from "@/lib/menus/prepare-pdf-logo";
 import { formatDeliveryTime } from "@/lib/kitchen-menus/delivery-time";
-
-const PAGE_HORIZONTAL_PADDING = 36;
-const HEADER_CLEARANCE = 50;
-
-const colors = {
-  white: "#FFFFFF",
-  cream: "#FFFFFF",
-  ink: "#000000",
-  muted: "#333333",
-  teal: "#000000",
-  tealDeep: "#000000",
-  tealLine: "#000000",
-  rule: "#000000",
-};
+import { eventDateString } from "@/lib/orders/event-date";
+import { formatDateDisplay } from "@/lib/utils";
 
 const styles = StyleSheet.create({
-  page: {
-    backgroundColor: colors.cream,
-    paddingTop: HEADER_CLEARANCE,
-    paddingBottom: 36,
-    paddingHorizontal: PAGE_HORIZONTAL_PADDING,
-    fontFamily: "SourceSans",
-    fontSize: 10,
-    color: colors.ink,
-  },
-  pageHeader: {
-    position: "absolute",
-    top: 14,
-    left: PAGE_HORIZONTAL_PADDING,
-    right: PAGE_HORIZONTAL_PADDING,
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
-  },
-  coverSection: {
-    marginBottom: 8,
-    alignItems: "center",
-  },
-  coverBody: {
-    width: "100%",
-    maxWidth: 420,
-    alignItems: "center",
-  },
-  menuTitle: {
-    fontFamily: "SourceSans",
-    fontSize: 24,
-    fontWeight: 700,
-    color: colors.ink,
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  menuSubtitle: {
-    fontFamily: "SourceSans",
-    fontSize: 12,
-    color: colors.ink,
-    marginBottom: 10,
-    textAlign: "center",
-  },
-  fieldsCard: {
-    backgroundColor: colors.white,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: colors.rule,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    marginBottom: 4,
-    width: "100%",
-  },
-  fieldsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  field: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    paddingHorizontal: 4,
-  },
-  fieldLabel: {
-    fontSize: 8.5,
-    fontFamily: "SourceSans",
-    fontWeight: 600,
-    color: colors.teal,
-    marginRight: 5,
-  },
-  fieldLine: {
-    flex: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.ink,
-    marginBottom: 2,
-    minWidth: 40,
-  },
-  fieldValue: {
-    fontSize: 9.5,
-    fontFamily: "SourceSans",
-    color: colors.ink,
-    marginLeft: 4,
-  },
-  sectionIntro: {
-    display: "none",
-  },
-  categoryBlock: {
-    marginBottom: 10,
-  },
-  categoryHeader: {
-    marginBottom: 4,
-  },
-  categoryTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-  },
-  flankLine: {
-    display: "none",
-  },
-  categoryName: {
-    fontFamily: "SourceSans",
-    fontWeight: 700,
-    fontSize: 14,
-    textTransform: "uppercase",
-    color: colors.ink,
-    paddingHorizontal: 12,
-    textAlign: "center",
-  },
-  selectionRule: {
-    display: "none",
-  },
-  dishGrid: {
-    paddingTop: 2,
-  },
-  dishRow: {
-    flexDirection: "row",
-    width: "100%",
-  },
-  dishItem: {
-    width: "33.33%",
-    flexDirection: "row",
-    alignItems: "center",
-    paddingRight: 8,
-    paddingVertical: 3,
-  },
-  dishItemSingleColumn: {
-    width: "100%",
-  },
-  dishItemTwoColumns: {
-    width: "50%",
-  },
-  dishQuantity: {
-    fontSize: 10,
-    fontFamily: "SourceSans",
-    color: colors.tealDeep,
-    marginLeft: 4,
-    fontWeight: 600,
-    flexShrink: 0,
-  },
-  dishName: {
-    fontSize: 10.5,
-    fontFamily: "SourceSans",
-    color: colors.ink,
-    lineHeight: 1.2,
-    flexGrow: 1,
-    flexShrink: 1,
-  },
-  counterGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginTop: 5,
-  },
-  counterItem: {
-    width: "33.33%",
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  counterName: {
-    fontSize: 9.5,
-    fontFamily: "SourceSans",
-    color: colors.ink,
-    marginRight: 4,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 16,
-    left: PAGE_HORIZONTAL_PADDING,
-    right: PAGE_HORIZONTAL_PADDING,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTopWidth: 1,
-    borderTopColor: colors.tealLine,
-    paddingTop: 5,
-  },
-  footerBrand: {
-    fontFamily: "SourceSans",
-    fontSize: 10,
-    color: colors.ink,
-  },
-  footerPage: {
-    fontFamily: "SourceSans",
-    fontSize: 7,
-    color: colors.muted,
-  },
+  page: { paddingTop: 50, paddingBottom: 38, paddingHorizontal: 30, fontFamily: "SourceSans", fontSize: 11, color: "#111111", backgroundColor: "#FFFFFF" },
+  header: { position: "absolute", top: 12, left: 30, right: 30, height: 26, flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderBottomWidth: 0.5, borderBottomColor: "#999999", paddingBottom: 5 },
+  headerLabel: { fontSize: 10, fontWeight: 700 },
+  title: { fontSize: 18, fontWeight: 700, marginBottom: 8 },
+  details: { borderWidth: 0.5, borderColor: "#777777", padding: 8, marginBottom: 12 },
+  detailRow: { flexDirection: "row", marginTop: 4 },
+  detail: { width: "50%", paddingRight: 10, lineHeight: 1.3 },
+  venue: { lineHeight: 1.3, marginTop: 4 },
+  bold: { fontWeight: 700 },
+  category: { marginBottom: 7 },
+  categoryHeading: { backgroundColor: "#EFEFEF", paddingVertical: 4, paddingHorizontal: 7, borderBottomWidth: 0.5, borderBottomColor: "#888888" },
+  categoryName: { fontSize: 12, fontWeight: 700, lineHeight: 1.2 },
+  rule: { fontSize: 10, marginTop: 2, lineHeight: 1.2 },
+  row: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#DDDDDD" },
+  cell: { width: "50%", paddingHorizontal: 7, paddingVertical: 3 },
+  fullCell: { width: "100%" },
+  dish: { lineHeight: 1.3 },
+  quantity: { fontWeight: 700 },
+  footer: { position: "absolute", bottom: 14, left: 30, right: 30, borderTopWidth: 0.5, borderTopColor: "#999999", paddingTop: 5, flexDirection: "row", justifyContent: "space-between", fontSize: 9 },
 });
 
-type MenuPdfDocumentProps = {
-  menu: KitchenMenuDetail;
-  logo: PdfLogoAssets;
-};
+type Category = KitchenMenuDetail["categories"][number];
 
-function PageHeader({ logo }: { logo: PdfLogoAssets }) {
+function DishRow({ dishes, single }: { dishes: Category["dishes"]; single: boolean }) {
   return (
-    <View style={styles.pageHeader} fixed>
-      <Image
-        src={logo.src}
-        style={{ width: logo.headerWidth, height: logo.headerHeight }}
-      />
-    </View>
-  );
-}
-
-function CategorySection({
-  category,
-}: {
-  category: KitchenMenuDetail["categories"][number];
-}) {
-  const columns = category.dishes.length <= 3 ? 1 : category.isQtyField ? 2 : 3;
-  const rows = Array.from(
-    { length: Math.ceil(category.dishes.length / columns) },
-    (_, index) => category.dishes.slice(index * columns, (index + 1) * columns),
-  );
-
-  return (
-    <View style={styles.categoryBlock}>
-      <View style={styles.categoryHeader} minPresenceAhead={32}>
-        <View style={styles.categoryTitleRow}>
-          <Text style={styles.categoryName}>{category.name}</Text>
+    <View style={styles.row} wrap={false}>
+      {dishes.map(dish => (
+        <View key={dish.id} style={single ? [styles.cell, styles.fullCell] : styles.cell}>
+          <Text style={styles.dish}>
+            {dish.name}{dish.quantity ? <Text style={styles.quantity}>{` — ${dish.quantity}`}</Text> : null}
+          </Text>
         </View>
-      </View>
-
-      <View style={styles.dishGrid}>
-        {rows.map((row, rowIndex) => (
-          <View key={`${category.id}-row-${rowIndex}`} style={styles.dishRow} wrap={false}>
-            {row.map((dish) => (
-              <View
-                key={dish.id}
-                style={[
-                  styles.dishItem,
-                  columns === 1
-                    ? styles.dishItemSingleColumn
-                    : columns === 2
-                      ? styles.dishItemTwoColumns
-                      : {},
-                ]}
-              >
-                {dish.quantity ? (
-                  <>
-                    <Text style={styles.dishName}>{dish.name}</Text>
-                    <Text style={styles.dishQuantity}>- {dish.quantity}</Text>
-                  </>
-                ) : (
-                  <Text style={styles.dishName}>{dish.name}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        ))}
-      </View>
+      ))}
     </View>
   );
 }
 
-export function KitchenMenuPdfDocument({ menu, logo }: MenuPdfDocumentProps) {
-  const deliveryTime = formatDeliveryTime(menu.deliveryTime);
+function CategorySection({ category }: { category: Category }) {
+  // Quantities need room; ordinary dishes use two readable columns.
+  const single = category.isQtyField || category.dishes.length === 1;
+  const columns = single ? 1 : 2;
+  const rows = Array.from({ length: Math.ceil(category.dishes.length / columns) }, (_, index) => category.dishes.slice(index * columns, (index + 1) * columns));
   return (
-    <Document title={`${menu.name} - Kitchen`} author="Dhalaxmi Catering Service">
+    <View style={styles.category}>
+      {/* Keep the heading with its first row; remaining rows flow across pages. */}
+      <View wrap={false}>
+        <View style={styles.categoryHeading}>
+          <Text style={styles.categoryName}>{category.name}</Text>
+          {category.selectionRule ? <Text style={styles.rule}>{category.selectionRule}</Text> : null}
+        </View>
+        {rows[0] ? <DishRow dishes={rows[0]} single={single} /> : null}
+      </View>
+      {rows.slice(1).map((row, index) => <DishRow key={index} dishes={row} single={single} />)}
+    </View>
+  );
+}
+
+export function KitchenMenuPdfDocument({ menu, logo }: { menu: KitchenMenuDetail; logo: PdfLogoAssets }) {
+  const deliveryTime = formatDeliveryTime(menu.deliveryTime);
+  const logoWidth = Math.min(90, logo.headerWidth);
+  return (
+    <Document title={`${menu.name} - Kitchen`} author="Dhanlaxmi Caterer">
       <Page size="A4" style={styles.page}>
-        <PageHeader logo={logo} />
-
-        <View style={styles.coverSection} wrap={false}>
-          <View style={styles.coverBody}>
-            <Text style={styles.menuTitle}>{menu.name}</Text>
-            <Text style={styles.menuSubtitle}>Kitchen Operations Menu</Text>
-
-            <View style={styles.fieldsCard}>
-              <View style={[styles.fieldsRow, { marginBottom: 8 }]}>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Venue:</Text>
-                  {menu.venue ? (
-                    <Text style={styles.fieldValue}>{menu.venue}</Text>
-                  ) : (
-                    <View style={styles.fieldLine} />
-                  )}
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Date:</Text>
-                  {menu.date ? (
-                    <Text style={styles.fieldValue}>{new Date(menu.date).toLocaleDateString()}</Text>
-                  ) : (
-                    <View style={styles.fieldLine} />
-                  )}
-                </View>
-              </View>
-              <View style={styles.fieldsRow}>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Persons:</Text>
-                  {menu.numberOfPersons ? (
-                    <Text style={styles.fieldValue}>{menu.numberOfPersons}</Text>
-                  ) : (
-                    <View style={styles.fieldLine} />
-                  )}
-                </View>
-                <View style={styles.field}>
-                  <Text style={styles.fieldLabel}>Deliver by:</Text>
-                  {deliveryTime ? (
-                    <Text style={styles.fieldValue}>{deliveryTime}</Text>
-                  ) : (
-                    <View style={styles.fieldLine} />
-                  )}
-                </View>
-              </View>
-              {menu.mealType ? (
-                <View style={[styles.fieldsRow, { marginTop: 8 }]}>
-                  <View style={styles.field}>
-                    <Text style={styles.fieldLabel}>Meal:</Text>
-                    <Text style={styles.fieldValue}>{menu.mealType}</Text>
-                  </View>
-                  <View style={styles.field} />
-                </View>
-              ) : null}
+        <View style={styles.header} fixed>
+          <Text style={styles.headerLabel}>KITCHEN MENU</Text>
+          <PdfImage src={logo.src} style={{ width: logoWidth, height: Math.min(24, logoWidth * logo.headerHeight / logo.headerWidth), objectFit: "contain" }} />
+        </View>
+        <View wrap={false}>
+          <Text style={styles.title}>{menu.name}</Text>
+          <View style={styles.details}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detail}><Text style={styles.bold}>Date: </Text>{menu.date ? formatDateDisplay(eventDateString(new Date(menu.date))) : "—"}</Text>
+              <Text style={styles.detail}><Text style={styles.bold}>Meal: </Text>{menu.mealType || "—"}</Text>
+            </View>
+            <Text style={styles.venue}><Text style={styles.bold}>Venue: </Text>{menu.venue || "—"}</Text>
+            <View style={styles.detailRow}>
+              <Text style={styles.detail}><Text style={styles.bold}>Persons: </Text>{menu.numberOfPersons ?? "—"}</Text>
+              <Text style={styles.detail}><Text style={styles.bold}>Deliver by: </Text>{deliveryTime || "—"}</Text>
             </View>
           </View>
         </View>
-
-        {menu.categories.map((category, index) => (
-          <CategorySection key={`${category.id}-${index}`} category={category} />
-        ))}
-
+        {menu.categories.filter(category => category.dishes.length > 0).map((category, index) => <CategorySection key={`${category.id}-${index}`} category={category} />)}
         <View style={styles.footer} fixed>
-          <Text style={styles.footerBrand}>Dhalaxmi Catering Service</Text>
-          <Text
-            style={styles.footerPage}
-            render={({ pageNumber, totalPages }) =>
-              `${menu.name} (Kitchen)  ·  Page ${pageNumber} of ${totalPages}`
-            }
-          />
+          <Text>Dhanlaxmi Caterer</Text>
+          <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
         </View>
       </Page>
     </Document>
