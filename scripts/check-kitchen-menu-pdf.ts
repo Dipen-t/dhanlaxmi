@@ -41,6 +41,9 @@ async function main() {
     assert(pages.length <= (count === 6 ? 1 : count === 30 ? 2 : 10), "content should pack without wasted pages");
     for (let id = 1; id <= count; id++) assert(text.includes(`Dish-${String(id).padStart(3, "0")}`), `Missing dish ${id}`);
     assert(text.includes("30/11/2026"));
+    assert(!text.includes("Category "), "Kitchen PDF should show items without category headings");
+    assert(!text.includes("Any two"), "Selection rules do not belong in the kitchen item list");
+    assert(text.includes("200 plates, packed separately"), "Item quantities must remain visible");
     for (const page of pages) {
       assert(page.includes("Dish-"), "No page should contain only headers/footers");
       assert(page.includes("KITCHEN MENU"));

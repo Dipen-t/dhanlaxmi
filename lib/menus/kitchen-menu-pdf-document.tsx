@@ -16,10 +16,6 @@ const styles = StyleSheet.create({
   detail: { width: "50%", paddingRight: 10, lineHeight: 1.3 },
   venue: { lineHeight: 1.3, marginTop: 4 },
   bold: { fontWeight: 700 },
-  category: { marginBottom: 7 },
-  categoryHeading: { backgroundColor: "#EFEFEF", paddingVertical: 4, paddingHorizontal: 7, borderBottomWidth: 0.5, borderBottomColor: "#888888" },
-  categoryName: { fontSize: 12, fontWeight: 700, lineHeight: 1.2 },
-  rule: { fontSize: 10, marginTop: 2, lineHeight: 1.2 },
   row: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#DDDDDD" },
   cell: { width: "50%", paddingHorizontal: 7, paddingVertical: 3 },
   fullCell: { width: "100%" },
@@ -44,22 +40,14 @@ function DishRow({ dishes, single }: { dishes: Category["dishes"]; single: boole
   );
 }
 
-function CategorySection({ category }: { category: Category }) {
+function DishRows({ category }: { category: Category }) {
   // Quantities need room; ordinary dishes use two readable columns.
   const single = category.isQtyField || category.dishes.length === 1;
   const columns = single ? 1 : 2;
   const rows = Array.from({ length: Math.ceil(category.dishes.length / columns) }, (_, index) => category.dishes.slice(index * columns, (index + 1) * columns));
   return (
-    <View style={styles.category}>
-      {/* Keep the heading with its first row; remaining rows flow across pages. */}
-      <View wrap={false}>
-        <View style={styles.categoryHeading}>
-          <Text style={styles.categoryName}>{category.name}</Text>
-          {category.selectionRule ? <Text style={styles.rule}>{category.selectionRule}</Text> : null}
-        </View>
-        {rows[0] ? <DishRow dishes={rows[0]} single={single} /> : null}
-      </View>
-      {rows.slice(1).map((row, index) => <DishRow key={index} dishes={row} single={single} />)}
+    <View>
+      {rows.map((row, index) => <DishRow key={index} dishes={row} single={single} />)}
     </View>
   );
 }
@@ -88,7 +76,7 @@ export function KitchenMenuPdfDocument({ menu, logo }: { menu: KitchenMenuDetail
             </View>
           </View>
         </View>
-        {menu.categories.filter(category => category.dishes.length > 0).map((category, index) => <CategorySection key={`${category.id}-${index}`} category={category} />)}
+        {menu.categories.filter(category => category.dishes.length > 0).map((category, index) => <DishRows key={`${category.id}-${index}`} category={category} />)}
         <View style={styles.footer} fixed>
           <Text>Dhanlaxmi Caterer</Text>
           <Text render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
