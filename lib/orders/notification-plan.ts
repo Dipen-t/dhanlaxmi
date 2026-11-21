@@ -91,7 +91,7 @@ export function vendorTemplateParams(order: NotificationOrder, timing: string, i
 
   // Put the update banner in {{4}} so {{3}} stays a clean materials list.
   const noteParts: string[] = [];
-  if (updated) noteParts.push("UPDATED ORDER — replaces previous details");
+  if (updated) noteParts.push("UPDATED ORDER");
   const itemNotes = [...new Set(items.flatMap((item) => (item.notes?.trim() ? [item.notes.trim()] : [])))];
   if (itemNotes.length) noteParts.push(itemNotes.join("; "));
   const notes = noteParts.join(" · ") || "—";

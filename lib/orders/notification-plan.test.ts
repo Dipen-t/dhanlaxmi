@@ -27,7 +27,7 @@ test("materials stay numbered and plates-first; update banner moves to notes par
   const params = vendorTemplateParams(before, "18:00", before.rawMaterials, new Map([[1, "Paneer"], [2, "Rice"]]), before.venue, true);
   assert.equal(params[0], "18/12/2026 at 6:00 PM");
   assert.equal(params[2], "Plates: 100 · 1) Paneer: 100 plates · 2) Rice: 20 kg");
-  assert.equal(params[3], "UPDATED ORDER — replaces previous details · Serve warm");
+  assert.equal(params[3], "UPDATED ORDER · Serve warm");
   assert.ok(!params[2].includes("UPDATED"));
   assert.ok(!params[3].includes("Paneer") && !params[3].includes("Customer"));
 });
