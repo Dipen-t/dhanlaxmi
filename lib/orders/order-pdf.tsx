@@ -1,5 +1,6 @@
 import type { MenuDetail, CategoryWithDishes } from "@/app/menus/actions";
 import { isHiTeaCategory } from "./hi-tea";
+import { OrderMenuPdfDocument } from "./order-menu-pdf-document";
 
 export type OrderForPdf = {
   id: number;
@@ -9,6 +10,8 @@ export type OrderForPdf = {
   venue?: string | null;
   date?: string | null;
   mealType?: string | null;
+  numberOfPersons?: number | null;
+  extraPlates?: number | null;
   menuDishes: { dishId: number; name: string; categoryId: number; categoryName: string }[];
   hiTeaNotes?: string | null;
 };
@@ -56,12 +59,21 @@ export function orderToMenuDetail(order: OrderForPdf): MenuDetail {
 }
 
 export async function generateOrderMenuPdfBuffer(order: OrderForPdf): Promise<Buffer> {
-  const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
-  const { generateMenuPdfBuffer } = await import("@/lib/menus/generate-menu-pdf");
-  const menuDetail = orderToMenuDetail(order);
-  const logo = await getPdfLogoAssets();
-  return generateMenuPdfBuffer(menuDetail, logo, "standard", {
-    fontFamily: "SourceSans",
-    fontSize: "10pt",
-  });
+  const { registerPdfFonts } = await import("@/lib/menus/register-pdf-fonts");
+  const { renderToBuffer } = await import("@react-pdf/renderer");
+
+  registerPdfFonts();
+
+  let logo: import("@/lib/menus/prepare-pdf-logo").PdfLogoAssets | null = null;
+  try {
+    const { getPdfLogoAssets } = await import("@/lib/menus/prepare-pdf-logo");
+    logo = await getPdfLogoAssets();
+  } catch {
+    logo = null;
+  }
+
+  const buffer = await renderToBuffer(
+    <OrderMenuPdfDocument order={order} logo={logo} />
+  );
+  return Buffer.from(buffer);
 }

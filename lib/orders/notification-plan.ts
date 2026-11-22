@@ -151,6 +151,14 @@ export function planCustomerNotifications(before: NotificationOrder | null, next
   return drafts;
 }
 
+export function formatHiTeaMaterialNote(notes: string[]): string {
+  const clean = notes
+    .map(n => n.trim().replace(/^(?:hi[- ]?tea|high[- ]?tea)\s*[:-]*\s*/i, ""))
+    .filter(Boolean);
+  if (!clean.length) return "";
+  return `HI-TEA:- ${clean.join("; ")}`;
+}
+
 export function vendorTemplateParams(order: NotificationOrder, timing: string, items: NotificationMaterial[], names: Map<number, string>, venue: string, updated: boolean) {
   // WhatsApp Hub/Meta strip real newlines in template params and turn them into " | ".
   // Keep this param readable as one line: plates first, then numbered items.
@@ -164,8 +172,11 @@ export function vendorTemplateParams(order: NotificationOrder, timing: string, i
   // Put the update banner in {{4}} so {{3}} stays a clean materials list.
   const noteParts: string[] = [];
   if (updated) noteParts.push("UPDATED ORDER");
-  const itemNotes = [...new Set(items.flatMap((item) => (item.notes?.trim() ? [item.notes.trim()] : [])))];
-  if (itemNotes.length) noteParts.push(itemNotes.join("; "));
+  const rawNotes = [...new Set(items.flatMap((item) => (item.notes?.trim() ? [item.notes.trim()] : [])))];
+  if (rawNotes.length) {
+    const formatted = formatHiTeaMaterialNote(rawNotes);
+    if (formatted) noteParts.push(formatted);
+  }
   const notes = noteParts.join(" · ") || "—";
 
   return [vendorScheduleLabel(order.date, timing), venue, details, notes];
