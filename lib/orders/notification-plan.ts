@@ -22,10 +22,27 @@ export function planVendorChanges(before: NotificationOrder | null, next: Notifi
   const oldGroups = before ? groupMaterialsByVendorTiming(before.rawMaterials, before.mealType) : [];
   const newGroups = groupMaterialsByVendorTiming(next.rawMaterials, next.mealType);
   const scheduleChanged = !!before && (before.date !== next.date || before.venue !== next.venue || before.mealType !== next.mealType || before.numberOfPersons + before.extraPlates !== next.numberOfPersons + next.extraPlates);
-  const updates = newGroups.filter(group => {
+
+  // Check if anything changed at all across any vendor group.
+  const anyGroupChanged = newGroups.some(group => {
     const previous = oldGroups.find(old => old.vendorId === group.vendorId && old.timing === group.timing);
     return !previous || scheduleChanged || materialKey(previous.items) !== materialKey(group.items);
   });
+
+  // When editing (before != null) and something changed, resend the complete list
+  // to ALL vendors so every vendor sees the full updated picture — not just the
+  // vendors whose own items changed.
+  const updates = newGroups.filter(group => {
+    if (!before) {
+      // New order: only send to vendors that have items.
+      return true;
+    }
+    // Edit: if anything changed anywhere, notify ALL vendor groups.
+    if (anyGroupChanged) return true;
+    // Nothing changed at all — skip.
+    return false;
+  });
+
   const removed = oldGroups.flatMap(group => {
     const items = group.items.filter(old => !newGroups.some(current => current.vendorId === group.vendorId && current.timing === group.timing && current.items.some(item => item.rawMaterialId === old.rawMaterialId)));
     return items.length ? [{ ...group, items }] : [];

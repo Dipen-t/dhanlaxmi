@@ -52,6 +52,8 @@ export type OrderRecord = {
   discount: string | null;
   customerName: string | null;
   customerPhone: string | null;
+  customer2Name: string | null;
+  customer2Phone: string | null;
   isPaymentAmount: boolean;
   menuId: number | null;
   menuName: string | null;
@@ -82,6 +84,8 @@ function serializeOrder(order: {
   discount: string | null;
   customerName: string | null;
   customerPhone: string | null;
+  customer2Name?: string | null;
+  customer2Phone?: string | null;
   isPaymentAmount: boolean;
   menuId?: number | null;
   menu?: { id: number; name: string } | null;
@@ -139,6 +143,8 @@ function serializeOrder(order: {
     discount: order.discount,
     customerName: order.customerName,
     customerPhone: order.customerPhone,
+    customer2Name: order.customer2Name ?? null,
+    customer2Phone: order.customer2Phone ?? null,
     isPaymentAmount: order.isPaymentAmount,
     menuId: order.menuId ?? order.menu?.id ?? null,
     menuName: order.menu?.name ?? null,
@@ -309,6 +315,8 @@ export type OrderInput = {
   discount?: string;
   customerName?: string;
   customerPhone?: string;
+  customer2Name?: string;
+  customer2Phone?: string;
   rawMaterials: OrderRawMaterialRecord[];
   dishIds?: number[];
   hiTeaNotes?: string;
@@ -367,6 +375,8 @@ export async function createOrder(data: OrderInput) {
   const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
+  const customer2Name = data.customer2Name?.trim() || null;
+  const customer2Phone = data.customer2Phone?.trim() || null;
   const isPaymentAmount = totalAmount !== null && totalAmount > 0;
   const materials = (data.rawMaterials || []).map((material) => ({
     ...material,
@@ -431,6 +441,8 @@ export async function createOrder(data: OrderInput) {
         discount,
         customerName,
         customerPhone,
+        customer2Name,
+        customer2Phone,
         isPaymentAmount,
         extraPlates: 0,
       }).returning({ id: orders.id });
@@ -496,6 +508,8 @@ export async function updateOrder(data: OrderInput) {
   const discount = data.discount?.trim() || null;
   const customerName = data.customerName?.trim() || null;
   const customerPhone = data.customerPhone?.trim() || null;
+  const customer2Name = data.customer2Name?.trim() || null;
+  const customer2Phone = data.customer2Phone?.trim() || null;
   const materials = (data.rawMaterials || []).map((material) => ({
     ...material,
     timing: material.timing?.trim() || null,
@@ -563,6 +577,8 @@ export async function updateOrder(data: OrderInput) {
           discount,
           customerName,
           customerPhone,
+          customer2Name,
+          customer2Phone,
           isPaymentAmount: currentTotalAmount > 0,
           updatedAt: new Date(),
         })

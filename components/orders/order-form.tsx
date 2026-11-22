@@ -258,6 +258,8 @@ export function OrderForm({
       discount: finalDiscount,
       customerName: String(formData.get("customerName") || "").trim(),
       customerPhone: String(formData.get("customerPhone") || "").trim(),
+      customer2Name: String(formData.get("customer2Name") || "").trim(),
+      customer2Phone: String(formData.get("customer2Phone") || "").trim(),
       rawMaterials: itemsToSubmit,
       hiTeaNotes,
       materialOrder: orderedMaterialIds,
@@ -417,7 +419,7 @@ export function OrderForm({
                 htmlFor="customer-name"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Customer Name
+                Customer 1 Name
               </label>
               <input
                 id="customer-name"
@@ -437,7 +439,7 @@ export function OrderForm({
                 htmlFor="customer-phone"
                 className="mb-1.5 block text-sm font-medium text-foreground"
               >
-                Customer Phone (Optional)
+                Customer 1 Phone (Optional)
               </label>
               <input
                 id="customer-phone"
@@ -445,6 +447,44 @@ export function OrderForm({
                 type="tel"
                 maxLength={20}
                 defaultValue={order?.customerPhone ?? ""}
+                autoComplete="tel"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. 9876543210"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label
+                htmlFor="customer2-name"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Customer 2 Name (Optional)
+              </label>
+              <input
+                id="customer2-name"
+                name="customer2Name"
+                type="text"
+                maxLength={200}
+                defaultValue={order?.customer2Name ?? ""}
+                autoComplete="name"
+                className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                placeholder="e.g. Jane Doe"
+              />
+            </div>
+
+            <div className="min-w-0">
+              <label
+                htmlFor="customer2-phone"
+                className="mb-1.5 block text-sm font-medium text-foreground"
+              >
+                Customer 2 Phone (Optional)
+              </label>
+              <input
+                id="customer2-phone"
+                name="customer2Phone"
+                type="tel"
+                maxLength={20}
+                defaultValue={order?.customer2Phone ?? ""}
                 autoComplete="tel"
                 className="w-full min-w-0 rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none transition-colors placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
                 placeholder="e.g. 9876543210"

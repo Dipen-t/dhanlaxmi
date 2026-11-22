@@ -120,6 +120,13 @@
       "when": 1795278174438,
       "tag": "0016_order_hi_tea_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1795900000000,
+      "tag": "0017_customer2_fields",
+      "breakpoints": true
     }
   ]
 }

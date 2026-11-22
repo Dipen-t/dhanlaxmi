@@ -64,6 +64,8 @@ export const orders = pgTable("orders", {
   discount: text("discount"),
   customerName: text("customer_name"),
   customerPhone: text("customer_phone"),
+  customer2Name: text("customer2_name"),
+  customer2Phone: text("customer2_phone"),
   /** Client menu template used for dish selection (nullable). */
   menuId: integer("menu_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
