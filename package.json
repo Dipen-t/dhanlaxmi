@@ -16,6 +16,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx db/seed.ts",
     "db:seed-menu": "tsx db/seed-menu.ts",
+    "db:migrate-client-menu": "node scripts/migrate-client-menu.mjs",
+    "db:export-client-menu": "node scripts/export-client-menu.mjs",
     "db:ensure-menu-sort": "node scripts/ensure-menu-category-sort-order.mjs",
     "db:ensure-order-items": "node scripts/ensure-order-item-settings.mjs"
   },
