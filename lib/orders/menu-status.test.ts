@@ -1,23 +1,24 @@
-import { describe, expect, it } from "vitest";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
 
 import { isMenuPending } from "./menu-status";
 
 describe("isMenuPending", () => {
   it("is pending when menuDishes is empty", () => {
-    expect(isMenuPending({ menuDishes: [], dishIds: [] })).toBe(true);
+    assert.equal(isMenuPending({ menuDishes: [], dishIds: [] }), true);
   });
 
   it("is not pending when menuDishes has items", () => {
-    expect(isMenuPending({ menuDishes: [{ id: 1 }], dishIds: [] })).toBe(false);
+    assert.equal(isMenuPending({ menuDishes: [{ id: 1 }], dishIds: [] }), false);
   });
 
   it("falls back to dishIds when menuDishes is absent", () => {
-    expect(isMenuPending({ dishIds: [] })).toBe(true);
-    expect(isMenuPending({ dishIds: [1] })).toBe(false);
+    assert.equal(isMenuPending({ dishIds: [] }), true);
+    assert.equal(isMenuPending({ dishIds: [1] }), false);
   });
 
   it("prefers menuDishes over dishIds", () => {
-    expect(isMenuPending({ menuDishes: [{ id: 1 }], dishIds: [] })).toBe(false);
-    expect(isMenuPending({ menuDishes: [], dishIds: [1] })).toBe(true);
+    assert.equal(isMenuPending({ menuDishes: [{ id: 1 }], dishIds: [] }), false);
+    assert.equal(isMenuPending({ menuDishes: [], dishIds: [1] }), true);
   });
 });

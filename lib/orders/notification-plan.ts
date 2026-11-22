@@ -1,7 +1,7 @@
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
 import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "../whatsapp-booking-config";
 import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
-import { normalizeHiTeaNotes } from "./hi-tea";
+import { isHiTeaCategory, normalizeHiTeaNotes } from "./hi-tea";
 
 export const CUSTOMER_MENU_TEMPLATE = "customer_menu";
 
@@ -52,11 +52,22 @@ export function planVendorChanges(before: NotificationOrder | null, next: Notifi
 
 export function selectedMenuText(order: NotificationOrder) {
   const lines = ["Dhanlaxmi Caterer", `Customer: ${order.customerName || "Customer"}`, `Date: ${order.date.split("-").reverse().join("/")}`, `Venue: ${order.venue}`, `Meal: ${order.mealType}`, `Plates: ${order.numberOfPersons + order.extraPlates}`, "", "Selected menu"];
-  let category = "";
-  for (const dish of order.menuDishes) {
-    if (dish.categoryName !== category) { category = dish.categoryName; lines.push("", category); }
+  const regularDishes = order.menuDishes.filter(d => !isHiTeaCategory(d.categoryName));
+  const hiTeaDishes = order.menuDishes.filter(d => isHiTeaCategory(d.categoryName));
+
+  for (const dish of regularDishes) {
     lines.push(`• ${dish.name}`);
   }
+
+  let currentCategory = "";
+  for (const dish of hiTeaDishes) {
+    if (dish.categoryName !== currentCategory) {
+      currentCategory = dish.categoryName;
+      lines.push("", currentCategory);
+    }
+    lines.push(`• ${dish.name}`);
+  }
+
   if (!order.menuDishes.length) lines.push("Menu not selected yet.");
   const hiTeaNotes = normalizeHiTeaNotes(order.hiTeaNotes);
   if (hiTeaNotes) lines.push("", "Hi-tea notes", hiTeaNotes);
@@ -68,15 +79,32 @@ export function menuNotificationChanged(before: NotificationOrder, next: Notific
 }
 
 export function selectedMenuTemplateParams(order: NotificationOrder): string[] {
-  const categories = new Map<number, { name: string; dishes: string[] }>();
+  const regularDishes: string[] = [];
+  const hiTeaCategories = new Map<number, { name: string; dishes: string[] }>();
+
   for (const dish of order.menuDishes) {
-    const group = categories.get(dish.categoryId) ?? { name: dish.categoryName, dishes: [] };
-    group.dishes.push(dish.name);
-    categories.set(dish.categoryId, group);
+    if (isHiTeaCategory(dish.categoryName)) {
+      const group = hiTeaCategories.get(dish.categoryId) ?? { name: dish.categoryName, dishes: [] };
+      group.dishes.push(dish.name);
+      hiTeaCategories.set(dish.categoryId, group);
+    } else {
+      regularDishes.push(dish.name);
+    }
   }
+
   // The gateway's template variables cannot contain raw newlines. Keep every
   // category and dish, using clear inline separators rather than truncating.
-  const sections = [...categories.values()].map(category => `${category.name}: ${category.dishes.join(" / ")}`);
+  // Regular dishes appear without category headings; only the Hi-tea category
+  // has a heading and its dishes under that heading.
+  const sections: string[] = [];
+  if (regularDishes.length > 0) {
+    sections.push(regularDishes.join(" / "));
+  }
+
+  for (const group of hiTeaCategories.values()) {
+    sections.push(`${group.name}: ${group.dishes.join(" / ")}`);
+  }
+
   const hiTeaNotes = normalizeHiTeaNotes(order.hiTeaNotes);
   if (hiTeaNotes) sections.push(`Hi-tea notes: ${hiTeaNotes}`);
   const menu = sections.join(" | ");

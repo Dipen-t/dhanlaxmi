@@ -4,18 +4,18 @@ import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, 
 
 const before: NotificationOrder = { id: 1, date: "2026-12-18", venue: "Test venue", mealType: "dinner", numberOfPersons: 100, extraPlates: 0, customerName: "Test customer", customerPhone: "9999999999", rawMaterials: [{ rawMaterialId: 1, vendorId: 10, timing: "18:00", unitQty: "100", unitName: "plates", notes: "Serve warm" }, { rawMaterialId: 2, vendorId: 20, timing: "19:00", unitQty: "20", unitName: "kg" }], menuDishes: [{ dishId: 3, name: "Soup", categoryId: 1, categoryName: "Soups" }] };
 
-test("only changed vendors are notified; rearranging materials or identical saves do nothing", () => {
+test("all assigned vendors receive their list when order is edited; identical saves do nothing", () => {
   assert.deepEqual(planVendorChanges(before, before), { updates: [], removed: [] });
   assert.equal(planVendorChanges(before, { ...before, rawMaterials: [...before.rawMaterials].reverse() }).updates.length, 0);
   const edited = { ...before, rawMaterials: before.rawMaterials.map(item => item.vendorId === 10 ? { ...item, unitQty: "120" } : item) };
-  assert.deepEqual(planVendorChanges(before, edited).updates.map(group => group.vendorId), [10]);
+  assert.deepEqual(planVendorChanges(before, edited).updates.map(group => group.vendorId), [10, 20]);
   assert.equal(menuNotificationChanged(before, edited), false);
 });
 
-test("removed/replaced vendor assignments are flagged for manual contact", () => {
+test("removed/replaced vendor assignments are flagged for manual contact and remaining vendors receive updates", () => {
   const next = { ...before, rawMaterials: before.rawMaterials.map(item => item.vendorId === 10 ? { ...item, vendorId: 30 } : item) };
   assert.deepEqual(planVendorChanges(before, next).removed.map(group => group.vendorId), [10]);
-  assert.deepEqual(planVendorChanges(before, next).updates.map(group => group.vendorId), [30]);
+  assert.deepEqual(planVendorChanges(before, next).updates.map(group => group.vendorId), [30, 20]);
 });
 
 test("schedule and plate-count changes notify all vendors without scaling quantities", () => {
@@ -50,7 +50,7 @@ test("changed selected dishes trigger customer/manager menu text without a booki
 test("edited menus send customer_menu with exactly six variables to customer and Sunny", () => {
   const next = { ...before, customerName: "Mohit Raheja", date: "2026-11-20", venue: "Sky", extraPlates: 5,
     menuDishes: [{ dishId: 10, name: "Pineapple", categoryId: 3, categoryName: "Welcome Drinks" }, { dishId: 11, name: "Fruit Punch", categoryId: 3, categoryName: "Welcome Drinks" }, { dishId: 12, name: "Dal Tadka", categoryId: 4, categoryName: "Dal / Curry" }] };
-  const expected = ["Mohit Raheja", "20/11/2026", "Sky", "dinner", "105", "Welcome Drinks: Pineapple / Fruit Punch | Dal / Curry: Dal Tadka"];
+  const expected = ["Mohit Raheja", "20/11/2026", "Sky", "dinner", "105", "Pineapple / Fruit Punch / Dal Tadka"];
   assert.deepEqual(selectedMenuTemplateParams(next), expected);
   const messages = planCustomerNotifications(before, next);
   assert.deepEqual(messages.map(message => message.phone), [before.customerPhone, "8080200800"]);
@@ -72,6 +72,20 @@ test("confirmation remains customer-only and unchanged or empty edited menus do 
   const empty = planCustomerNotifications(null, { ...before, menuDishes: [] });
   assert.equal(empty.length, 1);
   assert.equal(empty[0].payload.template, "customerorder");
+});
+
+test("menu notifications keep regular dishes without category heading, only Hi-tea category has a heading", () => {
+  const mixed: NotificationOrder = {
+    ...before,
+    menuDishes: [
+      { dishId: 1, name: "Paneer Tikka", categoryId: 1, categoryName: "Starters" },
+      { dishId: 2, name: "Dal Makhani", categoryId: 2, categoryName: "Dal / Curry" },
+      { dishId: 3, name: "Assorted Uttapam", categoryId: 42, categoryName: "Hi-tea" },
+      { dishId: 4, name: "Special Tea", categoryId: 42, categoryName: "Hi-tea" },
+    ],
+  };
+  const expectedMenu = "Paneer Tikka / Dal Makhani | Hi-tea: Assorted Uttapam / Special Tea";
+  assert.equal(selectedMenuTemplateParams(mixed)[5], expectedMenu);
 });
 
 test("menu notifications avoid duplicating Sunny and still notify him when customer phone is missing", () => {

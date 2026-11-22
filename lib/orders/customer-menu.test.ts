@@ -27,7 +27,7 @@ test("customer_menu reaches the utility endpoint with six correctly ordered para
       assert.equal(request.pathname, "/api/sendmsgutil.php");
       assert.equal(request.searchParams.get("text"), "customer_menu");
       assert.equal(request.searchParams.get("htype"), null);
-      assert.deepEqual(request.searchParams.get("Params")!.split(","), ["Mohit Raheja", "20/11/2026", "Sky", "dinner", "105", "Welcome Drinks: Pineapple | Hi Tea: Tea"]);
+      assert.deepEqual(request.searchParams.get("Params")!.split(","), ["Mohit Raheja", "20/11/2026", "Sky", "dinner", "105", "Pineapple | Hi Tea: Tea"]);
     }
     globalThis.fetch = async input => { requests.push(new URL(String(input))); return new Response("Template not approved", { status: 422 }); };
     const rejected = await sendWhatsAppTemplateMessage({ phone: notifications[0].phone, template: "customer_menu", params: notifications[0].payload.params });
