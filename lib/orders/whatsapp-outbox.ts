@@ -109,7 +109,27 @@ async function deliver(message: Message) {
   }
   const payload = message.payload;
   if (payload.mode === "text") return sendWhatsAppPlainText(phone, payload.text || "");
-  if (payload.mode === "template") return sendWhatsAppTemplateMessage({ phone, template: payload.template || "", params: payload.params || [] });
+  if (payload.mode === "template") {
+    let document = payload.document;
+    if (payload.template === "customer_menu_pdf" && !document) {
+      try {
+        const { getOrder } = await import("@/app/orders/actions");
+        const order = await getOrder(String(message.orderId));
+        if (order) {
+          const { getWhatsAppPdfUrl } = await import("@/lib/whatsapp-pdf-url");
+          const { generateOrderMenuPdfBuffer } = await import("@/lib/orders/order-pdf");
+          const { sanitizeFilename } = await import("@/lib/menus/sanitize-filename");
+          const filename = `${sanitizeFilename(order.customerName || order.orderId)}-menu.pdf`;
+          const url = await getWhatsAppPdfUrl("orders", order.id, "standard", () => generateOrderMenuPdfBuffer(order));
+          document = { url, filename };
+        }
+      } catch (err) {
+        console.error("Failed to generate order menu PDF for WhatsApp:", err);
+        return { error: `Failed to attach menu PDF: ${err instanceof Error ? err.message : String(err)}` };
+      }
+    }
+    return sendWhatsAppTemplateMessage({ phone, template: payload.template || "", params: payload.params || [], document });
+  }
   return { error: "This entry requires manual contact; no WhatsApp cancellation template is configured." };
 }
 

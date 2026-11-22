@@ -1,13 +1,13 @@
 import { headers } from "next/headers";
 import { menuPdfThemes } from "@/lib/menus/pdf-themes";
 
-export function buildPublicPdfUrl(origin: string, kind: "menus" | "kitchen-menus", id: number, theme = "standard") {
+export function buildPublicPdfUrl(origin: string, kind: "menus" | "kitchen-menus" | "orders", id: number, theme = "standard") {
   if (kind === "menus" && !menuPdfThemes.some((item) => item.id === theme)) {
     throw new Error("Select a valid PDF design.");
   }
   const base = new URL(origin);
   const host = base.hostname.toLowerCase();
-  if (!Number.isSafeInteger(id) || id < 1) throw new Error("Invalid menu.");
+  if (!Number.isSafeInteger(id) || id < 1) throw new Error("Invalid id.");
   if (!["https:", "http:"].includes(base.protocol) || base.username || base.password ||
     host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") ||
     host === "[::1]" || host.startsWith("[fc") || host.startsWith("[fd") || host.startsWith("[fe80") ||
@@ -20,7 +20,7 @@ export function buildPublicPdfUrl(origin: string, kind: "menus" | "kitchen-menus
 }
 
 export async function getWhatsAppPdfUrl(
-  kind: "menus" | "kitchen-menus",
+  kind: "menus" | "kitchen-menus" | "orders",
   id: number,
   theme: string,
   renderPdf: () => Promise<Buffer>,

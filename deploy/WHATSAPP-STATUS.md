@@ -20,11 +20,8 @@ message history. Records start with this release; earlier sends are not imported
 - Removed or reassigned vendor work is flagged for manual contact. No automatic
   cancellation is sent because no approved cancellation template is available.
 
-The `customer_menu` variables are: customer name, date only, venue, meal, total
-plates including extra plates, and the complete selected categories/dishes.
-Both recipients get the customer's name in the template. There are no separate
-Hi-tea variables or event-time variables. The gateway cannot accept raw newlines
-inside template parameters, so the menu uses `Category: Dish / Dish | Category: Dish`.
+The `customer_menu_pdf` template variables are: {{1}} customer name, {{2}} date only (DD/MM/YYYY), {{3}} venue, {{4}} meal, and {{5}} total plates including extra plates.
+The template has a Document (Media) header. The system generates and attaches the order menu PDF automatically via public Vercel Blob storage or the `/api/orders/[id]/pdf` endpoint.
 Provider errors remain visible in message history; no vendor-template fallback is used.
 
 ## Status and Retry

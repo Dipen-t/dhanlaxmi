@@ -47,17 +47,17 @@ test("changed selected dishes trigger customer/manager menu text without a booki
   assert.ok(!text.includes("confirmed") && !text.includes("18:00") && !text.includes("6:00"));
 });
 
-test("edited menus send customer_menu with exactly six variables to customer and Sunny", () => {
+test("edited menus send customer_menu_pdf with exactly five variables to customer and Sunny", () => {
   const next = { ...before, customerName: "Mohit Raheja", date: "2026-11-20", venue: "Sky", extraPlates: 5,
     menuDishes: [{ dishId: 10, name: "Pineapple", categoryId: 3, categoryName: "Welcome Drinks" }, { dishId: 11, name: "Fruit Punch", categoryId: 3, categoryName: "Welcome Drinks" }, { dishId: 12, name: "Dal Tadka", categoryId: 4, categoryName: "Dal / Curry" }] };
-  const expected = ["Mohit Raheja", "20/11/2026", "Sky", "dinner", "105", "Pineapple / Fruit Punch / Dal Tadka"];
+  const expected = ["Mohit Raheja", "20/11/2026", "Sky", "dinner", "105"];
   assert.deepEqual(selectedMenuTemplateParams(next), expected);
   const messages = planCustomerNotifications(before, next);
   assert.deepEqual(messages.map(message => message.phone), [before.customerPhone, "8080200800"]);
   assert.equal(messages[1].recipientName, "Manager Sunny");
   for (const message of messages) {
     assert.equal(message.kind, "menu_update");
-    assert.deepEqual(message.payload, { mode: "template", template: "customer_menu", params: expected });
+    assert.deepEqual(message.payload, { mode: "template", template: "customer_menu_pdf", params: expected });
     assert.ok(!message.payload.params.some(value => value.includes("\n")));
   }
 });
@@ -65,7 +65,7 @@ test("edited menus send customer_menu with exactly six variables to customer and
 test("confirmation remains customer-only and unchanged or empty edited menus do not queue menu templates", () => {
   const created = planCustomerNotifications(null, before);
   assert.equal(created[0].payload.template, "customerorder");
-  assert.equal(created[1].payload.template, "customer_menu");
+  assert.equal(created[1].payload.template, "customer_menu_pdf");
   assert.equal(created[1].recipientKind, "manager");
   assert.deepEqual(planCustomerNotifications(before, before), []);
   assert.deepEqual(planCustomerNotifications(before, { ...before, menuDishes: [] }), []);
@@ -74,7 +74,7 @@ test("confirmation remains customer-only and unchanged or empty edited menus do 
   assert.equal(empty[0].payload.template, "customerorder");
 });
 
-test("menu notifications keep regular dishes without category heading, only Hi-tea category has a heading", () => {
+test("menu text keeps regular dishes without category heading, only Hi-tea category has a heading", () => {
   const mixed: NotificationOrder = {
     ...before,
     menuDishes: [
@@ -84,8 +84,10 @@ test("menu notifications keep regular dishes without category heading, only Hi-t
       { dishId: 4, name: "Special Tea", categoryId: 42, categoryName: "Hi-tea" },
     ],
   };
-  const expectedMenu = "Paneer Tikka / Dal Makhani | Hi-tea: Assorted Uttapam / Special Tea";
-  assert.equal(selectedMenuTemplateParams(mixed)[5], expectedMenu);
+  const text = selectedMenuText(mixed);
+  assert.ok(text.includes("• Paneer Tikka\n• Dal Makhani\n\nHi-tea\n• Assorted Uttapam\n• Special Tea"));
+  assert.ok(!text.includes("Starters"));
+  assert.ok(!text.includes("Dal / Curry"));
 });
 
 test("menu notifications avoid duplicating Sunny and still notify him when customer phone is missing", () => {

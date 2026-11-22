@@ -3,7 +3,7 @@ import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "../whatsapp-booking
 import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
 import { isHiTeaCategory, normalizeHiTeaNotes } from "./hi-tea";
 
-export const CUSTOMER_MENU_TEMPLATE = "customer_menu";
+export const CUSTOMER_MENU_TEMPLATE = "customer_menu_pdf";
 
 export type NotificationMaterial = { rawMaterialId: number; vendorId?: number | null; timing?: string | null; unitQty: string; unitName: string; notes?: string | null };
 export type NotificationOrder = {
@@ -79,42 +79,19 @@ export function menuNotificationChanged(before: NotificationOrder, next: Notific
 }
 
 export function selectedMenuTemplateParams(order: NotificationOrder): string[] {
-  const regularDishes: string[] = [];
-  const hiTeaCategories = new Map<number, { name: string; dishes: string[] }>();
-
-  for (const dish of order.menuDishes) {
-    if (isHiTeaCategory(dish.categoryName)) {
-      const group = hiTeaCategories.get(dish.categoryId) ?? { name: dish.categoryName, dishes: [] };
-      group.dishes.push(dish.name);
-      hiTeaCategories.set(dish.categoryId, group);
-    } else {
-      regularDishes.push(dish.name);
-    }
-  }
-
-  // The gateway's template variables cannot contain raw newlines. Keep every
-  // category and dish, using clear inline separators rather than truncating.
-  // Regular dishes appear without category headings; only the Hi-tea category
-  // has a heading and its dishes under that heading.
-  const sections: string[] = [];
-  if (regularDishes.length > 0) {
-    sections.push(regularDishes.join(" / "));
-  }
-
-  for (const group of hiTeaCategories.values()) {
-    sections.push(`${group.name}: ${group.dishes.join(" / ")}`);
-  }
-
-  const hiTeaNotes = normalizeHiTeaNotes(order.hiTeaNotes);
-  if (hiTeaNotes) sections.push(`Hi-tea notes: ${hiTeaNotes}`);
-  const menu = sections.join(" | ");
-  return [order.customerName?.trim() || "Customer", order.date.split("-").reverse().join("/"), order.venue, order.mealType, String(order.numberOfPersons + order.extraPlates), menu];
+  return [
+    order.customerName?.trim() || "Customer",
+    order.date.split("-").reverse().join("/"),
+    order.venue,
+    order.mealType,
+    String(order.numberOfPersons + order.extraPlates),
+  ];
 }
 
 export type CustomerNotificationDraft = {
   orderId: number; recipientKind: "customer" | "manager"; recipientName: string; phone: string;
   kind: "confirmation" | "menu_update" | "selected_menu";
-  payload: { mode: "template"; template: string; params: string[] };
+  payload: { mode: "template"; template: string; params: string[]; document?: { url: string; filename: string } };
 };
 
 export function planCustomerNotifications(before: NotificationOrder | null, next: NotificationOrder): CustomerNotificationDraft[] {

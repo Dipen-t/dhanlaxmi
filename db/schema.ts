@@ -80,7 +80,7 @@ export const orderWhatsappMessages = pgTable("order_whatsapp_messages", {
   recipientName: text("recipient_name").notNull(),
   phone: text("phone").notNull(),
   kind: text("kind").notNull(),
-  payload: jsonb("payload").$type<{ mode: "template" | "text" | "manual"; template?: string; params?: string[]; text?: string }>().notNull(),
+  payload: jsonb("payload").$type<{ mode: "template" | "text" | "manual"; template?: string; params?: string[]; text?: string; document?: { url: string; filename: string } }>().notNull(),
   status: text("status").notNull().default("queued"),
   lastError: text("last_error"),
   attempts: integer("attempts").notNull().default(0),
