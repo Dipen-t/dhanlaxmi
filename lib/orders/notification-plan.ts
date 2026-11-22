@@ -9,6 +9,7 @@ export type NotificationMaterial = { rawMaterialId: number; vendorId?: number | 
 export type NotificationOrder = {
   id: number; date: string; venue: string; mealType: string; numberOfPersons: number; extraPlates: number;
   customerName: string | null; customerPhone: string | null;
+  customer2Name?: string | null; customer2Phone?: string | null;
   hiTeaNotes?: string | null;
   rawMaterials: NotificationMaterial[];
   menuDishes: { dishId: number; name: string; categoryId: number; categoryName: string }[];
@@ -75,12 +76,17 @@ export function selectedMenuText(order: NotificationOrder) {
 }
 
 export function menuNotificationChanged(before: NotificationOrder, next: NotificationOrder) {
-  return selectedMenuText(before) !== selectedMenuText(next) || before.customerPhone !== next.customerPhone;
+  return (
+    selectedMenuText(before) !== selectedMenuText(next) ||
+    before.customerPhone !== next.customerPhone ||
+    (before.customer2Phone ?? null) !== (next.customer2Phone ?? null) ||
+    (before.customer2Name ?? null) !== (next.customer2Name ?? null)
+  );
 }
 
-export function selectedMenuTemplateParams(order: NotificationOrder): string[] {
+export function selectedMenuTemplateParams(order: NotificationOrder, customName?: string | null): string[] {
   return [
-    order.customerName?.trim() || "Customer",
+    customName?.trim() || order.customerName?.trim() || "Customer",
     order.date.split("-").reverse().join("/"),
     order.venue,
     order.mealType,
@@ -98,13 +104,50 @@ export function planCustomerNotifications(before: NotificationOrder | null, next
   if (before && !menuNotificationChanged(before, next)) return [];
   const drafts: CustomerNotificationDraft[] = [];
   const hasMenu = next.menuDishes.length > 0 || !!normalizeHiTeaNotes(next.hiTeaNotes);
-  const menuPayload = { mode: "template" as const, template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next) };
-  if (next.customerPhone && normalizeWhatsAppHubPhone(next.customerPhone) !== BOOKING_MANAGER_PHONE && (!before || hasMenu)) {
-    drafts.push({ orderId: next.id, recipientKind: "customer", recipientName: next.customerName || "Customer", phone: next.customerPhone,
-      kind: before ? "menu_update" : "confirmation", payload: before ? menuPayload : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] } });
+
+  const phone1 = normalizeWhatsAppHubPhone(next.customerPhone ?? "");
+  const phone2 = normalizeWhatsAppHubPhone(next.customer2Phone ?? "");
+
+  // Customer 1
+  if (phone1 && phone1 !== BOOKING_MANAGER_PHONE && (!before || hasMenu)) {
+    drafts.push({
+      orderId: next.id,
+      recipientKind: "customer",
+      recipientName: next.customerName?.trim() || "Customer",
+      phone: next.customerPhone!,
+      kind: before ? "menu_update" : "confirmation",
+      payload: before
+        ? { mode: "template", template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next, next.customerName) }
+        : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] },
+    });
   }
-  if (hasMenu) drafts.push({ orderId: next.id, recipientKind: "manager", recipientName: `Manager ${BOOKING_MANAGER_NAME}`, phone: BOOKING_MANAGER_PHONE,
-    kind: before ? "menu_update" : "selected_menu", payload: menuPayload });
+
+  // Customer 2 (if present, not Sunny, and distinct from Customer 1)
+  if (phone2 && phone2 !== BOOKING_MANAGER_PHONE && phone2 !== phone1 && (!before || hasMenu)) {
+    drafts.push({
+      orderId: next.id,
+      recipientKind: "customer",
+      recipientName: next.customer2Name?.trim() || "Customer 2",
+      phone: next.customer2Phone!,
+      kind: before ? "menu_update" : "confirmation",
+      payload: before
+        ? { mode: "template", template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next, next.customer2Name || next.customerName) }
+        : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] },
+    });
+  }
+
+  // Manager Sunny
+  if (hasMenu) {
+    drafts.push({
+      orderId: next.id,
+      recipientKind: "manager",
+      recipientName: `Manager ${BOOKING_MANAGER_NAME}`,
+      phone: BOOKING_MANAGER_PHONE,
+      kind: before ? "menu_update" : "selected_menu",
+      payload: { mode: "template", template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next, next.customerName) },
+    });
+  }
+
   return drafts;
 }
 

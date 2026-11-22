@@ -98,3 +98,62 @@ test("menu notifications avoid duplicating Sunny and still notify him when custo
     assert.equal(messages[0].payload.params[0], before.customerName);
   }
 });
+
+test("notifies both Customer 1 and Customer 2 when both numbers are present without duplicating identical phones", () => {
+  const orderWithTwo: NotificationOrder = {
+    ...before,
+    customerName: "Rahul",
+    customerPhone: "9876543210",
+    customer2Name: "Priya",
+    customer2Phone: "9123456789",
+  };
+
+  // Creation: both customers receive customerorder template
+  const created = planCustomerNotifications(null, orderWithTwo);
+  assert.equal(created.length, 3); // Customer 1, Customer 2, Manager Sunny (has menu)
+  assert.equal(created[0].recipientKind, "customer");
+  assert.equal(created[0].phone, "9876543210");
+  assert.equal(created[0].recipientName, "Rahul");
+  assert.equal(created[0].payload.template, "customerorder");
+
+  assert.equal(created[1].recipientKind, "customer");
+  assert.equal(created[1].phone, "9123456789");
+  assert.equal(created[1].recipientName, "Priya");
+  assert.equal(created[1].payload.template, "customerorder");
+
+  assert.equal(created[2].recipientKind, "manager");
+
+  // Edit with menu update: both receive customer_menu_pdf personalized with their respective names
+  const edited = { ...orderWithTwo, venue: "Grand Ballroom" };
+  assert.equal(menuNotificationChanged(orderWithTwo, edited), true);
+  const updated = planCustomerNotifications(orderWithTwo, edited);
+  assert.equal(updated.length, 3);
+  assert.equal(updated[0].phone, "9876543210");
+  assert.equal(updated[0].payload.params[0], "Rahul");
+  assert.equal(updated[1].phone, "9123456789");
+  assert.equal(updated[1].payload.params[0], "Priya");
+  assert.equal(updated[2].phone, "8080200800");
+
+  // Duplicate phone: if customer2Phone is identical to customerPhone, do not duplicate
+  const duplicatePhoneOrder: NotificationOrder = {
+    ...orderWithTwo,
+    customer2Phone: "9876543210",
+  };
+  const dupMessages = planCustomerNotifications(null, duplicatePhoneOrder);
+  assert.equal(dupMessages.filter(m => m.recipientKind === "customer").length, 1);
+
+  // If customer2Phone is Sunny's number, do not send customer message to Sunny
+  const sunnyCustomer2Order: NotificationOrder = {
+    ...orderWithTwo,
+    customer2Phone: "8080200800",
+  };
+  const sunnyCustomer2Messages = planCustomerNotifications(null, sunnyCustomer2Order);
+  assert.equal(sunnyCustomer2Messages.filter(m => m.recipientKind === "customer").length, 1);
+});
+
+test("changing customer 2 name or phone triggers menuNotificationChanged", () => {
+  const base: NotificationOrder = { ...before, customer2Name: "Priya", customer2Phone: "9123456789" };
+  assert.equal(menuNotificationChanged(base, { ...base, customer2Phone: "9988776655" }), true);
+  assert.equal(menuNotificationChanged(base, { ...base, customer2Name: "Anjali" }), true);
+  assert.equal(menuNotificationChanged(base, base), false);
+});

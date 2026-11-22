@@ -5,6 +5,7 @@ export type OrderForPdf = {
   id: number;
   orderId?: string;
   customerName?: string | null;
+  customer2Name?: string | null;
   venue?: string | null;
   date?: string | null;
   mealType?: string | null;
@@ -42,8 +43,9 @@ export function orderToMenuDetail(order: OrderForPdf): MenuDetail {
     }
   }
 
-  const title = order.customerName?.trim()
-    ? `${order.customerName.trim()} - Menu`
+  const names = [order.customerName?.trim(), order.customer2Name?.trim()].filter(Boolean).join(" & ");
+  const title = names
+    ? `${names} - Menu`
     : `Order ${order.orderId || order.id} - Menu`;
 
   return {

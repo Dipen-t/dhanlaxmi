@@ -22,10 +22,15 @@ export function CustomerConfirmationButton({ order, className }: { order: OrderR
   const router = useRouter();
   const attention = liveAttention ?? order.whatsappAttention ?? 0;
   const phone = normalizeWhatsAppHubPhone(order.customerPhone ?? "");
+  const phone2 = normalizeWhatsAppHubPhone(order.customer2Phone ?? "");
+  const hasValidPhone = Boolean(
+    (phone && phone !== BOOKING_MANAGER_PHONE) ||
+    (phone2 && phone2 !== BOOKING_MANAGER_PHONE)
+  );
   const titleId = useId();
 
   function open() {
-    setError(phone ? null : "Add a valid customer phone number by editing this order first.");
+    setError(hasValidPhone ? null : "Add a valid customer phone number by editing this order first.");
     setSuccess(false);
     setWarning(null);
     setOpenState(true);
@@ -37,7 +42,7 @@ export function CustomerConfirmationButton({ order, className }: { order: OrderR
   }
 
   async function send() {
-    if (sendingRef.current || !phone) return;
+    if (sendingRef.current || !hasValidPhone) return;
     sendingRef.current = true;
     setSending(true);
     setError(null);
@@ -63,8 +68,13 @@ export function CustomerConfirmationButton({ order, className }: { order: OrderR
       <dialog ref={dialogRef} className="app-dialog app-dialog-wide" aria-labelledby={titleId} onClose={() => { setOpenState(false); setLiveAttention(null); router.refresh(); }} onCancel={(event) => { if (sendingRef.current) event.preventDefault(); }}>
         <div className="min-h-0 overflow-y-auto overscroll-contain px-5 pt-5 pb-4">
           <h2 id={titleId} className="text-base font-semibold text-foreground">Order WhatsApp</h2>
-          <p className="mt-2 break-words text-sm text-muted">To: {order.customerName || "Customer"}{phone ? ` · ${phone}` : " · No valid phone number"}</p>
-          <p className="mt-1 text-sm text-muted">Manager {BOOKING_MANAGER_NAME} · {BOOKING_MANAGER_PHONE} receives the selected menu when dishes are selected. Booking confirmation is sent to the customer.</p>
+          <div className="mt-2 space-y-1 text-sm text-muted">
+            <p className="break-words">Customer 1: {order.customerName || "Customer"}{phone ? ` · ${phone}` : " · No valid phone number"}</p>
+            {order.customer2Phone || order.customer2Name ? (
+              <p className="break-words">Customer 2: {order.customer2Name || "Customer 2"}{phone2 ? ` · ${phone2}` : " · No valid phone number"}</p>
+            ) : null}
+          </div>
+          <p className="mt-1 text-sm text-muted">Manager {BOOKING_MANAGER_NAME} · {BOOKING_MANAGER_PHONE} receives the selected menu when dishes are selected. Booking confirmation is sent to customer(s).</p>
           <details className="mt-4 border-t border-border pt-2 text-sm text-foreground"><summary className="min-h-11 cursor-pointer py-3 font-medium">Preview customer confirmation</summary>
           <div className="space-y-1">
             <p>Your order has been confirmed</p>
@@ -82,7 +92,7 @@ export function CustomerConfirmationButton({ order, className }: { order: OrderR
         </div>
         <div className="flex shrink-0 justify-end gap-2 border-t border-border bg-background px-5 py-4">
           <button type="button" disabled={sending} onClick={close} className="min-h-11 rounded-lg border border-border px-4 text-sm text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{success ? "Close" : "Cancel"}</button>
-          {!success ? <button type="button" disabled={sending || !phone} onClick={send} className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{sending ? "Sending…" : "Send to customer"}</button> : null}
+          {!success ? <button type="button" disabled={sending || !hasValidPhone} onClick={send} className="min-h-11 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">{sending ? "Sending…" : (phone && phone2 && phone !== phone2) ? "Send to both customers" : "Send to customer"}</button> : null}
         </div>
       </dialog>
     </>

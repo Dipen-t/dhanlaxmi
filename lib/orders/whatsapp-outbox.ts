@@ -49,10 +49,14 @@ export async function queueVendorNotifications(transaction: Transaction, before:
   const drafts: Draft[] = [];
   const warnings: string[] = [];
   const customerPhone = normalizeWhatsAppHubPhone(next.customerPhone ?? "");
+  const customer2Phone = normalizeWhatsAppHubPhone(next.customer2Phone ?? "");
   for (const group of groupMaterialsByVendorTiming(next.rawMaterials, next.mealType).filter(group => affected.includes(group.vendorId))) {
     const vendor = contacts.find(contact => contact.id === group.vendorId);
     if (!vendor) continue;
-    const matchesCustomer = customerPhone !== null && customerPhone === normalizeWhatsAppHubPhone(vendor.phone);
+    const vendorPhone = normalizeWhatsAppHubPhone(vendor.phone);
+    const matchesCustomer =
+      (customerPhone !== null && customerPhone === vendorPhone) ||
+      (customer2Phone !== null && customer2Phone === vendorPhone);
     drafts.push({ orderId: next.id, recipientKind: "vendor", vendorId: vendor.id, recipientName: vendor.name, phone: vendor.phone, kind: before ? "vendor_update" : "vendor_order",
       payload: { mode: "template", template: process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final", params: vendorTemplateParams(next, group.timing, group.items, names, vendor.deliveryLocation === "godown" ? "Godown" : next.venue, before !== null) },
       status: matchesCustomer ? "failed" : "queued", lastError: matchesCustomer ? "Vendor and customer have the same phone number. Correct the vendor contact before retrying." : null });
@@ -104,8 +108,12 @@ async function deliver(message: Message) {
   const phone = normalizeWhatsAppHubPhone(message.phone);
   if (!phone) return { error: "Invalid recipient number. Correct the saved customer/vendor phone, then retry." };
   if (message.recipientKind === "vendor") {
-    const [order] = await db.select({ phone: orders.customerPhone }).from(orders).where(eq(orders.id, message.orderId));
-    if (phone === normalizeWhatsAppHubPhone(order?.phone ?? "")) return { error: "Vendor phone matches the customer. Correct the vendor phone before retrying." };
+    const [order] = await db.select({ customerPhone: orders.customerPhone, customer2Phone: orders.customer2Phone }).from(orders).where(eq(orders.id, message.orderId));
+    const phone1 = normalizeWhatsAppHubPhone(order?.customerPhone ?? "");
+    const phone2 = normalizeWhatsAppHubPhone(order?.customer2Phone ?? "");
+    if ((phone1 && phone === phone1) || (phone2 && phone === phone2)) {
+      return { error: "Vendor phone matches the customer. Correct the vendor phone before retrying." };
+    }
   }
   const payload = message.payload;
   if (payload.mode === "text") return sendWhatsAppPlainText(phone, payload.text || "");
@@ -150,8 +158,10 @@ export async function retryOrderMessage(orderId: number, messageId: number, ackn
     if (message.status === "unknown" && !acknowledgeUnknown) return { error: "Confirm that retrying an unknown delivery may send a duplicate." };
     let phone = message.phone;
     if (message.recipientKind === "customer") {
-      const [order] = await transaction.select({ phone: orders.customerPhone }).from(orders).where(eq(orders.id, orderId));
-      phone = order?.phone ?? "";
+      const [order] = await transaction.select({ customerPhone: orders.customerPhone, customer2Phone: orders.customer2Phone, customer2Name: orders.customer2Name }).from(orders).where(eq(orders.id, orderId));
+      const isCustomer2 = message.recipientName === (order?.customer2Name || "Customer 2") ||
+        Boolean(order?.customer2Phone && normalizeWhatsAppHubPhone(message.phone) === normalizeWhatsAppHubPhone(order.customer2Phone));
+      phone = (isCustomer2 ? order?.customer2Phone : order?.customerPhone) ?? message.phone;
     } else if (message.vendorId) {
       const [vendor] = await transaction.select({ phone: vendors.phone }).from(vendors).where(eq(vendors.id, message.vendorId));
       phone = vendor?.phone ?? "";
