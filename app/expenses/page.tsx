@@ -47,8 +47,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
       <PageHeader title="Expense Ledger" />
       <div className="mb-6">
         <p className="text-sm text-muted">
-          Allocate vendor payments and other costs against each payment received
-          for an order.
+          Pick an order, then record vendor payments and other costs from the
+          total amount received.
         </p>
       </div>
       <Suspense

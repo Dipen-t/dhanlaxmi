@@ -11,7 +11,6 @@ import {
   useId,
   useMemo,
 } from "react";
-import { createPortal } from "react-dom";
 import { ExpenseEntryActions } from "@/components/expenses/entry-actions";
 import {
   Plus,
@@ -20,7 +19,7 @@ import {
   X,
   ReceiptText,
   IndianRupee,
-  ArrowLeftRight,
+  ArrowLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
@@ -81,7 +80,7 @@ export function ExpensesClient({
   initialOrderId,
 }: ExpensesClientProps) {
   const router = useRouter();
-  const searchTitleId = useId();
+  const orderListTitleId = useId();
   const entryTitleId = useId();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const entryDialogRef = useRef<HTMLDialogElement>(null);
@@ -94,8 +93,6 @@ export function ExpensesClient({
   const [entryError, setEntryError] = useState<string | null>(null);
   const [entryOpen, setEntryOpen] = useState(false);
   const [orderQuery, setOrderQuery] = useState("");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [isLoading, startLoading] = useTransition();
   const [isSaving, startSaving] = useTransition();
   const [awaitingLedger, setAwaitingLedger] = useState(initialOrderId != null);
@@ -104,30 +101,16 @@ export function ExpensesClient({
   const entrySavingRef = useRef(false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!pickerOpen) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeOrderPicker();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    requestAnimationFrame(() => searchInputRef.current?.focus());
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [pickerOpen]);
-
-  useEffect(() => {
     const dialog = entryDialogRef.current;
     if (!dialog || !entryOpen || dialog.open) return;
     dialog.showModal();
   }, [entryOpen]);
+
+  useEffect(() => {
+    if (selectedOrderId !== "") return;
+    const frame = requestAnimationFrame(() => searchInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [selectedOrderId]);
 
   const filteredOrders = useMemo(
     () => orders.filter((order) => orderMatchesQuery(order, orderQuery)),
@@ -177,16 +160,6 @@ export function ExpensesClient({
     }
   }, [selectedOrderId, refreshLedger]);
 
-  function openOrderPicker() {
-    setOrderQuery("");
-    setPickerOpen(true);
-  }
-
-  function closeOrderPicker() {
-    setPickerOpen(false);
-    setOrderQuery("");
-  }
-
   function selectOrder(id: number) {
     selectedRef.current = id;
     requestVersion.current++;
@@ -194,9 +167,9 @@ export function ExpensesClient({
     setLedger(null);
     setAwaitingLedger(true);
     setLoadError(null);
+    setOrderQuery("");
 
     syncUrl(id);
-    closeOrderPicker();
     closeForm();
   }
 
@@ -207,6 +180,7 @@ export function ExpensesClient({
     setLedger(null);
     setAwaitingLedger(false);
     setLoadError(null);
+    setOrderQuery("");
 
     syncUrl("");
     closeForm();
@@ -271,23 +245,82 @@ export function ExpensesClient({
   return (
     <div className="w-full space-y-8">
       {selectedOrderId === "" ? (
-        <section className="border-y border-border py-10 sm:py-14">
-          <div className="mx-auto max-w-xl text-center">
-            <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+        <section aria-labelledby={orderListTitleId} className="space-y-4">
+          <div>
+            <h2
+              id={orderListTitleId}
+              className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+            >
               Choose an order
             </h2>
-            <p className="mt-2 text-sm text-muted text-pretty">
-              Search by order ID, customer, venue, or date. Then spend from the
-              total amount received.
+            <p className="mt-1 text-sm text-muted">
+              Tap an order to record spend from its total received.
             </p>
-            <button
-              type="button"
-              className={`${primaryButton} mt-6`}
-              onClick={openOrderPicker}
-            >
-              <Search className="size-4" aria-hidden />
-              Find order
-            </button>
+          </div>
+
+          <label className="relative block max-w-xl">
+            <span className="sr-only">Search orders</span>
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
+              aria-hidden
+            />
+            <input
+              ref={searchInputRef}
+              type="search"
+              value={orderQuery}
+              onChange={(event) => setOrderQuery(event.target.value)}
+              placeholder="Search order ID, customer, venue, date…"
+              autoComplete="off"
+              className="min-h-12 w-full rounded-lg border border-border bg-background py-2.5 pr-10 pl-10 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+            />
+            {orderQuery.trim() ? (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setOrderQuery("")}
+                className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground"
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            ) : null}
+          </label>
+
+          <div className="overflow-hidden rounded-xl border border-border">
+            {filteredOrders.length === 0 ? (
+              <div className="flex items-center gap-3 px-4 py-8 text-sm text-muted sm:px-5">
+                <ReceiptText className="size-5 shrink-0" aria-hidden />
+                <p>
+                  {orders.length === 0
+                    ? "No orders yet. Create an order first."
+                    : "No orders match that search."}
+                </p>
+              </div>
+            ) : (
+              <ul role="listbox" aria-labelledby={orderListTitleId}>
+                {filteredOrders.map((order) => (
+                  <li key={order.id} role="option" aria-selected={false}>
+                    <button
+                      type="button"
+                      onClick={() => selectOrder(order.id)}
+                      className="flex w-full min-h-14 touch-manipulation flex-col items-start gap-0.5 border-b border-border px-4 py-3.5 text-left transition-colors last:border-b-0 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-5"
+                    >
+                      <span className="font-semibold text-foreground">
+                        {order.orderId}
+                      </span>
+                      <span className="text-sm text-muted">
+                        {[
+                          displayDate(order.date),
+                          order.venue,
+                          order.customerName,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
       ) : (
@@ -315,25 +348,15 @@ export function ExpensesClient({
                   : "Loading order details…"}
               </p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={secondaryButton}
-                disabled={isSaving}
-                onClick={openOrderPicker}
-              >
-                <ArrowLeftRight className="size-4" aria-hidden />
-                Change order
-              </button>
-              <button
-                type="button"
-                className={quietButton}
-                disabled={isSaving}
-                onClick={clearOrder}
-              >
-                Clear selection
-              </button>
-            </div>
+            <button
+              type="button"
+              className={secondaryButton}
+              disabled={isSaving}
+              onClick={clearOrder}
+            >
+              <ArrowLeft className="size-4" aria-hidden />
+              All orders
+            </button>
           </div>
         </section>
       )}
@@ -591,12 +614,10 @@ export function ExpensesClient({
           <SpendForm
             key={selectedOrderId || "spend"}
             titleId={entryTitleId}
-            receivedLabel={
-              ledger
-                ? `Total received ${formatCurrency(ledger.summary.clientPaid)} · remaining ${formatCurrency(ledger.summary.netProfit)}`
-                : null
-            }
+            clientPaid={ledger?.summary.clientPaid ?? 0}
+            cashRemaining={ledger?.summary.netProfit ?? 0}
             vendors={vendors}
+            linkedVendorIds={ledger?.linkedVendors.map((vendor) => vendor.id) ?? []}
             entryError={entryError}
             isSaving={isSaving}
             onCancel={closeForm}
@@ -604,150 +625,110 @@ export function ExpensesClient({
           />
         ) : null}
       </dialog>
+    </div>
+  );
+}
 
-      {mounted && pickerOpen
-        ? createPortal(
-            <div className="fixed inset-0 z-200 flex items-end justify-center p-0 sm:items-center sm:p-4">
-              <button
-                type="button"
-                aria-label="Close dialog"
-                className="absolute inset-0 bg-[oklch(0.22_0.02_175/0.45)]"
-                onClick={closeOrderPicker}
-              />
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby={searchTitleId}
-                className="relative z-10 flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-t-2xl border border-border bg-background text-foreground sm:rounded-xl"
-                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-              >
-                <div className="shrink-0 border-b border-border px-4 pt-4 pb-3 sm:px-5">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h2
-                        id={searchTitleId}
-                        className="text-lg font-semibold text-foreground"
-                      >
-                        Find an order
-                      </h2>
-                      <p className="mt-1 text-sm text-muted">
-                        Search by order ID, customer, venue, or date.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      aria-label="Close"
-                      onClick={closeOrderPicker}
-                      className="inline-flex size-10 items-center justify-center rounded-lg text-muted hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <X className="size-5" aria-hidden />
-                    </button>
-                  </div>
-                  <label className="relative mt-4 block">
-                    <span className="sr-only">Search orders</span>
-                    <Search
-                      className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
-                      aria-hidden
-                    />
-                    <input
-                      ref={searchInputRef}
-                      type="search"
-                      value={orderQuery}
-                      onChange={(event) => setOrderQuery(event.target.value)}
-                      placeholder="ORD-12, customer, venue…"
-                      autoComplete="off"
-                      className="min-h-12 w-full rounded-lg border border-border bg-background py-2.5 pr-10 pl-10 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
-                    />
-                    {orderQuery.trim() ? (
-                      <button
-                        type="button"
-                        aria-label="Clear search"
-                        onClick={() => setOrderQuery("")}
-                        className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground"
-                      >
-                        <X className="size-4" aria-hidden />
-                      </button>
-                    ) : null}
-                  </label>
-                </div>
+const OTHER_QUICK_LABELS = ["Transport", "Labour", "Fuel", "Decoration", "Misc"];
 
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-                  {filteredOrders.length === 0 ? (
-                    <div className="flex items-center gap-3 px-5 py-8 text-sm text-muted">
-                      <ReceiptText className="size-5 shrink-0" aria-hidden />
-                      <p>
-                        {orders.length === 0
-                          ? "No orders yet. Create an order first."
-                          : "No orders match that search."}
-                      </p>
-                    </div>
-                  ) : (
-                    <ul role="listbox" aria-labelledby={searchTitleId}>
-                      {filteredOrders.map((order) => {
-                        const selected = order.id === selectedOrderId;
-                        return (
-                          <li
-                            key={order.id}
-                            role="option"
-                            aria-selected={selected}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => selectOrder(order.id)}
-                              className={`flex w-full min-h-14 touch-manipulation flex-col items-start gap-0.5 border-b border-border px-4 py-3 text-left transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:px-5 ${
-                                selected ? "bg-primary-soft" : ""
-                              }`}
-                            >
-                              <span className="font-semibold text-foreground">
-                                {order.orderId}
-                              </span>
-                              <span className="text-sm text-muted">
-                                {[
-                                  displayDate(order.date),
-                                  order.venue,
-                                  order.customerName,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                              </span>
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
+function AmountField({
+  name,
+  value,
+  onChange,
+  ariaLabel,
+  required,
+  autoFocus,
+}: {
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  required?: boolean;
+  autoFocus?: boolean;
+}) {
+  return (
+    <div className="relative min-w-0">
+      <span
+        className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm font-medium text-muted"
+        aria-hidden
+      >
+        ₹
+      </span>
+      <input
+        name={name}
+        type="number"
+        inputMode="numeric"
+        min="1"
+        max="2147483647"
+        step="1"
+        required={required}
+        autoFocus={autoFocus}
+        aria-label={ariaLabel}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder="0"
+        className={`${fieldClass} pl-7 tabular-nums`}
+      />
     </div>
   );
 }
 
 function SpendForm({
   titleId,
-  receivedLabel,
+  clientPaid,
+  cashRemaining,
   vendors,
+  linkedVendorIds,
   entryError,
   isSaving,
   onCancel,
   onSubmit,
 }: {
   titleId: string;
-  receivedLabel: string | null;
+  clientPaid: number;
+  cashRemaining: number;
   vendors: VendorDropdownItem[];
+  linkedVendorIds: number[];
   entryError: string | null;
   isSaving: boolean;
   onCancel: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
   const [vendorAmounts, setVendorAmounts] = useState<Record<number, string>>({});
+  const [vendorQuery, setVendorQuery] = useState("");
+  const [showNotes, setShowNotes] = useState(false);
+  const [showAllVendors, setShowAllVendors] = useState(false);
   const [expenses, setExpenses] = useState([
     { id: 0, description: "", amount: "" },
   ]);
   const nextExpenseId = useRef(1);
+  const linkedSet = useMemo(() => new Set(linkedVendorIds), [linkedVendorIds]);
+
+  const sortedVendors = useMemo(() => {
+    return [...vendors].sort((a, b) => {
+      const aLinked = linkedSet.has(a.id) ? 0 : 1;
+      const bLinked = linkedSet.has(b.id) ? 0 : 1;
+      if (aLinked !== bLinked) return aLinked - bLinked;
+      return a.name.localeCompare(b.name);
+    });
+  }, [vendors, linkedSet]);
+
+  const linkedVendors = sortedVendors.filter((vendor) => linkedSet.has(vendor.id));
+  const otherVendors = sortedVendors.filter((vendor) => !linkedSet.has(vendor.id));
+
+  const vendorQueryNorm = vendorQuery.trim().toLowerCase();
+  const matchesQuery = (vendor: VendorDropdownItem) =>
+    !vendorQueryNorm || vendor.name.toLowerCase().includes(vendorQueryNorm);
+
+  const visibleLinked = linkedVendors.filter(
+    (vendor) => matchesQuery(vendor) || Boolean(vendorAmounts[vendor.id]?.trim()),
+  );
+  const visibleOther = otherVendors.filter(
+    (vendor) => matchesQuery(vendor) || Boolean(vendorAmounts[vendor.id]?.trim()),
+  );
+  const showOtherList =
+    showAllVendors || vendorQueryNorm.length > 0 || visibleOther.some((v) => vendorAmounts[v.id]?.trim());
+
   const vendorTotal = Object.values(vendorAmounts).reduce(
     (sum, value) => sum + (Number(value) || 0),
     0,
@@ -757,6 +738,7 @@ function SpendForm({
     0,
   );
   const total = vendorTotal + otherTotal;
+  const remainingAfter = cashRemaining - total;
   const vendorFilled = Object.values(vendorAmounts).filter((amount) =>
     amount.trim(),
   ).length;
@@ -765,23 +747,74 @@ function SpendForm({
   ).length;
   const filledCount = vendorFilled + otherFilled;
 
+  function setVendorAmount(vendorId: number, value: string) {
+    setVendorAmounts((current) => ({ ...current, [vendorId]: value }));
+  }
+
   function updateExpense(
     id: number,
     updates: { description?: string; amount?: string },
   ) {
-    setExpenses((current) =>
-      current.map((expense) =>
+    setExpenses((current) => {
+      const next = current.map((expense) =>
         expense.id === id ? { ...expense, ...updates } : expense,
-      ),
-    );
+      );
+      const last = next[next.length - 1];
+      const lastFilled = Boolean(last?.description.trim() && last?.amount.trim());
+      if (lastFilled) {
+        const newId = nextExpenseId.current++;
+        return [...next, { id: newId, description: "", amount: "" }];
+      }
+      return next;
+    });
   }
 
-  function addExpenseRow() {
-    const id = nextExpenseId.current++;
-    setExpenses((current) => [
-      ...current,
-      { id, description: "", amount: "" },
-    ]);
+  function addExpenseRow(description = "") {
+    setExpenses((current) => {
+      const blank = current.find(
+        (row) => !row.description.trim() && !row.amount.trim(),
+      );
+      if (blank && description) {
+        return current.map((row) =>
+          row.id === blank.id ? { ...row, description } : row,
+        );
+      }
+      if (blank && !description) return current;
+      const id = nextExpenseId.current++;
+      return [...current, { id, description, amount: "" }];
+    });
+  }
+
+  function applyQuickLabel(label: string) {
+    addExpenseRow(label);
+  }
+
+  function renderVendorRow(vendor: VendorDropdownItem, hint?: string) {
+    const filled = Boolean(vendorAmounts[vendor.id]?.trim());
+    return (
+      <div
+        key={vendor.id}
+        className={`px-3 py-3 ${filled ? "bg-primary-soft/40" : ""}`}
+      >
+        <input type="hidden" name="vendorId" value={vendor.id} />
+        <label className="grid grid-cols-[minmax(0,1fr)_minmax(7.5rem,9.5rem)] items-center gap-3">
+          <span className="min-w-0">
+            <span className="block break-words text-sm font-medium text-foreground">
+              {vendor.name}
+            </span>
+            {hint ? (
+              <span className="mt-0.5 block text-xs text-muted">{hint}</span>
+            ) : null}
+          </span>
+          <AmountField
+            name="amount"
+            value={vendorAmounts[vendor.id] ?? ""}
+            onChange={(value) => setVendorAmount(vendor.id, value)}
+            ariaLabel={`Amount paid to ${vendor.name}`}
+          />
+        </label>
+      </div>
+    );
   }
 
   return (
@@ -790,176 +823,297 @@ function SpendForm({
       className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
       style={{ maxHeight: "inherit" }}
     >
-      <div className="shrink-0 px-5 pt-5 pb-4">
-        <h2 id={titleId} className="text-lg font-semibold text-foreground">
-          Add expenses
-        </h2>
-        {receivedLabel ? (
-          <p className="mt-1 text-sm text-muted">{receivedLabel}</p>
-        ) : null}
-      </div>
-
-      <div className="app-dialog-body min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
-        <fieldset disabled={isSaving} className="min-w-0 space-y-6">
-          <label className="block min-w-0">
-            <span className="mb-1.5 block text-sm font-medium text-foreground">
-              Date
-            </span>
+      <div className="shrink-0 space-y-3 border-b border-border px-5 pt-5 pb-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id={titleId} className="text-lg font-semibold text-foreground">
+              What did you spend?
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Type amounts only where you paid. Empty rows are skipped.
+            </p>
+          </div>
+          <label className="block shrink-0">
+            <span className="mb-1 block text-xs font-medium text-muted">Date</span>
             <input
               name="date"
               type="date"
               defaultValue={today()}
               required
-              className={fieldClass}
+              className="min-h-11 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
             />
           </label>
+        </div>
+        <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="rounded-lg border border-border bg-surface/50 px-3 py-2">
+            <dt className="text-xs text-muted">Received</dt>
+            <dd className="mt-0.5 text-sm font-semibold tabular-nums text-foreground">
+              {formatCurrency(clientPaid)}
+            </dd>
+          </div>
+          <div className="rounded-lg border border-border bg-surface/50 px-3 py-2">
+            <dt className="text-xs text-muted">Cash left now</dt>
+            <dd
+              className={`mt-0.5 text-sm font-semibold tabular-nums ${
+                cashRemaining < 0 ? "text-error" : "text-primary"
+              }`}
+            >
+              {formatCurrency(cashRemaining)}
+            </dd>
+          </div>
+          <div className="col-span-2 rounded-lg border border-border bg-surface/50 px-3 py-2 sm:col-span-1">
+            <dt className="text-xs text-muted">After this save</dt>
+            <dd
+              className={`mt-0.5 text-sm font-semibold tabular-nums ${
+                remainingAfter < 0 ? "text-error" : "text-foreground"
+              }`}
+            >
+              {formatCurrency(remainingAfter)}
+            </dd>
+          </div>
+        </dl>
+      </div>
 
+      <div className="app-dialog-body min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
+        <fieldset disabled={isSaving} className="min-w-0 space-y-8">
           {vendors.length > 0 ? (
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-sm font-semibold text-foreground">
-                  Vendor payments
-                </h3>
-                <p className="mt-1 text-sm text-muted">
-                  Enter amounts for vendors you paid. Leave the rest empty.
-                </p>
+            <section className="space-y-3" aria-label="Vendor payments">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">
+                    1. Paid to vendors
+                  </h3>
+                  <p className="mt-1 text-sm text-muted">
+                    Find a vendor, type the rupees you paid.
+                  </p>
+                </div>
+                {vendorFilled > 0 ? (
+                  <p className="text-sm font-medium tabular-nums text-foreground">
+                    {vendorFilled} · {formatCurrency(vendorTotal)}
+                  </p>
+                ) : null}
               </div>
-              <label className="block min-w-0">
-                <span className="mb-1.5 block text-sm font-medium text-foreground">
-                  Notes for vendor payments (optional)
-                </span>
-                <input
-                  name="notes"
-                  maxLength={240}
-                  placeholder="e.g. Advance for supplies"
-                  className={fieldClass}
-                />
-              </label>
-              <div className="divide-y divide-border rounded-lg border border-border">
-                {vendors.map((vendor) => (
-                  <div key={vendor.id} className="px-3 py-3">
-                    <input type="hidden" name="vendorId" value={vendor.id} />
-                    <label className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,10rem)] items-center gap-3">
-                      <span className="break-words text-sm font-medium text-foreground">
-                        {vendor.name}
-                      </span>
-                      <input
-                        name="amount"
-                        type="number"
-                        inputMode="numeric"
-                        min="1"
-                        max="2147483647"
-                        step="1"
-                        aria-label={`Amount paid to ${vendor.name}`}
-                        value={vendorAmounts[vendor.id] ?? ""}
-                        onChange={(event) =>
-                          setVendorAmounts((current) => ({
-                            ...current,
-                            [vendor.id]: event.target.value,
-                          }))
-                        }
-                        placeholder="Amount (₹)"
-                        className={`${fieldClass} tabular-nums`}
-                      />
-                    </label>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
 
-          <div className="space-y-3">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground">
-                Other expenses
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                Transport, labour, or anything else from this order&apos;s cash.
-              </p>
-            </div>
-            {expenses.map((expense, index) => {
-              const required = Boolean(
-                expense.description.trim() || expense.amount.trim(),
-              );
-              return (
-                <div
-                  key={expense.id}
-                  className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_2.5rem] items-end gap-2"
-                >
-                  <label className="block min-w-0">
-                    <span className="mb-1.5 block text-sm font-medium text-foreground">
-                      Description
-                    </span>
-                    <input
-                      name="description"
-                      required={required}
-                      maxLength={240}
-                      value={expense.description}
-                      onChange={(event) =>
-                        updateExpense(expense.id, {
-                          description: event.target.value,
-                        })
-                      }
-                      aria-label={`Expense ${index + 1} description`}
-                      placeholder="Transport or labour"
-                      className={fieldClass}
-                    />
-                  </label>
-                  <label className="block min-w-0">
-                    <span className="mb-1.5 block text-sm font-medium text-foreground">
-                      Amount (₹)
-                    </span>
-                    <input
-                      name="expenseAmount"
-                      type="number"
-                      inputMode="numeric"
-                      min="1"
-                      max="2147483647"
-                      step="1"
-                      required={required}
-                      value={expense.amount}
-                      onChange={(event) =>
-                        updateExpense(expense.id, {
-                          amount: event.target.value,
-                        })
-                      }
-                      aria-label={`Expense ${index + 1} amount`}
-                      placeholder="0"
-                      className={`${fieldClass} tabular-nums`}
-                    />
-                  </label>
+              <label className="relative block">
+                <span className="sr-only">Search vendors</span>
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted"
+                  aria-hidden
+                />
+                <input
+                  type="search"
+                  value={vendorQuery}
+                  onChange={(event) => setVendorQuery(event.target.value)}
+                  placeholder="Search vendor name…"
+                  autoComplete="off"
+                  className="min-h-12 w-full rounded-lg border border-border bg-background py-2.5 pr-10 pl-10 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
+                {vendorQuery.trim() ? (
                   <button
                     type="button"
-                    disabled={expenses.length === 1}
-                    onClick={() =>
-                      setExpenses((current) =>
-                        current.filter((row) => row.id !== expense.id),
-                      )
-                    }
-                    aria-label={`Remove expense ${index + 1}`}
-                    className="inline-flex min-h-12 items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+                    aria-label="Clear vendor search"
+                    onClick={() => setVendorQuery("")}
+                    className="absolute top-1/2 right-2 inline-flex size-8 -translate-y-1/2 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-foreground"
                   >
-                    <Trash2 className="size-4" aria-hidden />
+                    <X className="size-4" aria-hidden />
                   </button>
+                ) : null}
+              </label>
+
+              {visibleLinked.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                    On this order
+                  </p>
+                  <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                    {visibleLinked.map((vendor) =>
+                      renderVendorRow(vendor, "Kitchen item vendor"),
+                    )}
+                  </div>
                 </div>
-              );
-            })}
-            <button type="button" onClick={addExpenseRow} className={quietButton}>
-              <Plus className="size-4" aria-hidden /> Add more
+              ) : null}
+
+              {showOtherList ? (
+                <div className="space-y-2">
+                  {linkedVendors.length > 0 ? (
+                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted">
+                      Other vendors
+                    </p>
+                  ) : null}
+                  {visibleOther.length ? (
+                    <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+                      {visibleOther.map((vendor) => renderVendorRow(vendor))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted">No vendors match that search.</p>
+                  )}
+                </div>
+              ) : otherVendors.length > 0 ? (
+                <button
+                  type="button"
+                  className={quietButton}
+                  onClick={() => setShowAllVendors(true)}
+                >
+                  Show all {otherVendors.length} other vendors
+                </button>
+              ) : null}
+
+              {vendorFilled > 0 || showNotes ? (
+                <div className="space-y-2">
+                  {!showNotes ? (
+                    <button
+                      type="button"
+                      className={quietButton}
+                      onClick={() => setShowNotes(true)}
+                    >
+                      Add a shared note for these vendor payments
+                    </button>
+                  ) : (
+                    <label className="block min-w-0">
+                      <span className="mb-1.5 block text-sm font-medium text-foreground">
+                        Note for vendor payments
+                      </span>
+                      <input
+                        name="notes"
+                        maxLength={240}
+                        autoFocus
+                        placeholder="e.g. Paid at venue"
+                        className={fieldClass}
+                      />
+                    </label>
+                  )}
+                </div>
+              ) : (
+                <input type="hidden" name="notes" value="" />
+              )}
+            </section>
+          ) : null}
+
+          <section className="space-y-3" aria-label="Other expenses">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  {vendors.length > 0 ? "2. " : ""}Other costs
+                </h3>
+                <p className="mt-1 text-sm text-muted">
+                  Transport, labour, or tap a quick label.
+                </p>
+              </div>
+              {otherFilled > 0 ? (
+                <p className="text-sm font-medium tabular-nums text-foreground">
+                  {otherFilled} · {formatCurrency(otherTotal)}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {OTHER_QUICK_LABELS.map((label) => {
+                const used = expenses.some(
+                  (expense) =>
+                    expense.description.trim().toLowerCase() ===
+                    label.toLowerCase(),
+                );
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    disabled={used}
+                    onClick={() => applyQuickLabel(label)}
+                    className="inline-flex min-h-10 items-center rounded-lg border border-border bg-background px-3 text-sm font-medium text-foreground hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="space-y-2">
+              {expenses.map((expense, index) => {
+                const required = Boolean(
+                  expense.description.trim() || expense.amount.trim(),
+                );
+                const isBlank =
+                  !expense.description.trim() && !expense.amount.trim();
+                return (
+                  <div
+                    key={expense.id}
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_2.5rem] items-center gap-2 rounded-lg border border-border px-3 py-2.5"
+                  >
+                    <label className="block min-w-0">
+                      <span className="sr-only">
+                        Expense {index + 1} description
+                      </span>
+                      <input
+                        name="description"
+                        required={required}
+                        maxLength={240}
+                        value={expense.description}
+                        onChange={(event) =>
+                          updateExpense(expense.id, {
+                            description: event.target.value,
+                          })
+                        }
+                        placeholder={
+                          isBlank ? "What for? e.g. Transport" : "Description"
+                        }
+                        className="min-h-11 w-full min-w-0 rounded-lg border border-transparent bg-transparent px-2 text-base text-foreground outline-none placeholder:text-muted focus:border-primary focus:bg-background focus:ring-2 focus:ring-ring/30"
+                      />
+                    </label>
+                    <AmountField
+                      name="expenseAmount"
+                      value={expense.amount}
+                      onChange={(value) =>
+                        updateExpense(expense.id, { amount: value })
+                      }
+                      ariaLabel={`Expense ${index + 1} amount`}
+                      required={required}
+                    />
+                    <button
+                      type="button"
+                      disabled={expenses.length === 1 && isBlank}
+                      onClick={() =>
+                        setExpenses((current) =>
+                          current.length === 1
+                            ? [{ id: current[0].id, description: "", amount: "" }]
+                            : current.filter((row) => row.id !== expense.id),
+                        )
+                      }
+                      aria-label={`Remove expense ${index + 1}`}
+                      className="inline-flex min-h-11 items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => addExpenseRow()}
+              className={quietButton}
+            >
+              <Plus className="size-4" aria-hidden /> Add another cost
             </button>
-          </div>
+          </section>
         </fieldset>
       </div>
 
       {entryError ? (
-        <p role="alert" className="shrink-0 px-5 pb-4 text-sm text-error">
+        <p role="alert" className="shrink-0 px-5 pb-3 text-sm text-error">
           {entryError}
         </p>
       ) : null}
       <div className="relative shrink-0 border-t border-border bg-background px-5 py-4">
-        <div className="mb-3 flex items-center justify-between gap-3 text-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-muted">
-            {filledCount} entr{filledCount === 1 ? "y" : "ies"}
+            {vendorFilled > 0 || otherFilled > 0
+              ? [
+                  vendorFilled > 0 ? `${vendorFilled} vendor` : null,
+                  otherFilled > 0 ? `${otherFilled} other` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Nothing entered yet"}
           </span>
           <span className="font-semibold tabular-nums text-foreground">
             Total {formatCurrency(total)}
@@ -979,7 +1133,11 @@ function SpendForm({
             className={primaryButton}
             disabled={isSaving || filledCount === 0}
           >
-            {isSaving ? "Saving…" : "Save all"}
+            {isSaving
+              ? "Saving…"
+              : filledCount === 0
+                ? "Enter an amount"
+                : `Save ${formatCurrency(total)}`}
           </button>
         </div>
       </div>
