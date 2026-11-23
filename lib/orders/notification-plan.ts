@@ -1,3 +1,4 @@
+import { formatEventTime } from "./event-time";
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
 import { BOOKING_MANAGER_NAME, BOOKING_MANAGER_PHONE } from "../whatsapp-booking-config";
 import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
@@ -26,7 +27,7 @@ export function planVendorChanges(before: NotificationOrder | null, next: Notifi
 
   // Check if anything changed at all across any vendor group.
   const anyGroupChanged = newGroups.some(group => {
-    const previous = oldGroups.find(old => old.vendorId === group.vendorId && old.timing === group.timing);
+    const previous = oldGroups.find(old => old.vendorId === group.vendorId);
     return !previous || scheduleChanged || materialKey(previous.items) !== materialKey(group.items);
   });
 
@@ -45,7 +46,9 @@ export function planVendorChanges(before: NotificationOrder | null, next: Notifi
   });
 
   const removed = oldGroups.flatMap(group => {
-    const items = group.items.filter(old => !newGroups.some(current => current.vendorId === group.vendorId && current.timing === group.timing && current.items.some(item => item.rawMaterialId === old.rawMaterialId)));
+    const items = group.items.filter(old => !newGroups.some(current =>
+      current.vendorId === group.vendorId && current.items.some(item => item.rawMaterialId === old.rawMaterialId),
+    ));
     return items.length ? [{ ...group, items }] : [];
   });
   return { updates, removed };
@@ -161,17 +164,21 @@ export function formatHiTeaMaterialNote(notes: string[]): string {
 
 export function vendorTemplateParams(order: NotificationOrder, timing: string, items: NotificationMaterial[], names: Map<number, string>, venue: string, updated: boolean) {
   // WhatsApp Hub/Meta strip real newlines in template params and turn them into " | ".
-  // Vendors get materials only — never the order plate count.
-  // Per-item description (notes) goes after qty/unit as "(description)".
+  // One message per vendor: all items combined. Per-item timing/description stay on the line.
   const list = items.map((item, index) => {
     const name = names.get(item.rawMaterialId) || "Kitchen item";
     const description = item.notes?.trim().replace(/\s+/g, " ");
-    const base = `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
-    return description ? `${base} (${description})` : base;
+    const itemTiming = item.timing?.trim();
+    const timeLabel = itemTiming ? formatEventTime(itemTiming) : null;
+    let line = `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
+    if (timeLabel) line += ` @ ${timeLabel}`;
+    if (description) line += ` (${description})`;
+    return line;
   });
   const details = list.join(" · ");
 
-  // {{4}} keeps the update banner only; item descriptions stay on each material line.
+  // {{1}} uses meal/order timing; item-specific times are on each material line.
+  // {{4}} keeps the update banner only.
   const notes = updated ? "UPDATED ORDER — replaces previous details" : "—";
 
   return [vendorScheduleLabel(order.date, timing), venue, details, notes];
