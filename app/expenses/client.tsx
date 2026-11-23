@@ -91,7 +91,7 @@ export function ExpensesClient({
   const [ledger, setLedger] = useState<OrderExpenseLedger | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [entryError, setEntryError] = useState<string | null>(null);
-  const [entryOpen, setEntryOpen] = useState(false);
+  const [entryMode, setEntryMode] = useState<"expense" | "vendor" | null>(null);
   const [orderQuery, setOrderQuery] = useState("");
   const [isLoading, startLoading] = useTransition();
   const [isSaving, startSaving] = useTransition();
@@ -102,9 +102,9 @@ export function ExpensesClient({
 
   useEffect(() => {
     const dialog = entryDialogRef.current;
-    if (!dialog || !entryOpen || dialog.open) return;
+    if (!dialog || !entryMode || dialog.open) return;
     dialog.showModal();
-  }, [entryOpen]);
+  }, [entryMode]);
 
   useEffect(() => {
     if (selectedOrderId !== "") return;
@@ -186,8 +186,8 @@ export function ExpensesClient({
     closeForm();
   }
 
-  function openForm() {
-    setEntryOpen(true);
+  function openForm(mode: "expense" | "vendor") {
+    setEntryMode(mode);
     setEntryError(null);
   }
 
@@ -196,19 +196,20 @@ export function ExpensesClient({
       entryDialogRef.current.close();
       return;
     }
-    setEntryOpen(false);
+    setEntryMode(null);
     setEntryError(null);
   }
 
   function handleEntryDialogClose() {
-    setEntryOpen(false);
+    setEntryMode(null);
     setEntryError(null);
   }
 
   function addEntry(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selectedOrderId === "" || entrySavingRef.current) return;
+    if (selectedOrderId === "" || !entryMode || entrySavingRef.current) return;
     const orderId = selectedOrderId;
+    const mode = entryMode;
     const form = event.currentTarget;
     const data = new FormData(form);
     data.set("orderId", String(orderId));
@@ -222,7 +223,11 @@ export function ExpensesClient({
           return;
         }
         form.reset();
-        toast.success("Expenses recorded");
+        toast.success(
+          mode === "vendor"
+            ? "Vendor payments recorded"
+            : "Expenses recorded",
+        );
         await refreshLedger(orderId);
         closeForm();
       } catch {
@@ -428,19 +433,30 @@ export function ExpensesClient({
             <div>
               <h3 className="text-lg font-semibold text-foreground">Spend</h3>
               <p className="mt-1 text-sm text-muted">
-                Add vendor payments and other expenses together from the total
+                Choose what you paid — vendor or other cost — from total
                 received.
               </p>
             </div>
-            <button
-              type="button"
-              className={primaryButton}
-              disabled={isSaving}
-              onClick={openForm}
-            >
-              <Plus className="size-4" aria-hidden />
-              Add expenses
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={secondaryButton}
+                disabled={isSaving || vendors.length === 0}
+                onClick={() => openForm("vendor")}
+              >
+                <Plus className="size-4" aria-hidden />
+                Add vendor payment
+              </button>
+              <button
+                type="button"
+                className={primaryButton}
+                disabled={isSaving}
+                onClick={() => openForm("expense")}
+              >
+                <Plus className="size-4" aria-hidden />
+                Add expense
+              </button>
+            </div>
           </div>
 
           <section className="space-y-3" aria-label="Payments received">
@@ -494,10 +510,21 @@ export function ExpensesClient({
 
           <section className="grid gap-6 lg:grid-cols-2" aria-label="Spend ledger">
             <div className="rounded-xl border border-border">
-              <div className="border-b border-border px-4 py-3 sm:px-5">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
                 <h4 className="text-sm font-semibold text-foreground">
                   Vendor payments
                 </h4>
+                {vendors.length > 0 ? (
+                  <button
+                    type="button"
+                    className={quietButton}
+                    disabled={isSaving}
+                    onClick={() => openForm("vendor")}
+                  >
+                    <Plus className="size-4" aria-hidden />
+                    Add
+                  </button>
+                ) : null}
               </div>
               <div className="px-4 py-3 sm:px-5">
                 {vendors.length === 0 ? (
@@ -555,10 +582,19 @@ export function ExpensesClient({
             </div>
 
             <div className="rounded-xl border border-border">
-              <div className="border-b border-border px-4 py-3 sm:px-5">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-5">
                 <h4 className="text-sm font-semibold text-foreground">
                   Other expenses
                 </h4>
+                <button
+                  type="button"
+                  className={quietButton}
+                  disabled={isSaving}
+                  onClick={() => openForm("expense")}
+                >
+                  <Plus className="size-4" aria-hidden />
+                  Add
+                </button>
               </div>
               <div className="px-4 py-3 sm:px-5">
                 {otherSpend.length ? (
@@ -610,9 +646,10 @@ export function ExpensesClient({
           }
         }}
       >
-        {entryOpen ? (
+        {entryMode ? (
           <SpendForm
-            key={selectedOrderId || "spend"}
+            key={`${entryMode}-${selectedOrderId || "spend"}`}
+            mode={entryMode}
             titleId={entryTitleId}
             clientPaid={ledger?.summary.clientPaid ?? 0}
             cashRemaining={ledger?.summary.netProfit ?? 0}
@@ -674,6 +711,7 @@ function AmountField({
 }
 
 function SpendForm({
+  mode,
   titleId,
   clientPaid,
   cashRemaining,
@@ -684,6 +722,7 @@ function SpendForm({
   onCancel,
   onSubmit,
 }: {
+  mode: "expense" | "vendor";
   titleId: string;
   clientPaid: number;
   cashRemaining: number;
@@ -694,6 +733,7 @@ function SpendForm({
   onCancel: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
+  const isVendor = mode === "vendor";
   const [vendorAmounts, setVendorAmounts] = useState<Record<number, string>>({});
   const [vendorQuery, setVendorQuery] = useState("");
   const [showNotes, setShowNotes] = useState(false);
@@ -737,7 +777,7 @@ function SpendForm({
     (sum, expense) => sum + (Number(expense.amount) || 0),
     0,
   );
-  const total = vendorTotal + otherTotal;
+  const total = isVendor ? vendorTotal : otherTotal;
   const remainingAfter = cashRemaining - total;
   const vendorFilled = Object.values(vendorAmounts).filter((amount) =>
     amount.trim(),
@@ -745,7 +785,7 @@ function SpendForm({
   const otherFilled = expenses.filter(
     (expense) => expense.description.trim() || expense.amount.trim(),
   ).length;
-  const filledCount = vendorFilled + otherFilled;
+  const filledCount = isVendor ? vendorFilled : otherFilled;
 
   function setVendorAmount(vendorId: number, value: string) {
     setVendorAmounts((current) => ({ ...current, [vendorId]: value }));
@@ -827,10 +867,12 @@ function SpendForm({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id={titleId} className="text-lg font-semibold text-foreground">
-              What did you spend?
+              {isVendor ? "Add vendor payment" : "Add expense"}
             </h2>
             <p className="mt-1 text-sm text-muted">
-              Type amounts only where you paid. Empty rows are skipped.
+              {isVendor
+                ? "Type amounts for vendors you paid. Empty rows are skipped."
+                : "Add one or more costs from this order's cash."}
             </p>
           </div>
           <label className="block shrink-0">
@@ -876,12 +918,12 @@ function SpendForm({
 
       <div className="app-dialog-body min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
         <fieldset disabled={isSaving} className="min-w-0 space-y-8">
-          {vendors.length > 0 ? (
+          {isVendor && vendors.length > 0 ? (
             <section className="space-y-3" aria-label="Vendor payments">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">
-                    1. Paid to vendors
+                    Paid to vendors
                   </h3>
                   <p className="mt-1 text-sm text-muted">
                     Find a vendor, type the rupees you paid.
@@ -989,11 +1031,18 @@ function SpendForm({
             </section>
           ) : null}
 
+          {isVendor && vendors.length === 0 ? (
+            <p className="text-sm text-muted">
+              Add a vendor in Vendors before recording a payment.
+            </p>
+          ) : null}
+
+          {!isVendor ? (
           <section className="space-y-3" aria-label="Other expenses">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">
-                  {vendors.length > 0 ? "2. " : ""}Other costs
+                  Other costs
                 </h3>
                 <p className="mt-1 text-sm text-muted">
                   Transport, labour, or tap a quick label.
@@ -1095,6 +1144,7 @@ function SpendForm({
               <Plus className="size-4" aria-hidden /> Add another cost
             </button>
           </section>
+          ) : null}
         </fieldset>
       </div>
 
@@ -1106,14 +1156,11 @@ function SpendForm({
       <div className="relative shrink-0 border-t border-border bg-background px-5 py-4">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-sm">
           <span className="text-muted">
-            {vendorFilled > 0 || otherFilled > 0
-              ? [
-                  vendorFilled > 0 ? `${vendorFilled} vendor` : null,
-                  otherFilled > 0 ? `${otherFilled} other` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")
-              : "Nothing entered yet"}
+            {filledCount === 0
+              ? "Nothing entered yet"
+              : isVendor
+                ? `${vendorFilled} vendor payment${vendorFilled === 1 ? "" : "s"}`
+                : `${otherFilled} expense${otherFilled === 1 ? "" : "s"}`}
           </span>
           <span className="font-semibold tabular-nums text-foreground">
             Total {formatCurrency(total)}
@@ -1137,7 +1184,9 @@ function SpendForm({
               ? "Saving…"
               : filledCount === 0
                 ? "Enter an amount"
-                : `Save ${formatCurrency(total)}`}
+                : isVendor
+                  ? `Save vendor payments ${formatCurrency(total)}`
+                  : `Save expenses ${formatCurrency(total)}`}
           </button>
         </div>
       </div>
