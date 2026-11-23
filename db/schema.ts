@@ -123,9 +123,14 @@ export const vendorPayments = pgTable("vendor_payments", {
 
 export const orderPaymentExpenses = pgTable("order_payment_expenses", {
   id: serial("id").primaryKey(),
-  orderPaymentId: integer("order_payment_id")
+  /** Spend is tracked against the order total, not a specific client payment. */
+  orderId: integer("order_id")
     .notNull()
-    .references(() => orderPayments.id, { onDelete: "cascade" }),
+    .references(() => orders.id, { onDelete: "cascade" }),
+  /** Legacy optional link; new entries leave this null. */
+  orderPaymentId: integer("order_payment_id").references(() => orderPayments.id, {
+    onDelete: "set null",
+  }),
   amount: integer("amount").notNull(),
   description: text("description").notNull(),
   date: timestamp("date", { mode: "date" }).notNull(),
@@ -316,6 +321,7 @@ export const ordersRelations = relations(orders, ({ many, one }) => ({
   orderRawMaterials: many(orderRawMaterials),
   orderMenuDishes: many(orderMenuDishes),
   orderPayments: many(orderPayments),
+  orderPaymentExpenses: many(orderPaymentExpenses),
   vendorPayments: many(vendorPayments),
   menu: one(menus, {
     fields: [orders.menuId],
@@ -344,6 +350,10 @@ export const orderPaymentsRelations = relations(orderPayments, ({ one, many }) =
 }));
 
 export const orderPaymentExpensesRelations = relations(orderPaymentExpenses, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderPaymentExpenses.orderId],
+    references: [orders.id],
+  }),
   orderPayment: one(orderPayments, {
     fields: [orderPaymentExpenses.orderPaymentId],
     references: [orderPayments.id],

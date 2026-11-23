@@ -127,6 +127,13 @@
       "when": 1795900000000,
       "tag": "0017_customer2_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1796000000000,
+      "tag": "0018_order_level_expenses",
+      "breakpoints": true
     }
   ]
 }

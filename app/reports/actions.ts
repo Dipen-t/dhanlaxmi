@@ -57,11 +57,8 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
   const allOrders = await db.query.orders.findMany({
     orderBy: desc(orders.createdAt),
     with: {
-      orderPayments: {
-        with: {
-          expenses: true,
-        },
-      },
+      orderPayments: true,
+      orderPaymentExpenses: true,
       vendorPayments: true,
     },
   });
@@ -69,7 +66,11 @@ export async function getEventProfitabilityReport(): Promise<EventProfitability[
   return allOrders.map(order => {
     const effectiveTotal = calculateEffectiveTotal(order.totalAmount, order.discount) || 0;
     
-    const cash = calculateCashPosition(order.orderPayments, order.vendorPayments);
+    const cash = calculateCashPosition(
+      order.orderPayments,
+      order.vendorPayments,
+      order.orderPaymentExpenses,
+    );
     const { clientPaid, clientWaived: totalWaived, vendorExpenses, otherExpenses, totalExpenses, netProfit } = cash;
 
     const clientBalance = Math.max(0, effectiveTotal - clientPaid - totalWaived);
@@ -110,6 +111,7 @@ export async function getMasterLedger(): Promise<LedgerTransaction[]> {
 
   const ope = await db.query.orderPaymentExpenses.findMany({
     with: {
+      order: true,
       orderPayment: {
         with: {
           order: true,
@@ -151,7 +153,7 @@ export async function getMasterLedger(): Promise<LedgerTransaction[]> {
       date: toDateString(e.date),
       type: "OUT",
       amount: e.amount,
-      reference: `Order ${e.orderPayment?.order?.orderId || "Expense"}`,
+      reference: `Order ${e.order?.orderId || e.orderPayment?.order?.orderId || "Expense"}`,
       notes: e.description || "Order Expense",
       createdAt: e.createdAt.toISOString(),
     });

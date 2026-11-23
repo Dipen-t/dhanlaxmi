@@ -29,7 +29,10 @@ export function parseVendorExpenseEntries(data: FormData): BatchResult<VendorExp
 
 export function parseOtherExpenseEntries(data: FormData): BatchResult<OtherExpenseEntry> {
   const descriptions = data.getAll("description");
-  const amounts = data.getAll("amount");
+  // Combined spend form uses expenseAmount so it does not clash with vendor amount fields.
+  const amounts = data.getAll("expenseAmount").length
+    ? data.getAll("expenseAmount")
+    : data.getAll("amount");
   if (descriptions.length !== amounts.length) return { error: "The expense rows are incomplete. Reload the form and try again." };
   const entries: OtherExpenseEntry[] = [];
   for (let index = 0; index < descriptions.length; index++) {

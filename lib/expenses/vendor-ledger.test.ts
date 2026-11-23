@@ -22,5 +22,8 @@ test("vendor payments remain visible without client receipts; cash summary count
   const payments = [payment(1, 1, 5000)];
   assert.equal(buildVendorLedger([], payments)[0].totalPaid, 5000);
   assert.equal(calculateCashPosition([], payments).netProfit, -5000);
-  assert.equal(calculateCashPosition([{ amount: 50000, isWaived: false, expenses: [{ amount: 5000 }] }], payments).netProfit, 40000);
+  assert.equal(
+    calculateCashPosition([{ amount: 50000, isWaived: false }], payments, [{ amount: 5000 }]).netProfit,
+    40000,
+  );
 });

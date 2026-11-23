@@ -7,14 +7,6 @@ import { db } from "@/db";
 import { orderPayments, orderPaymentExpenses, orders } from "@/db/schema";
 import { parseCalendarDate, toCalendarDateString } from "@/lib/utils";
 
-export type OrderPaymentExpenseRecord = {
-  id: number;
-  orderPaymentId: number;
-  amount: number;
-  description: string;
-  date: string;
-};
-
 export type OrderPaymentRecord = {
   id: number;
   orderId: number;
@@ -22,7 +14,6 @@ export type OrderPaymentRecord = {
   date: string;
   isWaived: boolean;
   notes: string | null;
-  expenses: OrderPaymentExpenseRecord[];
 };
 
 function toDateString(date: Date) {
@@ -37,19 +28,12 @@ export async function getOrderFinances(orderId: string): Promise<OrderPaymentRec
 
   const payments = await db.query.orderPayments.findMany({
     where: eq(orderPayments.orderId, numericId),
-    with: {
-      expenses: true,
-    },
     orderBy: (orderPayments, { desc }) => [desc(orderPayments.date)],
   });
 
   return payments.map(p => ({
     ...p,
     date: toDateString(p.date),
-    expenses: p.expenses.map(e => ({
-      ...e,
-      date: toDateString(e.date),
-    }))
   }));
 }
 
@@ -83,18 +67,24 @@ export async function createOrderPayment(data: FormData) {
 
 export async function createOrderPaymentExpense(data: FormData) {
   const orderId = Number(data.get("orderId"));
-  const orderPaymentId = Number(data.get("orderPaymentId"));
   const amount = Number(data.get("amount"));
   const date = data.get("date") as string;
   const description = data.get("description") as string;
 
-  if (!orderPaymentId || !amount || !date || !description) {
+  if (!orderId || !amount || !date || !description) {
     return { error: "Missing required fields" };
   }
 
   try {
+    const order = await db.query.orders.findFirst({
+      where: eq(orders.id, orderId),
+      columns: { id: true },
+    });
+    if (!order) return { error: "This order is no longer available." };
+
     await db.insert(orderPaymentExpenses).values({
-      orderPaymentId,
+      orderId,
+      orderPaymentId: null,
       amount,
       date: parseCalendarDate(date),
       description,
@@ -159,8 +149,6 @@ import { vendorPayments } from "@/db/schema";
 export async function createVendorPaymentForOrderFinance(data: FormData) {
   const vendorId = Number(data.get("vendorId"));
   const orderId = Number(data.get("orderId"));
-  const orderPaymentIdRaw = data.get("orderPaymentId");
-  const orderPaymentId = orderPaymentIdRaw ? Number(orderPaymentIdRaw) : null;
   const amount = Number(data.get("amount"));
   const dateStr = data.get("date") as string;
   const notes = data.get("notes") as string || null;
@@ -172,24 +160,10 @@ export async function createVendorPaymentForOrderFinance(data: FormData) {
   const date = dateStr ? parseCalendarDate(dateStr) : new Date();
 
   try {
-    if (orderPaymentId) {
-      const receipt = await db.query.orderPayments.findFirst({
-        where: and(
-          eq(orderPayments.id, orderPaymentId),
-          eq(orderPayments.orderId, orderId),
-          eq(orderPayments.isWaived, false),
-        ),
-        columns: { id: true },
-      });
-      if (!receipt) {
-        return { error: "That client payment is no longer available for this order." };
-      }
-    }
-
     await db.insert(vendorPayments).values({
       vendorId,
       orderId,
-      orderPaymentId: orderPaymentId || null,
+      orderPaymentId: null,
       amount,
       date,
       notes,

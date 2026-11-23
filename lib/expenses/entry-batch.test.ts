@@ -39,6 +39,15 @@ test("other expenses accept several rows and ignore unused extra rows", () => {
   });
 });
 
+test("combined spend form can use expenseAmount so it does not clash with vendor amounts", () => {
+  assert.deepEqual(
+    parseOtherExpenseEntries(
+      rows({ description: ["Transport", ""], expenseAmount: ["300", ""] }),
+    ),
+    { entries: [{ description: "Transport", amount: 300 }] },
+  );
+});
+
 test("partial or invalid other expenses reject the whole batch", () => {
   for (const data of [
     rows({ description: ["Transport", "Labour"], amount: ["300", ""] }),

@@ -40,7 +40,7 @@ async function main() {
     const kitchen = await generateKitchenMenuPdfBuffer({ id: 0, name: "Kitchen Test", categories: [] }, logo);
     assert.equal(kitchen.subarray(0, 5).toString(), "%PDF-");
     console.log("Kitchen PDF: generated offline");
-    const cash = calculateCashPosition([{ amount: 50_000, isWaived: false, expenses: [{ amount: 5_000 }] }], [{ amount: 5_000 }]);
+    const cash = calculateCashPosition([{ amount: 50_000, isWaived: false }], [{ amount: 5_000 }], [{ amount: 5_000 }]);
     const report = await renderToBuffer(ProfitabilityPDF({ reports: [{
       ...cash, id: 0, orderId: "TEST-100K", customerName: "Calculation test", customerPhone: null,
       date: "14/10/2026", venue: "Test", mealType: "lunch", revenue: 100_000, clientBalance: 50_000,

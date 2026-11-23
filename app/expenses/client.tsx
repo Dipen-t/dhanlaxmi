@@ -26,8 +26,7 @@ import { toast } from "sonner";
 import { formatCurrency } from "@/lib/utils";
 import {
   getOrderExpenseLedger,
-  createExpenses,
-  createVendorPaymentsForExpenses,
+  createOrderSpend,
   type OrderExpenseLedger,
   type OrderSelectionItem,
   type VendorDropdownItem,
@@ -76,8 +75,6 @@ type ExpensesClientProps = {
   initialOrderId: number | null;
 };
 
-type EntryFormKind = "vendor" | "expense";
-
 export function ExpensesClient({
   orders,
   vendors,
@@ -95,10 +92,7 @@ export function ExpensesClient({
   const [ledger, setLedger] = useState<OrderExpenseLedger | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [entryError, setEntryError] = useState<string | null>(null);
-  const [activeForm, setActiveForm] = useState<{
-    paymentId: number;
-    kind: EntryFormKind;
-  } | null>(null);
+  const [entryOpen, setEntryOpen] = useState(false);
   const [orderQuery, setOrderQuery] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -131,9 +125,9 @@ export function ExpensesClient({
 
   useEffect(() => {
     const dialog = entryDialogRef.current;
-    if (!dialog || !activeForm || dialog.open) return;
+    if (!dialog || !entryOpen || dialog.open) return;
     dialog.showModal();
-  }, [activeForm]);
+  }, [entryOpen]);
 
   const filteredOrders = useMemo(
     () => orders.filter((order) => orderMatchesQuery(order, orderQuery)),
@@ -218,10 +212,9 @@ export function ExpensesClient({
     closeForm();
   }
 
-  function openForm(paymentId: number, kind: EntryFormKind) {
-    setActiveForm({ paymentId, kind });
+  function openForm() {
+    setEntryOpen(true);
     setEntryError(null);
-
   }
 
   function closeForm() {
@@ -229,39 +222,33 @@ export function ExpensesClient({
       entryDialogRef.current.close();
       return;
     }
-    setActiveForm(null);
+    setEntryOpen(false);
     setEntryError(null);
   }
 
   function handleEntryDialogClose() {
-    setActiveForm(null);
+    setEntryOpen(false);
     setEntryError(null);
   }
 
   function addEntry(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (selectedOrderId === "" || !activeForm || entrySavingRef.current) return;
+    if (selectedOrderId === "" || entrySavingRef.current) return;
     const orderId = selectedOrderId;
     const form = event.currentTarget;
     const data = new FormData(form);
     data.set("orderId", String(orderId));
-    data.set("orderPaymentId", String(activeForm.paymentId));
-    const isVendor = activeForm.kind === "vendor";
     setEntryError(null);
     entrySavingRef.current = true;
     startSaving(async () => {
       try {
-        const result = isVendor
-          ? await createVendorPaymentsForExpenses(data)
-          : await createExpenses(data);
+        const result = await createOrderSpend(data);
         if ("error" in result && result.error) {
           setEntryError(result.error);
           return;
         }
         form.reset();
-        toast.success(
-          isVendor ? "Vendor payments recorded" : "Expenses recorded",
-        );
+        toast.success("Expenses recorded");
         await refreshLedger(orderId);
         closeForm();
       } catch {
@@ -274,18 +261,12 @@ export function ExpensesClient({
 
   const activeOrderId = ledger?.order.id ?? 0;
   const receipts = ledger?.payments.filter((payment) => !payment.isWaived) ?? [];
-  const unallocatedVendorPayments =
-    ledger?.vendorPayments.filter((payment) => !payment.orderPaymentId) ?? [];
+  const vendorSpend = ledger?.vendorPayments ?? [];
+  const otherSpend = ledger?.otherExpenses ?? [];
   const selectedOrderMeta =
     ledger?.order ??
     orders.find((order) => order.id === selectedOrderId) ??
     null;
-  const activeReceipt = activeForm
-    ? (receipts.find((receipt) => receipt.id === activeForm.paymentId) ?? null)
-    : null;
-  const activeReceiptLabel = activeReceipt
-    ? `${formatCurrency(activeReceipt.amount)} received · ${displayDate(activeReceipt.date)}`
-    : null;
 
   return (
     <div className="w-full space-y-8">
@@ -296,8 +277,8 @@ export function ExpensesClient({
               Choose an order
             </h2>
             <p className="mt-2 text-sm text-muted text-pretty">
-              Search by order ID, customer, venue, or date. Then allocate spend
-              against each payment received.
+              Search by order ID, customer, venue, or date. Then spend from the
+              total amount received.
             </p>
             <button
               type="button"
@@ -415,26 +396,44 @@ export function ExpensesClient({
               ))}
             </dl>
             <p className="mt-2 text-xs text-muted">
-              Cash remaining = client received − vendor paid − other expenses.
+              Cash remaining = total received − all vendor payments − all other
+              expenses.
             </p>
           </section>
 
-          <section className="space-y-5" aria-label="Payments received">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className="text-lg font-semibold text-foreground">Spend</h3>
+              <p className="mt-1 text-sm text-muted">
+                Add vendor payments and other expenses together from the total
+                received.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={primaryButton}
+              disabled={isSaving}
+              onClick={openForm}
+            >
+              <Plus className="size-4" aria-hidden />
+              Add expenses
+            </button>
+          </div>
+
+          <section className="space-y-3" aria-label="Payments received">
+            <div>
+              <h3 className="text-base font-semibold text-foreground">
                 Payments received
               </h3>
               <p className="mt-1 text-sm text-muted">
-                Allocate vendor payments and other expenses inside each payment
-                so you can see what remains from money received.
+                Money in from the client. Spend is not tied to a single payment.
               </p>
             </div>
-
             {!receipts.length ? (
               <div className="border border-dashed border-border px-4 py-6 text-sm">
                 <p className="text-muted">
-                  No client payments recorded for this order yet. Record a
-                  payment-in before allocating spend.
+                  No client payments recorded yet. You can still add expenses;
+                  cash remaining will go negative until payments are recorded.
                 </p>
                 <Link
                   href={`/orders/${selectedOrderId}/finance`}
@@ -444,216 +443,136 @@ export function ExpensesClient({
                 </Link>
               </div>
             ) : (
-              <ul className="space-y-5">
-                {receipts.map((receipt) => {
-                  const vendorSpend = ledger.vendorPayments.filter(
-                    (payment) => payment.orderPaymentId === receipt.id,
-                  );
-                  const otherSpend = [...receipt.expenses].sort(
-                    (a, b) =>
-                      b.date.localeCompare(a.date) || b.id - a.id,
-                  );
-                  const allocated =
-                    vendorSpend.reduce((sum, item) => sum + item.amount, 0) +
-                    otherSpend.reduce((sum, item) => sum + item.amount, 0);
-                  const remaining = receipt.amount - allocated;
-
-                  return (
-                    <li
-                      key={receipt.id}
-                      className="overflow-hidden rounded-xl border border-border"
-                    >
-                      <div className="border-b border-border bg-surface/40 px-4 py-4 sm:px-5 sm:py-5">
-                        <div className="flex flex-wrap items-start justify-between gap-4">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="inline-flex size-8 items-center justify-center rounded-full bg-success-soft text-success">
-                                <IndianRupee className="size-4" aria-hidden />
-                              </span>
-                              <div>
-                                <p className="text-lg font-semibold tabular-nums text-foreground">
-                                  {formatCurrency(receipt.amount)} received
-                                </p>
-                                <p className="text-sm text-muted">
-                                  {displayDate(receipt.date)}
-                                  {receipt.notes ? ` · ${receipt.notes}` : ""}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                          <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-right sm:grid-cols-3">
-                            <div>
-                              <dt className="text-xs text-muted">Allocated</dt>
-                              <dd className="text-sm font-semibold tabular-nums text-foreground">
-                                {formatCurrency(allocated)}
-                              </dd>
-                            </div>
-                            <div>
-                              <dt className="text-xs text-muted">Remaining</dt>
-                              <dd
-                                className={`text-sm font-semibold tabular-nums ${
-                                  remaining < 0
-                                    ? "text-error"
-                                    : "text-primary"
-                                }`}
-                              >
-                                {formatCurrency(remaining)}
-                              </dd>
-                            </div>
-                          </dl>
-                        </div>
+              <ul className="divide-y divide-border rounded-xl border border-border">
+                {receipts.map((receipt) => (
+                  <li
+                    key={receipt.id}
+                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="inline-flex size-8 items-center justify-center rounded-full bg-success-soft text-success">
+                        <IndianRupee className="size-4" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold tabular-nums text-foreground">
+                          {formatCurrency(receipt.amount)}
+                        </p>
+                        <p className="text-xs text-muted">
+                          {displayDate(receipt.date)}
+                          {receipt.notes ? ` · ${receipt.notes}` : ""}
+                        </p>
                       </div>
-
-                      <div className="grid gap-0 lg:grid-cols-2">
-                        <div className="border-b border-border px-4 py-4 sm:px-5 lg:border-r lg:border-b-0">
-                          <div className="flex items-center justify-between gap-3">
-                            <h4 className="text-sm font-semibold text-foreground">
-                              Vendor payments
-                            </h4>
-                            {vendors.length > 0 ? (
-                              <button
-                                type="button"
-                                className={quietButton}
-                                disabled={isSaving}
-                                onClick={() => openForm(receipt.id, "vendor")}
-                              >
-                                <Plus className="size-4" aria-hidden />
-                                Add
-                              </button>
-                            ) : null}
-                          </div>
-
-                          {vendors.length === 0 ? (
-                            <p className="mt-3 text-sm text-muted">
-                              Add a vendor in{" "}
-                              <Link
-                                className="font-medium text-primary underline"
-                                href="/vendors"
-                              >
-                                Vendors
-                              </Link>{" "}
-                              to record a payment.
-                            </p>
-                          ) : null}
-
-                          {vendorSpend.length ? (
-                            <ul className="mt-3 divide-y divide-border">
-                              {vendorSpend.map((payment) => (
-                                <li
-                                  key={payment.id}
-                                  className="flex flex-wrap items-start justify-between gap-3 py-3"
-                                >
-                                  <div className="min-w-0">
-                                    <p className="text-sm font-medium text-foreground">
-                                      <Link href={`/vendors/${payment.vendorId}/finance`} className="inline-flex min-h-11 items-center text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{payment.vendorName}</Link>
-                                    </p>
-                                    <p className="mt-0.5 text-xs text-muted">
-                                      {displayDate(payment.date)}
-                                      {payment.notes
-                                        ? ` · ${payment.notes}`
-                                        : ""}
-                                    </p>
-                                  </div>
-                                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(payment.amount)}</span><ExpenseEntryActions orderId={activeOrderId} kind="vendor" entry={payment} vendors={vendors} onChanged={() => refreshLedger(activeOrderId)} /></div>
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="mt-3 text-sm text-muted">
-                              No vendor payments from this receipt yet.
-                            </p>
-                          )}
-                        </div>
-
-                        <div className="px-4 py-4 sm:px-5">
-                          <div className="flex items-center justify-between gap-3">
-                            <h4 className="text-sm font-semibold text-foreground">
-                              Other expenses
-                            </h4>
-                            <button
-                              type="button"
-                              className={quietButton}
-                              disabled={isSaving}
-                              onClick={() => openForm(receipt.id, "expense")}
-                            >
-                              <Plus className="size-4" aria-hidden />
-                              Add
-                            </button>
-                          </div>
-
-                          {otherSpend.length ? (
-                            <ul className="mt-3 divide-y divide-border">
-                              {otherSpend.map((expense) => (
-                                <li key={expense.id} className="py-3">
-                                  <div className="flex flex-wrap items-start justify-between gap-3">
-                                    <div className="min-w-0">
-                                      <p className="break-words text-sm font-medium text-foreground">
-                                        {expense.description}
-                                      </p>
-                                      <p className="mt-0.5 text-xs text-muted">
-                                        {displayDate(expense.date)}
-                                      </p>
-                                    </div>
-                                    <div className="flex shrink-0 flex-wrap items-center gap-1">
-                                      <span className="text-sm font-semibold tabular-nums text-foreground">
-                                        {formatCurrency(expense.amount)}
-                                      </span>
-                                      <ExpenseEntryActions orderId={activeOrderId} kind="expense" entry={expense} vendors={vendors} onChanged={() => refreshLedger(activeOrderId)} />
-                                    </div>
-                                  </div>
-
-                                </li>
-                              ))}
-                            </ul>
-                          ) : (
-                            <p className="mt-3 text-sm text-muted">
-                              No other expenses from this receipt yet.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
+                    </div>
+                  </li>
+                ))}
               </ul>
             )}
           </section>
 
-          {unallocatedVendorPayments.length ? (
-            <section
-              aria-label="Unallocated vendor payments"
-              className="space-y-3 border-t border-border pt-6"
-            >
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  Unallocated vendor payments
-                </h3>
-                <p className="mt-1 text-sm text-muted">
-                  Older vendor payments recorded for this order before payment-in
-                  allocation. New entries should be added under a payment above.
-                </p>
+          <section className="grid gap-6 lg:grid-cols-2" aria-label="Spend ledger">
+            <div className="rounded-xl border border-border">
+              <div className="border-b border-border px-4 py-3 sm:px-5">
+                <h4 className="text-sm font-semibold text-foreground">
+                  Vendor payments
+                </h4>
               </div>
-              <ul className="divide-y divide-border rounded-xl border border-border">
-                {unallocatedVendorPayments.map((payment) => (
-                  <li
-                    key={payment.id}
-                    className="flex flex-wrap items-start justify-between gap-3 px-4 py-3 sm:px-5"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground">
-                        {payment.vendorName}
-                      </p>
-                      <p className="mt-0.5 text-xs text-muted">
-                        {displayDate(payment.date)}
-                        {payment.notes ? ` · ${payment.notes}` : ""}
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1"><span className="text-sm font-semibold tabular-nums text-foreground">{formatCurrency(payment.amount)}</span><ExpenseEntryActions orderId={activeOrderId} kind="vendor" entry={payment} vendors={vendors} onChanged={() => refreshLedger(activeOrderId)} /></div>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+              <div className="px-4 py-3 sm:px-5">
+                {vendors.length === 0 ? (
+                  <p className="text-sm text-muted">
+                    Add a vendor in{" "}
+                    <Link
+                      className="font-medium text-primary underline"
+                      href="/vendors"
+                    >
+                      Vendors
+                    </Link>{" "}
+                    to record a payment.
+                  </p>
+                ) : null}
+                {vendorSpend.length ? (
+                  <ul className="divide-y divide-border">
+                    {vendorSpend.map((payment) => (
+                      <li
+                        key={payment.id}
+                        className="flex flex-wrap items-start justify-between gap-3 py-3"
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            <Link
+                              href={`/vendors/${payment.vendorId}/finance`}
+                              className="inline-flex min-h-11 items-center text-primary underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              {payment.vendorName}
+                            </Link>
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted">
+                            {displayDate(payment.date)}
+                            {payment.notes ? ` · ${payment.notes}` : ""}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+                          <span className="text-sm font-semibold tabular-nums text-foreground">
+                            {formatCurrency(payment.amount)}
+                          </span>
+                          <ExpenseEntryActions
+                            orderId={activeOrderId}
+                            kind="vendor"
+                            entry={payment}
+                            vendors={vendors}
+                            onChanged={() => refreshLedger(activeOrderId)}
+                          />
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted">No vendor payments yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border">
+              <div className="border-b border-border px-4 py-3 sm:px-5">
+                <h4 className="text-sm font-semibold text-foreground">
+                  Other expenses
+                </h4>
+              </div>
+              <div className="px-4 py-3 sm:px-5">
+                {otherSpend.length ? (
+                  <ul className="divide-y divide-border">
+                    {otherSpend.map((expense) => (
+                      <li key={expense.id} className="py-3">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="break-words text-sm font-medium text-foreground">
+                              {expense.description}
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted">
+                              {displayDate(expense.date)}
+                            </p>
+                          </div>
+                          <div className="flex shrink-0 flex-wrap items-center gap-1">
+                            <span className="text-sm font-semibold tabular-nums text-foreground">
+                              {formatCurrency(expense.amount)}
+                            </span>
+                            <ExpenseEntryActions
+                              orderId={activeOrderId}
+                              kind="expense"
+                              entry={expense}
+                              vendors={vendors}
+                              onChanged={() => refreshLedger(activeOrderId)}
+                            />
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted">No other expenses yet.</p>
+                )}
+              </div>
+            </div>
+          </section>
         </div>
       ) : null}
 
@@ -668,12 +587,15 @@ export function ExpensesClient({
           }
         }}
       >
-        {activeForm ? (
-          <EntryForm
-            key={`${activeForm.kind}-${activeForm.paymentId}`}
-            kind={activeForm.kind}
+        {entryOpen ? (
+          <SpendForm
+            key={selectedOrderId || "spend"}
             titleId={entryTitleId}
-            receiptLabel={activeReceiptLabel}
+            receivedLabel={
+              ledger
+                ? `Total received ${formatCurrency(ledger.summary.clientPaid)} · remaining ${formatCurrency(ledger.summary.netProfit)}`
+                : null
+            }
             vendors={vendors}
             entryError={entryError}
             isSaving={isSaving}
@@ -804,131 +726,260 @@ export function ExpensesClient({
   );
 }
 
-function EntryForm({
-  kind,
+function SpendForm({
   titleId,
-  receiptLabel,
+  receivedLabel,
   vendors,
   entryError,
   isSaving,
   onCancel,
   onSubmit,
 }: {
-  kind: EntryFormKind;
   titleId: string;
-  receiptLabel: string | null;
+  receivedLabel: string | null;
   vendors: VendorDropdownItem[];
   entryError: string | null;
   isSaving: boolean;
   onCancel: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 }) {
-  const isVendor = kind === "vendor";
   const [vendorAmounts, setVendorAmounts] = useState<Record<number, string>>({});
-  const [expenses, setExpenses] = useState([{ id: 0, description: "", amount: "" }]);
+  const [expenses, setExpenses] = useState([
+    { id: 0, description: "", amount: "" },
+  ]);
   const nextExpenseId = useRef(1);
-  const amounts = isVendor ? Object.values(vendorAmounts) : expenses.map((expense) => expense.amount);
-  const total = amounts.reduce((sum, value) => sum + (Number(value) || 0), 0);
-  const filledCount = isVendor
-    ? amounts.filter((amount) => amount.trim()).length
-    : expenses.filter((expense) => expense.description.trim() || expense.amount.trim()).length;
+  const vendorTotal = Object.values(vendorAmounts).reduce(
+    (sum, value) => sum + (Number(value) || 0),
+    0,
+  );
+  const otherTotal = expenses.reduce(
+    (sum, expense) => sum + (Number(expense.amount) || 0),
+    0,
+  );
+  const total = vendorTotal + otherTotal;
+  const vendorFilled = Object.values(vendorAmounts).filter((amount) =>
+    amount.trim(),
+  ).length;
+  const otherFilled = expenses.filter(
+    (expense) => expense.description.trim() || expense.amount.trim(),
+  ).length;
+  const filledCount = vendorFilled + otherFilled;
 
-  function updateExpense(id: number, updates: { description?: string; amount?: string }) {
-    setExpenses((current) => current.map((expense) => expense.id === id ? { ...expense, ...updates } : expense));
+  function updateExpense(
+    id: number,
+    updates: { description?: string; amount?: string },
+  ) {
+    setExpenses((current) =>
+      current.map((expense) =>
+        expense.id === id ? { ...expense, ...updates } : expense,
+      ),
+    );
   }
 
   function addExpenseRow() {
     const id = nextExpenseId.current++;
-    setExpenses((current) => [...current, { id, description: "", amount: "" }]);
+    setExpenses((current) => [
+      ...current,
+      { id, description: "", amount: "" },
+    ]);
   }
 
   return (
-    <form onSubmit={onSubmit} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" style={{ maxHeight: "inherit" }}>
+    <form
+      onSubmit={onSubmit}
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+      style={{ maxHeight: "inherit" }}
+    >
       <div className="shrink-0 px-5 pt-5 pb-4">
         <h2 id={titleId} className="text-lg font-semibold text-foreground">
-          {isVendor ? "Vendor expenses" : "Other expenses"}
+          Add expenses
         </h2>
-        {receiptLabel ? <p className="mt-1 text-sm text-muted">Allocated against {receiptLabel}</p> : null}
+        {receivedLabel ? (
+          <p className="mt-1 text-sm text-muted">{receivedLabel}</p>
+        ) : null}
       </div>
 
       <div className="app-dialog-body min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5">
-      <fieldset disabled={isSaving} className="min-w-0 space-y-4">
-        <label className="block min-w-0">
-          <span className="mb-1.5 block text-sm font-medium text-foreground">Date</span>
-          <input name="date" type="date" defaultValue={today()} required className={fieldClass} />
-        </label>
+        <fieldset disabled={isSaving} className="min-w-0 space-y-6">
+          <label className="block min-w-0">
+            <span className="mb-1.5 block text-sm font-medium text-foreground">
+              Date
+            </span>
+            <input
+              name="date"
+              type="date"
+              defaultValue={today()}
+              required
+              className={fieldClass}
+            />
+          </label>
 
-        {isVendor ? (
-          <>
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-sm font-medium text-foreground">Notes for these payments (optional)</span>
-              <input name="notes" maxLength={240} placeholder="e.g. Advance for supplies" className={fieldClass} />
-            </label>
-            <p className="text-sm text-muted">Enter the amount beside each vendor you paid. Leave the others empty.</p>
-            <div className="divide-y divide-border rounded-lg border border-border">
-              {vendors.map((vendor) => (
-                <div key={vendor.id} className="px-3 py-3">
-                  <input type="hidden" name="vendorId" value={vendor.id} />
-                  <label className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,10rem)] items-center gap-3">
-                    <span className="break-words text-sm font-medium text-foreground">{vendor.name}</span>
+          {vendors.length > 0 ? (
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Vendor payments
+                </h3>
+                <p className="mt-1 text-sm text-muted">
+                  Enter amounts for vendors you paid. Leave the rest empty.
+                </p>
+              </div>
+              <label className="block min-w-0">
+                <span className="mb-1.5 block text-sm font-medium text-foreground">
+                  Notes for vendor payments (optional)
+                </span>
+                <input
+                  name="notes"
+                  maxLength={240}
+                  placeholder="e.g. Advance for supplies"
+                  className={fieldClass}
+                />
+              </label>
+              <div className="divide-y divide-border rounded-lg border border-border">
+                {vendors.map((vendor) => (
+                  <div key={vendor.id} className="px-3 py-3">
+                    <input type="hidden" name="vendorId" value={vendor.id} />
+                    <label className="grid grid-cols-[minmax(0,1fr)_minmax(8rem,10rem)] items-center gap-3">
+                      <span className="break-words text-sm font-medium text-foreground">
+                        {vendor.name}
+                      </span>
+                      <input
+                        name="amount"
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        max="2147483647"
+                        step="1"
+                        aria-label={`Amount paid to ${vendor.name}`}
+                        value={vendorAmounts[vendor.id] ?? ""}
+                        onChange={(event) =>
+                          setVendorAmounts((current) => ({
+                            ...current,
+                            [vendor.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="Amount (₹)"
+                        className={`${fieldClass} tabular-nums`}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">
+                Other expenses
+              </h3>
+              <p className="mt-1 text-sm text-muted">
+                Transport, labour, or anything else from this order&apos;s cash.
+              </p>
+            </div>
+            {expenses.map((expense, index) => {
+              const required = Boolean(
+                expense.description.trim() || expense.amount.trim(),
+              );
+              return (
+                <div
+                  key={expense.id}
+                  className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_2.5rem] items-end gap-2"
+                >
+                  <label className="block min-w-0">
+                    <span className="mb-1.5 block text-sm font-medium text-foreground">
+                      Description
+                    </span>
                     <input
-                      name="amount"
+                      name="description"
+                      required={required}
+                      maxLength={240}
+                      value={expense.description}
+                      onChange={(event) =>
+                        updateExpense(expense.id, {
+                          description: event.target.value,
+                        })
+                      }
+                      aria-label={`Expense ${index + 1} description`}
+                      placeholder="Transport or labour"
+                      className={fieldClass}
+                    />
+                  </label>
+                  <label className="block min-w-0">
+                    <span className="mb-1.5 block text-sm font-medium text-foreground">
+                      Amount (₹)
+                    </span>
+                    <input
+                      name="expenseAmount"
                       type="number"
                       inputMode="numeric"
                       min="1"
                       max="2147483647"
                       step="1"
-                      aria-label={`Amount paid to ${vendor.name}`}
-                      value={vendorAmounts[vendor.id] ?? ""}
-                      onChange={(event) => setVendorAmounts((current) => ({ ...current, [vendor.id]: event.target.value }))}
-                      placeholder="Amount (₹)"
+                      required={required}
+                      value={expense.amount}
+                      onChange={(event) =>
+                        updateExpense(expense.id, {
+                          amount: event.target.value,
+                        })
+                      }
+                      aria-label={`Expense ${index + 1} amount`}
+                      placeholder="0"
                       className={`${fieldClass} tabular-nums`}
                     />
                   </label>
+                  <button
+                    type="button"
+                    disabled={expenses.length === 1}
+                    onClick={() =>
+                      setExpenses((current) =>
+                        current.filter((row) => row.id !== expense.id),
+                      )
+                    }
+                    aria-label={`Remove expense ${index + 1}`}
+                    className="inline-flex min-h-12 items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                  </button>
                 </div>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="space-y-3">
-              {expenses.map((expense, index) => {
-                const required = Boolean(expense.description.trim() || expense.amount.trim());
-                return (
-                  <div key={expense.id} className="grid grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_2.5rem] items-end gap-2">
-                    <label className="block min-w-0">
-                      <span className="mb-1.5 block text-sm font-medium text-foreground">Description</span>
-                      <input name="description" required={required} maxLength={240} value={expense.description} onChange={(event) => updateExpense(expense.id, { description: event.target.value })} aria-label={`Expense ${index + 1} description`} placeholder="Transport or labour" className={fieldClass} />
-                    </label>
-                    <label className="block min-w-0">
-                      <span className="mb-1.5 block text-sm font-medium text-foreground">Amount (₹)</span>
-                      <input name="amount" type="number" inputMode="numeric" min="1" max="2147483647" step="1" required={required} value={expense.amount} onChange={(event) => updateExpense(expense.id, { amount: event.target.value })} aria-label={`Expense ${index + 1} amount`} placeholder="0" className={`${fieldClass} tabular-nums`} />
-                    </label>
-                    <button type="button" disabled={expenses.length === 1} onClick={() => setExpenses((current) => current.filter((row) => row.id !== expense.id))} aria-label={`Remove expense ${index + 1}`} className="inline-flex min-h-12 items-center justify-center rounded-lg text-muted hover:bg-error-soft hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30">
-                      <Trash2 className="size-4" aria-hidden />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+              );
+            })}
             <button type="button" onClick={addExpenseRow} className={quietButton}>
               <Plus className="size-4" aria-hidden /> Add more
             </button>
-          </>
-        )}
-      </fieldset>
+          </div>
+        </fieldset>
       </div>
 
-      {entryError ? <p role="alert" className="shrink-0 px-5 pb-4 text-sm text-error">{entryError}</p> : null}
+      {entryError ? (
+        <p role="alert" className="shrink-0 px-5 pb-4 text-sm text-error">
+          {entryError}
+        </p>
+      ) : null}
       <div className="relative shrink-0 border-t border-border bg-background px-5 py-4">
         <div className="mb-3 flex items-center justify-between gap-3 text-sm">
-          <span className="text-muted">{filledCount} {isVendor ? "vendor payments" : "expenses"}</span>
-          <span className="font-semibold tabular-nums text-foreground">Total {formatCurrency(total)}</span>
+          <span className="text-muted">
+            {filledCount} entr{filledCount === 1 ? "y" : "ies"}
+          </span>
+          <span className="font-semibold tabular-nums text-foreground">
+            Total {formatCurrency(total)}
+          </span>
         </div>
         <div className="flex justify-end gap-2">
-          <button type="button" className={secondaryButton} disabled={isSaving} onClick={onCancel}>Cancel</button>
-          <button type="submit" className={primaryButton} disabled={isSaving || filledCount === 0}>
-            {isSaving ? "Saving…" : isVendor ? "Save vendor expenses" : "Save expenses"}
+          <button
+            type="button"
+            className={secondaryButton}
+            disabled={isSaving}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            className={primaryButton}
+            disabled={isSaving || filledCount === 0}
+          >
+            {isSaving ? "Saving…" : "Save all"}
           </button>
         </div>
       </div>
