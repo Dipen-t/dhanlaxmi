@@ -129,7 +129,7 @@ function SortableMaterialCard({
         ) : null}
         {notes ? (
           <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
-            Note: {notes}
+            {notes}
           </span>
         ) : null}
         {timing ? (
@@ -232,7 +232,7 @@ export function OrderMaterialsPanel({
 
   function clearEditingMaterial() {
     if (editingId === null) return;
-    onUpdate(editingId, { unitQty: "", unitName: "", timing: "" });
+    onUpdate(editingId, { unitQty: "", unitName: "", timing: "", notes: "" });
     setEditingId(null);
   }
 
@@ -457,15 +457,15 @@ export function OrderMaterialsPanel({
                   htmlFor={`edit-notes-${editingMaterial.id}`}
                   className="mb-1.5 block text-sm font-medium text-foreground"
                 >
-                  Notes (e.g. high tea)
+                  Description <span className="font-normal text-muted">(optional)</span>
                 </label>
-                <input
+                <textarea
                   id={`edit-notes-${editingMaterial.id}`}
-                  type="text"
+                  rows={2}
                   value={editingItem.notes ?? ""}
                   onChange={(e) => onUpdate(editingMaterial.id, { notes: e.target.value })}
-                  placeholder="Any special instructions for the vendor..."
-                  className="w-full min-h-12 rounded-xl border border-border bg-background px-3 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                  placeholder="e.g. cut thin, serve hot, deliver early…"
+                  className="w-full min-h-16 rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
                 />
               </div>
             </div>

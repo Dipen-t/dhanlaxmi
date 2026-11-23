@@ -161,23 +161,18 @@ export function formatHiTeaMaterialNote(notes: string[]): string {
 
 export function vendorTemplateParams(order: NotificationOrder, timing: string, items: NotificationMaterial[], names: Map<number, string>, venue: string, updated: boolean) {
   // WhatsApp Hub/Meta strip real newlines in template params and turn them into " | ".
-  // Keep this param readable as one line: plates first, then numbered items.
-  const plates = `Plates: ${order.numberOfPersons + order.extraPlates}`;
+  // Vendors get materials only — never the order plate count.
+  // Per-item description (notes) goes after qty/unit as "(description)".
   const list = items.map((item, index) => {
     const name = names.get(item.rawMaterialId) || "Kitchen item";
-    return `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
+    const description = item.notes?.trim().replace(/\s+/g, " ");
+    const base = `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
+    return description ? `${base} (${description})` : base;
   });
-  const details = [plates, ...list].join(" · ");
+  const details = list.join(" · ");
 
-  // Put the update banner in {{4}} so {{3}} stays a clean materials list.
-  const noteParts: string[] = [];
-  if (updated) noteParts.push("UPDATED ORDER");
-  const rawNotes = [...new Set(items.flatMap((item) => (item.notes?.trim() ? [item.notes.trim()] : [])))];
-  if (rawNotes.length) {
-    const formatted = formatHiTeaMaterialNote(rawNotes);
-    if (formatted) noteParts.push(formatted);
-  }
-  const notes = noteParts.join(" · ") || "—";
+  // {{4}} keeps the update banner only; item descriptions stay on each material line.
+  const notes = updated ? "UPDATED ORDER — replaces previous details" : "—";
 
   return [vendorScheduleLabel(order.date, timing), venue, details, notes];
 }

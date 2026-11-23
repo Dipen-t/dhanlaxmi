@@ -17,10 +17,10 @@ const styles = StyleSheet.create({
   venue: { lineHeight: 1.3, marginTop: 4 },
   bold: { fontWeight: 700 },
   row: { flexDirection: "row", borderBottomWidth: 0.5, borderBottomColor: "#DDDDDD" },
-  cell: { width: "50%", paddingHorizontal: 7, paddingVertical: 3 },
+  cell: { width: "50%", paddingHorizontal: 7, paddingVertical: 5 },
   fullCell: { width: "100%" },
-  dish: { lineHeight: 1.3 },
-  quantity: { fontWeight: 700 },
+  dish: { fontSize: 14, lineHeight: 1.35 },
+  quantity: { fontSize: 14, fontWeight: 700 },
   footer: { position: "absolute", bottom: 14, left: 30, right: 30, borderTopWidth: 0.5, borderTopColor: "#999999", paddingTop: 5, flexDirection: "row", justifyContent: "space-between", fontSize: 9 },
 });
 

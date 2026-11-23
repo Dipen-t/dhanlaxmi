@@ -23,35 +23,31 @@ test("schedule and plate-count changes notify all vendors without scaling quanti
   assert.equal(before.rawMaterials[0].unitQty, "100");
 });
 
-test("materials stay numbered and plates-first; update banner moves to notes param", () => {
+test("materials stay numbered without plate count; update banner moves to notes param", () => {
   const params = vendorTemplateParams(before, "18:00", before.rawMaterials, new Map([[1, "Paneer"], [2, "Rice"]]), before.venue, true);
   assert.equal(params[0], "18/12/2026 at 6:00 PM");
-  assert.equal(params[2], "Plates: 100 · 1) Paneer: 100 plates · 2) Rice: 20 kg");
-  assert.equal(params[3], "UPDATED ORDER · HI-TEA:- Serve warm");
+  assert.equal(params[2], "1) Paneer: 100 plates (Serve warm) · 2) Rice: 20 kg");
+  assert.equal(params[3], "UPDATED ORDER — replaces previous details");
   assert.ok(!params[2].includes("UPDATED"));
+  assert.ok(!params[2].includes("Plates:"));
   assert.ok(!params[3].includes("Paneer") && !params[3].includes("Customer"));
 });
 
-test("fresh orders format raw material notes with HI-TEA:- prefix", () => {
+test("fresh orders append item description in parentheses after qty/unit", () => {
   const params = vendorTemplateParams(before, "18:00", [before.rawMaterials[0]], new Map([[1, "Paneer"]]), before.venue, false);
-  assert.equal(params[2], "Plates: 100 · 1) Paneer: 100 plates");
-  assert.equal(params[3], "HI-TEA:- Serve warm");
+  assert.equal(params[2], "1) Paneer: 100 plates (Serve warm)");
+  assert.equal(params[3], "—");
+  assert.ok(!params[2].includes("Plates:"));
 });
 
-test("vendor message formats raw material notes with HI-TEA:- and normalizes existing prefixes", () => {
-  const itemsWithPrefix = [
-    { rawMaterialId: 1, unitQty: "50", unitName: "pcs", notes: "HI-TEA:- 50 Samosas" },
-    { rawMaterialId: 2, unitQty: "10", unitName: "liters", notes: "Hi Tea: Milk for masala tea" },
+test("vendor message keeps descriptions on the item line and omits empty ones", () => {
+  const itemsWithDescription = [
+    { rawMaterialId: 1, unitQty: "50", unitName: "pcs", notes: "cut thin" },
+    { rawMaterialId: 2, unitQty: "10", unitName: "liters", notes: "  " },
   ];
-  const params = vendorTemplateParams(before, "17:00", itemsWithPrefix, new Map([[1, "Samosa"], [2, "Milk"]]), before.venue, false);
-  assert.equal(params[3], "HI-TEA:- 50 Samosas; Milk for masala tea");
-
-  // When no raw materials have notes, notes param falls back to —
-  const itemsWithoutNotes = [
-    { rawMaterialId: 1, unitQty: "50", unitName: "pcs", notes: null },
-  ];
-  const noNotesParams = vendorTemplateParams(before, "17:00", itemsWithoutNotes, new Map([[1, "Samosa"]]), before.venue, false);
-  assert.equal(noNotesParams[3], "—");
+  const params = vendorTemplateParams(before, "17:00", itemsWithDescription, new Map([[1, "Samosa"], [2, "Milk"]]), before.venue, false);
+  assert.equal(params[2], "1) Samosa: 50 pcs (cut thin) · 2) Milk: 10 liters");
+  assert.equal(params[3], "—");
 });
 
 test("changed selected dishes trigger customer/manager menu text without a booking confirmation or time", () => {
