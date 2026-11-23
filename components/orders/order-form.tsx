@@ -106,6 +106,7 @@ export function OrderForm({
           unitQty: existing?.unitQty ?? "",
           unitName: existing?.unitName ?? "",
           notes: existing?.notes ?? "",
+          description: existing?.description ?? "",
           timing: existing?.timing ?? "",
           vendorId: existing?.vendorId ?? defaultVendorId,
         };

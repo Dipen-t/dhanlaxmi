@@ -6,7 +6,15 @@ import { isHiTeaCategory, normalizeHiTeaNotes } from "./hi-tea";
 
 export const CUSTOMER_MENU_TEMPLATE = "customer_menu_pdf";
 
-export type NotificationMaterial = { rawMaterialId: number; vendorId?: number | null; timing?: string | null; unitQty: string; unitName: string; notes?: string | null };
+export type NotificationMaterial = {
+  rawMaterialId: number;
+  vendorId?: number | null;
+  timing?: string | null;
+  unitQty: string;
+  unitName: string;
+  notes?: string | null;
+  description?: string | null;
+};
 export type NotificationOrder = {
   id: number; date: string; venue: string; mealType: string; numberOfPersons: number; extraPlates: number;
   customerName: string | null; customerPhone: string | null;
@@ -17,7 +25,18 @@ export type NotificationOrder = {
 };
 
 function materialKey(items: NotificationMaterial[]) {
-  return JSON.stringify(items.map(item => [item.rawMaterialId, String(Number(item.unitQty)), item.unitName.trim().toLowerCase(), item.notes?.trim() || "", item.timing?.trim() || ""]).sort((a, b) => Number(a[0]) - Number(b[0])));
+  return JSON.stringify(
+    items
+      .map((item) => [
+        item.rawMaterialId,
+        String(Number(item.unitQty)),
+        item.unitName.trim().toLowerCase(),
+        item.notes?.trim() || "",
+        item.description?.trim() || "",
+        item.timing?.trim() || "",
+      ])
+      .sort((a, b) => Number(a[0]) - Number(b[0])),
+  );
 }
 
 export function planVendorChanges(before: NotificationOrder | null, next: NotificationOrder) {
@@ -167,7 +186,7 @@ export function vendorTemplateParams(order: NotificationOrder, timing: string, i
   // One message per vendor: all items combined. Per-item timing/description stay on the line.
   const list = items.map((item, index) => {
     const name = names.get(item.rawMaterialId) || "Kitchen item";
-    const description = item.notes?.trim().replace(/\s+/g, " ");
+    const description = item.description?.trim().replace(/\s+/g, " ");
     const itemTiming = item.timing?.trim();
     const timeLabel = itemTiming ? formatEventTime(itemTiming) : null;
     let line = `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
@@ -178,8 +197,15 @@ export function vendorTemplateParams(order: NotificationOrder, timing: string, i
   const details = list.join(" · ");
 
   // {{1}} uses meal/order timing; item-specific times are on each material line.
-  // {{4}} keeps the update banner only.
-  const notes = updated ? "UPDATED ORDER — replaces previous details" : "—";
+  // {{4}} = update banner and/or Hi-tea notes (separate from description).
+  const hiTea = formatHiTeaMaterialNote(
+    items.map((item) => item.notes || "").filter(Boolean),
+  );
+  const notesParts = [
+    updated ? "UPDATED ORDER — replaces previous details" : "",
+    hiTea,
+  ].filter(Boolean);
+  const notes = notesParts.join(" · ") || "—";
 
   return [vendorScheduleLabel(order.date, timing), venue, details, notes];
 }

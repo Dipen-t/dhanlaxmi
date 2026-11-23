@@ -164,7 +164,10 @@ export const orderRawMaterials = pgTable(
     }),
     unitQty: text("unit_qty").notNull(),
     unitName: text("unit_name").notNull(),
+    /** Hi-tea / high-tea note for vendors (HI-TEA:- in WhatsApp). */
     notes: text("notes"),
+    /** General item description shown on the item line. */
+    description: text("description"),
     sortOrder: integer("sort_order").notNull().default(0),
     timing: text("timing"),
   },

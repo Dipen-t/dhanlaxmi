@@ -31,6 +31,7 @@ export type OrderMaterialDraft = {
   unitQty: string;
   unitName: string;
   notes?: string;
+  description?: string;
   timing?: string;
   vendorId: number | null;
 };
@@ -62,6 +63,7 @@ function SortableMaterialCard({
   name,
   detail,
   notes,
+  description,
   timing,
   active,
   complete,
@@ -73,6 +75,7 @@ function SortableMaterialCard({
   name: string;
   detail?: string;
   notes?: string;
+  description?: string;
   timing?: string;
   active: boolean;
   complete: boolean;
@@ -127,9 +130,14 @@ function SortableMaterialCard({
             {detail}
           </span>
         ) : null}
+        {description ? (
+          <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
+            {description}
+          </span>
+        ) : null}
         {notes ? (
           <span className={`mt-0.5 w-full truncate text-xs ${active ? "text-primary-foreground/70" : "text-muted"}`}>
-            {notes}
+            Hi-tea: {notes}
           </span>
         ) : null}
         {timing ? (
@@ -232,7 +240,7 @@ export function OrderMaterialsPanel({
 
   function clearEditingMaterial() {
     if (editingId === null) return;
-    onUpdate(editingId, { unitQty: "", unitName: "", timing: "", notes: "" });
+    onUpdate(editingId, { unitQty: "", unitName: "", timing: "", notes: "", description: "" });
     setEditingId(null);
   }
 
@@ -309,6 +317,7 @@ export function OrderMaterialsPanel({
                     name={material.name}
                     detail={complete ? `${item.unitQty} ${item.unitName}${vendorName ? ` ${vendorName}` : ""}` : partial ? `${item.unitQty} · need unit` : undefined}
                     notes={item.notes}
+                    description={item.description}
                     timing={item.timing}
                     active={active}
                     complete={complete}
@@ -454,18 +463,34 @@ export function OrderMaterialsPanel({
               </div>
               <div className="min-w-0 sm:col-span-3 mt-2">
                 <label
-                  htmlFor={`edit-notes-${editingMaterial.id}`}
+                  htmlFor={`edit-description-${editingMaterial.id}`}
                   className="mb-1.5 block text-sm font-medium text-foreground"
                 >
                   Description <span className="font-normal text-muted">(optional)</span>
                 </label>
                 <textarea
-                  id={`edit-notes-${editingMaterial.id}`}
+                  id={`edit-description-${editingMaterial.id}`}
                   rows={2}
-                  value={editingItem.notes ?? ""}
-                  onChange={(e) => onUpdate(editingMaterial.id, { notes: e.target.value })}
+                  value={editingItem.description ?? ""}
+                  onChange={(e) => onUpdate(editingMaterial.id, { description: e.target.value })}
                   placeholder="e.g. cut thin, serve hot, deliver early…"
                   className="w-full min-h-16 rounded-xl border border-border bg-background px-3 py-2.5 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
+              </div>
+              <div className="min-w-0 sm:col-span-3 mt-2">
+                <label
+                  htmlFor={`edit-notes-${editingMaterial.id}`}
+                  className="mb-1.5 block text-sm font-medium text-foreground"
+                >
+                  Hi-tea <span className="font-normal text-muted">(optional)</span>
+                </label>
+                <input
+                  id={`edit-notes-${editingMaterial.id}`}
+                  type="text"
+                  value={editingItem.notes ?? ""}
+                  onChange={(e) => onUpdate(editingMaterial.id, { notes: e.target.value })}
+                  placeholder="e.g. 50 samosas, milk for masala tea…"
+                  className="w-full min-h-12 rounded-xl border border-border bg-background px-3 text-base text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
                 />
               </div>
             </div>

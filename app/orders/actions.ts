@@ -24,6 +24,7 @@ export type OrderRawMaterialRecord = {
   unitQty: string;
   unitName: string;
   notes?: string | null;
+  description?: string | null;
   timing?: string | null;
   vendorId?: number | null;
   sortOrder?: number;
@@ -104,6 +105,7 @@ function serializeOrder(order: {
     unitQty: string;
     unitName: string;
     notes?: string | null;
+    description?: string | null;
     timing?: string | null;
     vendorId: number | null;
     sortOrder?: number;
@@ -455,6 +457,7 @@ export async function createOrder(data: OrderInput) {
             unitQty: String(m.unitQty),
             unitName: String(m.unitName),
             notes: m.notes || null,
+            description: m.description || null,
             timing: m.timing?.trim() || null,
             vendorId: m.vendorId || null,
             sortOrder: index,
@@ -598,6 +601,7 @@ export async function updateOrder(data: OrderInput) {
             unitQty: String(m.unitQty),
             unitName: String(m.unitName),
             notes: m.notes || null,
+            description: m.description || null,
             timing: m.timing?.trim() || null,
             vendorId: m.vendorId || null,
             sortOrder: index,
