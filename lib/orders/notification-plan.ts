@@ -236,3 +236,25 @@ export function vendorTemplateParams(
 
   return [dateParam, venue, ...dishSlots];
 }
+
+export const VENDOR_CANCELLATION_MESSAGE =
+  "Your order has been cancelled. Don't send any material for this.";
+
+export function vendorCancellationTemplateParams(
+  order: NotificationOrder,
+  timing: string,
+  venue: string,
+): string[] {
+  const dateStr = vendorScheduleLabel(order.date, timing);
+  const dateParam = `${dateStr} (ORDER CANCELLED)`;
+  return [
+    dateParam,
+    venue,
+    VENDOR_CANCELLATION_MESSAGE,
+    "",
+    "",
+    "",
+    "",
+    "",
+  ];
+}

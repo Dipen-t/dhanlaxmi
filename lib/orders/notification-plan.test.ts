@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, selectedMenuTemplateParams, selectedMenuText, vendorTemplateParams, type NotificationOrder } from "./notification-plan";
+import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, selectedMenuTemplateParams, selectedMenuText, vendorCancellationTemplateParams, vendorTemplateParams, VENDOR_CANCELLATION_MESSAGE, type NotificationOrder } from "./notification-plan";
 
 const before: NotificationOrder = {
   id: 1,
@@ -114,6 +114,20 @@ test("same vendor with different item timings produces distinct lines in dish sl
   assert.equal(params[2], "1) Onion: 5 kg @ 10:30 AM");
   assert.equal(params[3], "2) Tomato: 2 boxes @ 7:00 PM (fresh)");
   assert.equal(params[4], "");
+});
+
+test("vendor cancellation template params format 8 parameters with cancellation message", () => {
+  const params = vendorCancellationTemplateParams(before, "dinner", before.venue);
+  assert.equal(params.length, 8);
+  assert.equal(params[0], "18/12/2026 at dinner (ORDER CANCELLED)");
+  assert.equal(params[1], before.venue);
+  assert.equal(params[2], VENDOR_CANCELLATION_MESSAGE);
+  assert.equal(params[2], "Your order has been cancelled. Don't send any material for this.");
+  assert.equal(params[3], "");
+  assert.equal(params[4], "");
+  assert.equal(params[5], "");
+  assert.equal(params[6], "");
+  assert.equal(params[7], "");
 });
 
 test("changed selected dishes trigger customer/manager menu text without a booking confirmation or time", () => {

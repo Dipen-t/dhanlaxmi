@@ -5,7 +5,7 @@ import { orders, orderWhatsappMessages as messages, rawMaterials, vendors } from
 import { sendWhatsAppPlainText, sendWhatsAppTemplateMessage } from "@/lib/whatsapp";
 import { normalizeWhatsAppHubPhone } from "@/lib/whatsapp-phone";
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
-import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, vendorTemplateParams, VENDOR_ORDER_TEMPLATE, type NotificationOrder } from "./notification-plan";
+import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, vendorCancellationTemplateParams, vendorTemplateParams, VENDOR_ORDER_TEMPLATE, type NotificationOrder } from "./notification-plan";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Message = typeof messages.$inferSelect;
@@ -64,9 +64,36 @@ export async function queueVendorNotifications(transaction: Transaction, before:
   for (const group of plan.removed) {
     const vendor = contacts.find(contact => contact.id === group.vendorId);
     if (!vendor || !before) continue;
-    const detail = `Contact ${vendor.name} (${vendor.phone}) manually: cancel the previous assignment for ${group.items.map(item => names.get(item.rawMaterialId) || "Kitchen item").join(", ")} at ${vendorScheduleLabel(before.date, group.timing)}, ${vendor.deliveryLocation === "godown" ? "Godown" : before.venue}. No automatic cancellation was sent.`;
-    warnings.push(detail);
-    drafts.push({ orderId: next.id, recipientKind: "vendor", vendorId: vendor.id, recipientName: vendor.name, phone: vendor.phone, kind: "vendor_removed", payload: { mode: "manual", text: detail }, status: "manual_required", lastError: detail });
+    const vendorHasNoMaterial = !next.rawMaterials.some(item => item.vendorId === group.vendorId);
+    if (vendorHasNoMaterial) {
+      const vendorPhone = normalizeWhatsAppHubPhone(vendor.phone);
+      const matchesCustomer =
+        (customerPhone !== null && customerPhone === vendorPhone) ||
+        (customer2Phone !== null && customer2Phone === vendorPhone);
+      drafts.push({
+        orderId: next.id,
+        recipientKind: "vendor",
+        vendorId: vendor.id,
+        recipientName: vendor.name,
+        phone: vendor.phone,
+        kind: "vendor_removed",
+        payload: {
+          mode: "template",
+          template: process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || VENDOR_ORDER_TEMPLATE,
+          params: vendorCancellationTemplateParams(
+            before,
+            group.timing,
+            vendor.deliveryLocation === "godown" ? "Godown" : before.venue,
+          ),
+        },
+        status: matchesCustomer ? "failed" : "queued",
+        lastError: matchesCustomer ? "Vendor and customer have the same phone number. Correct the vendor contact before retrying." : null,
+      });
+    } else {
+      const detail = `Contact ${vendor.name} (${vendor.phone}) manually: cancel the previous assignment for ${group.items.map(item => names.get(item.rawMaterialId) || "Kitchen item").join(", ")} at ${vendorScheduleLabel(before.date, group.timing)}, ${vendor.deliveryLocation === "godown" ? "Godown" : before.venue}.`;
+      warnings.push(detail);
+      drafts.push({ orderId: next.id, recipientKind: "vendor", vendorId: vendor.id, recipientName: vendor.name, phone: vendor.phone, kind: "vendor_removed", payload: { mode: "manual", text: detail }, status: "manual_required", lastError: detail });
+    }
   }
   return { ids: await insertDrafts(transaction, drafts), warnings };
 }
