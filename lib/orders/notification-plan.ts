@@ -221,7 +221,7 @@ export function vendorTemplateParams(
   });
 
   // Exactly 6 slots for dishes: {{3}} through {{8}}
-  const dishSlots: string[] = ["—", "—", "—", "—", "—", "—"];
+  const dishSlots: string[] = ["", "", "", "", "", ""];
 
   if (dishLines.length <= 6) {
     for (let i = 0; i < dishLines.length; i++) {

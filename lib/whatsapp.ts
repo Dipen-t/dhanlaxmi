@@ -282,7 +282,7 @@ export async function sendWhatsAppTemplateMessage(options: {
     return {
       index: index + 1,
       originalChars: rawStr.length,
-      value: cleaned.length > 0 ? cleaned : "—",
+      value: cleaned,
     };
   });
 
@@ -327,7 +327,7 @@ export async function sendWhatsAppTemplateMessage(options: {
   });
 
   try {
-    const response = await fetch(url, { method: "GET", signal: AbortSignal.timeout(15000) });
+    const response = await fetch(url, { method: "GET", signal: AbortSignal.timeout(60000) });
     const { contentType, raw, parsed } = await readResponseBody(response);
     const durationMs = Date.now() - started;
 
@@ -441,12 +441,12 @@ export async function sendNewOrderVendorAlert(options: {
       params: [
         options.dateLabel,
         options.venue,
-        options.materialsLine || "—",
-        options.notesLine && options.notesLine.trim() ? options.notesLine : "—",
-        "—",
-        "—",
-        "—",
-        "—",
+        options.materialsLine || "",
+        options.notesLine && options.notesLine.trim() ? options.notesLine : "",
+        "",
+        "",
+        "",
+        "",
       ],
     });
   } else {

@@ -52,23 +52,23 @@ test("materials stay numbered in 6 slots; description and hi-tea stay on the lin
   assert.equal(params[1], before.venue);
   assert.equal(params[2], "1) Paneer: 100 plates @ 6:00 PM (Serve warm) [HI-TEA:- 50 samosas]");
   assert.equal(params[3], "2) Rice: 20 kg @ 7:00 PM");
-  assert.equal(params[4], "—");
-  assert.equal(params[5], "—");
-  assert.equal(params[6], "—");
-  assert.equal(params[7], "—");
+  assert.equal(params[4], "");
+  assert.equal(params[5], "");
+  assert.equal(params[6], "");
+  assert.equal(params[7], "");
 });
 
-test("fresh orders populate dish slots and fill unused slots with —", () => {
+test("fresh orders populate dish slots and fill unused slots with empty string", () => {
   const params = vendorTemplateParams(before, "dinner", [before.rawMaterials[0]], new Map([[1, "Paneer"]]), before.venue, false);
   assert.equal(params.length, 8);
   assert.equal(params[0], "18/12/2026 at dinner");
   assert.equal(params[1], before.venue);
   assert.equal(params[2], "1) Paneer: 100 plates @ 6:00 PM (Serve warm) [HI-TEA:- 50 samosas]");
-  assert.equal(params[3], "—");
-  assert.equal(params[4], "—");
-  assert.equal(params[5], "—");
-  assert.equal(params[6], "—");
-  assert.equal(params[7], "—");
+  assert.equal(params[3], "");
+  assert.equal(params[4], "");
+  assert.equal(params[5], "");
+  assert.equal(params[6], "");
+  assert.equal(params[7], "");
 });
 
 test("vendor message keeps descriptions on the item line and omits empty ones", () => {
@@ -80,7 +80,7 @@ test("vendor message keeps descriptions on the item line and omits empty ones", 
   assert.equal(params.length, 8);
   assert.equal(params[2], "1) Samosa: 50 pcs (cut thin)");
   assert.equal(params[3], "2) Milk: 10 liters");
-  assert.equal(params[4], "—");
+  assert.equal(params[4], "");
 });
 
 test("orders with more than 6 items combine remaining items into the 6th dish slot", () => {
@@ -113,7 +113,7 @@ test("same vendor with different item timings produces distinct lines in dish sl
   assert.equal(params.length, 8);
   assert.equal(params[2], "1) Onion: 5 kg @ 10:30 AM");
   assert.equal(params[3], "2) Tomato: 2 boxes @ 7:00 PM (fresh)");
-  assert.equal(params[4], "—");
+  assert.equal(params[4], "");
 });
 
 test("changed selected dishes trigger customer/manager menu text without a booking confirmation or time", () => {
