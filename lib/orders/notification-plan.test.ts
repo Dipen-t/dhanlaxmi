@@ -45,22 +45,30 @@ test("schedule and plate-count changes notify all vendors without scaling quanti
   assert.equal(before.rawMaterials[0].unitQty, "100");
 });
 
-test("materials stay numbered without plate count; description and hi-tea stay separate", () => {
+test("materials stay numbered in 6 slots; description and hi-tea stay on the line", () => {
   const params = vendorTemplateParams(before, "dinner", before.rawMaterials, new Map([[1, "Paneer"], [2, "Rice"]]), before.venue, true);
-  assert.equal(params[0], "18/12/2026 at dinner");
-  assert.equal(params[2], "1) Paneer: 100 plates @ 6:00 PM (Serve warm) · 2) Rice: 20 kg @ 7:00 PM");
-  assert.equal(params[3], "UPDATED ORDER — replaces previous details · HI-TEA:- 50 samosas");
-  assert.ok(!params[2].includes("UPDATED"));
-  assert.ok(!params[2].includes("Plates:"));
-  assert.ok(!params[2].includes("HI-TEA"));
-  assert.ok(!params[3].includes("Paneer") && !params[3].includes("Customer"));
+  assert.equal(params.length, 8);
+  assert.equal(params[0], "18/12/2026 at dinner (UPDATED ORDER)");
+  assert.equal(params[1], before.venue);
+  assert.equal(params[2], "1) Paneer: 100 plates @ 6:00 PM (Serve warm) [HI-TEA:- 50 samosas]");
+  assert.equal(params[3], "2) Rice: 20 kg @ 7:00 PM");
+  assert.equal(params[4], "—");
+  assert.equal(params[5], "—");
+  assert.equal(params[6], "—");
+  assert.equal(params[7], "—");
 });
 
-test("fresh orders append item description in parentheses and hi-tea in notes param", () => {
+test("fresh orders populate dish slots and fill unused slots with —", () => {
   const params = vendorTemplateParams(before, "dinner", [before.rawMaterials[0]], new Map([[1, "Paneer"]]), before.venue, false);
-  assert.equal(params[2], "1) Paneer: 100 plates @ 6:00 PM (Serve warm)");
-  assert.equal(params[3], "HI-TEA:- 50 samosas");
-  assert.ok(!params[2].includes("Plates:"));
+  assert.equal(params.length, 8);
+  assert.equal(params[0], "18/12/2026 at dinner");
+  assert.equal(params[1], before.venue);
+  assert.equal(params[2], "1) Paneer: 100 plates @ 6:00 PM (Serve warm) [HI-TEA:- 50 samosas]");
+  assert.equal(params[3], "—");
+  assert.equal(params[4], "—");
+  assert.equal(params[5], "—");
+  assert.equal(params[6], "—");
+  assert.equal(params[7], "—");
 });
 
 test("vendor message keeps descriptions on the item line and omits empty ones", () => {
@@ -69,11 +77,30 @@ test("vendor message keeps descriptions on the item line and omits empty ones", 
     { rawMaterialId: 2, unitQty: "10", unitName: "liters", description: "  " },
   ];
   const params = vendorTemplateParams(before, "dinner", itemsWithDescription, new Map([[1, "Samosa"], [2, "Milk"]]), before.venue, false);
-  assert.equal(params[2], "1) Samosa: 50 pcs (cut thin) · 2) Milk: 10 liters");
-  assert.equal(params[3], "—");
+  assert.equal(params.length, 8);
+  assert.equal(params[2], "1) Samosa: 50 pcs (cut thin)");
+  assert.equal(params[3], "2) Milk: 10 liters");
+  assert.equal(params[4], "—");
 });
 
-test("same vendor with different item timings still produces one combined materials line", () => {
+test("orders with more than 6 items combine remaining items into the 6th dish slot", () => {
+  const sevenItems = Array.from({ length: 7 }, (_, i) => ({
+    rawMaterialId: i + 1,
+    unitQty: "10",
+    unitName: "kg",
+  }));
+  const names = new Map(Array.from({ length: 7 }, (_, i) => [i + 1, `Item ${i + 1}`]));
+  const params = vendorTemplateParams(before, "lunch", sevenItems, names, "Main Hall", false);
+  assert.equal(params.length, 8);
+  assert.equal(params[2], "1) Item 1: 10 kg");
+  assert.equal(params[3], "2) Item 2: 10 kg");
+  assert.equal(params[4], "3) Item 3: 10 kg");
+  assert.equal(params[5], "4) Item 4: 10 kg");
+  assert.equal(params[6], "5) Item 5: 10 kg");
+  assert.equal(params[7], "6) Item 6: 10 kg · 7) Item 7: 10 kg");
+});
+
+test("same vendor with different item timings produces distinct lines in dish slots", () => {
   const sameVendor = [
     { rawMaterialId: 1, vendorId: 10, timing: "10:30", unitQty: "5", unitName: "kg", notes: null },
     { rawMaterialId: 2, vendorId: 10, timing: "19:00", unitQty: "2", unitName: "boxes", description: "fresh" },
@@ -83,7 +110,10 @@ test("same vendor with different item timings still produces one combined materi
   assert.equal(groups[0].vendorId, 10);
   assert.equal(groups[0].items.length, 2);
   const params = vendorTemplateParams(before, groups[0].timing, groups[0].items, new Map([[1, "Onion"], [2, "Tomato"]]), before.venue, false);
-  assert.equal(params[2], "1) Onion: 5 kg @ 10:30 AM · 2) Tomato: 2 boxes @ 7:00 PM (fresh)");
+  assert.equal(params.length, 8);
+  assert.equal(params[2], "1) Onion: 5 kg @ 10:30 AM");
+  assert.equal(params[3], "2) Tomato: 2 boxes @ 7:00 PM (fresh)");
+  assert.equal(params[4], "—");
 });
 
 test("changed selected dishes trigger customer/manager menu text without a booking confirmation or time", () => {

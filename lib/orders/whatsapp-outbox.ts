@@ -5,7 +5,7 @@ import { orders, orderWhatsappMessages as messages, rawMaterials, vendors } from
 import { sendWhatsAppPlainText, sendWhatsAppTemplateMessage } from "@/lib/whatsapp";
 import { normalizeWhatsAppHubPhone } from "@/lib/whatsapp-phone";
 import { groupMaterialsByVendorTiming, vendorScheduleLabel } from "./vendor-timing";
-import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, vendorTemplateParams, type NotificationOrder } from "./notification-plan";
+import { menuNotificationChanged, planCustomerNotifications, planVendorChanges, vendorTemplateParams, VENDOR_ORDER_TEMPLATE, type NotificationOrder } from "./notification-plan";
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Message = typeof messages.$inferSelect;
@@ -58,7 +58,7 @@ export async function queueVendorNotifications(transaction: Transaction, before:
       (customerPhone !== null && customerPhone === vendorPhone) ||
       (customer2Phone !== null && customer2Phone === vendorPhone);
     drafts.push({ orderId: next.id, recipientKind: "vendor", vendorId: vendor.id, recipientName: vendor.name, phone: vendor.phone, kind: before ? "vendor_update" : "vendor_order",
-      payload: { mode: "template", template: process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final", params: vendorTemplateParams(next, group.timing, group.items, names, vendor.deliveryLocation === "godown" ? "Godown" : next.venue, before !== null) },
+      payload: { mode: "template", template: process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || VENDOR_ORDER_TEMPLATE, params: vendorTemplateParams(next, group.timing, group.items, names, vendor.deliveryLocation === "godown" ? "Godown" : next.venue, before !== null) },
       status: matchesCustomer ? "failed" : "queued", lastError: matchesCustomer ? "Vendor and customer have the same phone number. Correct the vendor contact before retrying." : null });
   }
   for (const group of plan.removed) {

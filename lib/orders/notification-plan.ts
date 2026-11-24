@@ -5,6 +5,7 @@ import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
 import { isHiTeaCategory, normalizeHiTeaNotes } from "./hi-tea";
 
 export const CUSTOMER_MENU_TEMPLATE = "customer_menu_pdf";
+export const VENDOR_ORDER_TEMPLATE = "orderalertfinally";
 
 export type NotificationMaterial = {
   rawMaterialId: number;
@@ -181,31 +182,57 @@ export function formatHiTeaMaterialNote(notes: string[]): string {
   return `HI-TEA:- ${clean.join("; ")}`;
 }
 
-export function vendorTemplateParams(order: NotificationOrder, timing: string, items: NotificationMaterial[], names: Map<number, string>, venue: string, updated: boolean) {
-  // WhatsApp Hub/Meta strip real newlines in template params and turn them into " | ".
-  // One message per vendor: all items combined. Per-item timing/description stay on the line.
-  const list = items.map((item, index) => {
+export function vendorTemplateParams(
+  order: NotificationOrder,
+  timing: string,
+  items: NotificationMaterial[],
+  names: Map<number, string>,
+  venue: string,
+  updated: boolean,
+): string[] {
+  // WhatsApp template: orderalertfinally
+  // Params:
+  // {{1}} = Date (with time if set, plus UPDATED ORDER if modified)
+  // {{2}} = Venue
+  // {{3}} = Dish 1
+  // {{4}} = Dish 2
+  // {{5}} = Dish 3
+  // {{6}} = Dish 4
+  // {{7}} = Dish 5
+  // {{8}} = Dish 6 (and remaining dishes combined if > 6)
+  const dateStr = vendorScheduleLabel(order.date, timing);
+  const dateParam = updated ? `${dateStr} (UPDATED ORDER)` : dateStr;
+
+  const dishLines = items.map((item, index) => {
     const name = names.get(item.rawMaterialId) || "Kitchen item";
     const description = item.description?.trim().replace(/\s+/g, " ");
     const itemTiming = item.timing?.trim();
     const timeLabel = itemTiming ? formatEventTime(itemTiming) : null;
+    const hiTea = item.notes?.trim();
+
     let line = `${index + 1}) ${name}: ${item.unitQty} ${item.unitName}`;
     if (timeLabel) line += ` @ ${timeLabel}`;
     if (description) line += ` (${description})`;
+    if (hiTea) {
+      const cleanHiTea = hiTea.replace(/^(?:hi[- ]?tea|high[- ]?tea)\s*[:-]*\s*/i, "");
+      line += ` [HI-TEA:- ${cleanHiTea || hiTea}]`;
+    }
     return line;
   });
-  const details = list.join(" · ");
 
-  // {{1}} uses meal/order timing; item-specific times are on each material line.
-  // {{4}} = update banner and/or Hi-tea notes (separate from description).
-  const hiTea = formatHiTeaMaterialNote(
-    items.map((item) => item.notes || "").filter(Boolean),
-  );
-  const notesParts = [
-    updated ? "UPDATED ORDER — replaces previous details" : "",
-    hiTea,
-  ].filter(Boolean);
-  const notes = notesParts.join(" · ") || "—";
+  // Exactly 6 slots for dishes: {{3}} through {{8}}
+  const dishSlots: string[] = ["—", "—", "—", "—", "—", "—"];
 
-  return [vendorScheduleLabel(order.date, timing), venue, details, notes];
+  if (dishLines.length <= 6) {
+    for (let i = 0; i < dishLines.length; i++) {
+      dishSlots[i] = dishLines[i];
+    }
+  } else {
+    for (let i = 0; i < 5; i++) {
+      dishSlots[i] = dishLines[i];
+    }
+    dishSlots[5] = dishLines.slice(5).join(" · ");
+  }
+
+  return [dateParam, venue, ...dishSlots];
 }

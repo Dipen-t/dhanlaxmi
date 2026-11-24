@@ -206,7 +206,7 @@ export async function sendWhatsAppMessage(
   noteParts.push("Dhanlaxmi Caterer");
   const notesVal = noteParts.join(" · ");
 
-  const template = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
+  const template = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "orderalertfinally";
 
   return sendWhatsAppTemplateMessage({
     phone: receiver,
@@ -282,7 +282,7 @@ export async function sendWhatsAppTemplateMessage(options: {
     return {
       index: index + 1,
       originalChars: rawStr.length,
-      value: cleaned.length > 0 ? cleaned : "Dhanlaxmi Caterer",
+      value: cleaned.length > 0 ? cleaned : "—",
     };
   });
 
@@ -385,20 +385,21 @@ export async function sendWhatsAppTemplateMessage(options: {
 }
 
 /**
- * Vendor order-alert via the approved "order_alert_final" Hub template.
+ * Vendor order-alert via the approved "orderalertfinally" Hub template.
  *
  * Template body:
  *   New Order Alert!
  *   Date: {{1}}
  *   Venue: {{2}}
- *   Please provide the following raw materials:
+ *   Please arrange the following raw materials required for the upcoming order:
  *   {{3}}
- *
  *   {{4}}
- *   Thankyou.
- *
- * {{1}} = date + time label   {{2}} = venue
- * {{3}} = plates + numbered materials   {{4}} = update banner and/or notes (or "—")
+ *   {{5}}
+ *   {{6}}
+ *   {{7}}
+ *   {{8}}
+ *   Kindly check the quantities and arrange the materials accordingly. Please confirm once the arrangement is completed.
+ *   Thank you.
  */
 export async function sendNewOrderVendorAlert(options: {
   phone: string;
@@ -414,8 +415,8 @@ export async function sendNewOrderVendorAlert(options: {
   logBanner(callId, "WhatsApp NEW ORDER vendor alert", "new-order-alert");
 
   const template =
-    process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "order_alert_final";
-  // Use the Hub template ("order_alert_final") when Hub credentials are
+    process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "orderalertfinally";
+  // Use the Hub template ("orderalertfinally") when Hub credentials are
   // present; fall back to the ChatNexa free-text path otherwise.
   const useHub = isWhatsAppHubConfigured();
 
@@ -428,21 +429,24 @@ export async function sendNewOrderVendorAlert(options: {
     notesLine: previewText(options.notesLine || "(empty)"),
     materialsPreview: previewText(options.materialsLine, 500),
     template,
-    path: useHub ? "hub-template (SMS Tech Hub — order_alert_final)" : "chatnexa fallback (free text)",
+    path: useHub ? "hub-template (SMS Tech Hub — orderalertfinally)" : "chatnexa fallback (free text)",
     hubConfigured: useHub,
   });
 
   let result: WhatsAppResult;
   if (useHub) {
-    // 4-param template: {{1}} date, {{2}} venue, {{3}} materials, {{4}} notes
     result = await sendWhatsAppTemplateMessage({
       phone: options.phone,
       template,
       params: [
         options.dateLabel,
         options.venue,
-        options.materialsLine,
-        options.notesLine && options.notesLine.trim() ? options.notesLine : " ",
+        options.materialsLine || "—",
+        options.notesLine && options.notesLine.trim() ? options.notesLine : "—",
+        "—",
+        "—",
+        "—",
+        "—",
       ],
     });
   } else {
