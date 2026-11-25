@@ -282,7 +282,7 @@ export async function sendWhatsAppTemplateMessage(options: {
     return {
       index: index + 1,
       originalChars: rawStr.length,
-      value: cleaned,
+      value: cleaned.length > 0 ? cleaned : "\u200B",
     };
   });
 
