@@ -58,7 +58,7 @@ export async function queueVendorNotifications(transaction: Transaction, before:
       (customerPhone !== null && customerPhone === vendorPhone) ||
       (customer2Phone !== null && customer2Phone === vendorPhone);
     drafts.push({ orderId: next.id, recipientKind: "vendor", vendorId: vendor.id, recipientName: vendor.name, phone: vendor.phone, kind: before ? "vendor_update" : "vendor_order",
-      payload: { mode: "template", template: process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || VENDOR_ORDER_TEMPLATE, params: vendorTemplateParams(next, group.timing, group.items, names, vendor.deliveryLocation === "godown" ? "Godown" : next.venue, before !== null) },
+      payload: { mode: "template", template: VENDOR_ORDER_TEMPLATE, params: vendorTemplateParams(next, group.timing, group.items, names, vendor.deliveryLocation === "godown" ? "Godown" : next.venue, before !== null) },
       status: matchesCustomer ? "failed" : "queued", lastError: matchesCustomer ? "Vendor and customer have the same phone number. Correct the vendor contact before retrying." : null });
   }
   for (const group of plan.removed) {
@@ -79,7 +79,7 @@ export async function queueVendorNotifications(transaction: Transaction, before:
         kind: "vendor_removed",
         payload: {
           mode: "template",
-          template: process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || VENDOR_ORDER_TEMPLATE,
+          template: VENDOR_ORDER_TEMPLATE,
           params: vendorCancellationTemplateParams(
             before,
             group.timing,

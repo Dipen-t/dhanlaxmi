@@ -206,7 +206,7 @@ export async function sendWhatsAppMessage(
   noteParts.push("Dhanlaxmi Caterer");
   const notesVal = noteParts.join(" · ");
 
-  const template = process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "orderalertfinally";
+  const template = "orderalertfinally";
 
   return sendWhatsAppTemplateMessage({
     phone: receiver,
@@ -414,8 +414,7 @@ export async function sendNewOrderVendorAlert(options: {
   const started = Date.now();
   logBanner(callId, "WhatsApp NEW ORDER vendor alert", "new-order-alert");
 
-  const template =
-    process.env.WHATSAPP_ORDER_TEMPLATE?.trim() || "orderalertfinally";
+  const template = "orderalertfinally";
   // Use the Hub template ("orderalertfinally") when Hub credentials are
   // present; fall back to the ChatNexa free-text path otherwise.
   const useHub = isWhatsAppHubConfigured();
