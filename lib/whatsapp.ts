@@ -206,7 +206,7 @@ export async function sendWhatsAppMessage(
   noteParts.push("Dhanlaxmi Caterer");
   const notesVal = noteParts.join(" · ");
 
-  const template = "orderalertfinally";
+  const template = "orderalertfinal";
 
   return sendWhatsAppTemplateMessage({
     phone: receiver,
@@ -385,7 +385,7 @@ export async function sendWhatsAppTemplateMessage(options: {
 }
 
 /**
- * Vendor order-alert via the approved "orderalertfinally" Hub template.
+ * Vendor order-alert via the approved "orderalertfinal" Hub template.
  *
  * Template body:
  *   New Order Alert!
@@ -414,8 +414,8 @@ export async function sendNewOrderVendorAlert(options: {
   const started = Date.now();
   logBanner(callId, "WhatsApp NEW ORDER vendor alert", "new-order-alert");
 
-  const template = "orderalertfinally";
-  // Use the Hub template ("orderalertfinally") when Hub credentials are
+  const template = "orderalertfinal";
+  // Use the Hub template ("orderalertfinal") when Hub credentials are
   // present; fall back to the ChatNexa free-text path otherwise.
   const useHub = isWhatsAppHubConfigured();
 
@@ -428,7 +428,7 @@ export async function sendNewOrderVendorAlert(options: {
     notesLine: previewText(options.notesLine || "(empty)"),
     materialsPreview: previewText(options.materialsLine, 500),
     template,
-    path: useHub ? "hub-template (SMS Tech Hub — orderalertfinally)" : "chatnexa fallback (free text)",
+    path: useHub ? "hub-template (SMS Tech Hub — orderalertfinal)" : "chatnexa fallback (free text)",
     hubConfigured: useHub,
   });
 
@@ -496,7 +496,7 @@ export async function sendWhatsAppPlainText(phone: string, message: string): Pro
 }
 
 /**
- * Customer notifications use the approved customerorder template only.
+ * Customer notifications use the approved customerorder1 template only.
  *
  * Parameters: {{1}} event date, {{2}} venue, {{3}} meal.
  * Attachments are not supported by the current Hub template endpoint.
@@ -514,11 +514,11 @@ export async function sendBookingConfirmation(options: {
 }): Promise<{ success: true; warning?: string } | { error: string }> {
   const callId = nextWhatsAppCallId();
   const started = Date.now();
-  logBanner(callId, "WhatsApp BOOKING CONFIRMATION (customerorder)", "booking-confirmation");
+  logBanner(callId, "WhatsApp BOOKING CONFIRMATION (customerorder1)", "booking-confirmation");
 
   // Use this exact approved template and parameter contract even on hosts
   // that still have the legacy order_pdf environment setting.
-  const template = "customerorder";
+  const template = "customerorder1";
   const eventDate = options.eventDate.trim().replace(/\s+at\s+.*$/i, "");
   const useHub = isWhatsAppHubConfigured();
 

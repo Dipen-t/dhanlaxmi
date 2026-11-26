@@ -5,7 +5,7 @@ message history. Records start with this release; earlier sends are not imported
 
 ## Sending rules
 
-- Creating an order queues `customerorder` for the saved customer number only.
+- Creating an order queues `customerorder1` for the saved customer number only.
   Sunny receives `customer_menu` when dishes are selected.
 - Editing selected dishes or the displayed menu details sends `customer_menu`
   to the customer and Sunny when the order has selected dishes. Identical saves

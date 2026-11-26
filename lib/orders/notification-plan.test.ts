@@ -156,14 +156,14 @@ test("edited menus send customer_menu_pdf with exactly five variables to custome
 
 test("confirmation remains customer-only and unchanged or empty edited menus do not queue menu templates", () => {
   const created = planCustomerNotifications(null, before);
-  assert.equal(created[0].payload.template, "customerorder");
+  assert.equal(created[0].payload.template, "customerorder1");
   assert.equal(created[1].payload.template, "customer_menu_pdf");
   assert.equal(created[1].recipientKind, "manager");
   assert.deepEqual(planCustomerNotifications(before, before), []);
   assert.deepEqual(planCustomerNotifications(before, { ...before, menuDishes: [] }), []);
   const empty = planCustomerNotifications(null, { ...before, menuDishes: [] });
   assert.equal(empty.length, 1);
-  assert.equal(empty[0].payload.template, "customerorder");
+  assert.equal(empty[0].payload.template, "customerorder1");
 });
 
 test("menu text keeps regular dishes without category heading, only Hi-tea category has a heading", () => {
@@ -200,18 +200,18 @@ test("notifies both Customer 1 and Customer 2 when both numbers are present with
     customer2Phone: "9123456789",
   };
 
-  // Creation: both customers receive customerorder template
+  // Creation: both customers receive customerorder1 template
   const created = planCustomerNotifications(null, orderWithTwo);
   assert.equal(created.length, 3); // Customer 1, Customer 2, Manager Sunny (has menu)
   assert.equal(created[0].recipientKind, "customer");
   assert.equal(created[0].phone, "9876543210");
   assert.equal(created[0].recipientName, "Rahul");
-  assert.equal(created[0].payload.template, "customerorder");
+  assert.equal(created[0].payload.template, "customerorder1");
 
   assert.equal(created[1].recipientKind, "customer");
   assert.equal(created[1].phone, "9123456789");
   assert.equal(created[1].recipientName, "Priya");
-  assert.equal(created[1].payload.template, "customerorder");
+  assert.equal(created[1].payload.template, "customerorder1");
 
   assert.equal(created[2].recipientKind, "manager");
 

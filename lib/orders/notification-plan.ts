@@ -5,7 +5,7 @@ import { normalizeWhatsAppHubPhone } from "../whatsapp-phone";
 import { isHiTeaCategory, normalizeHiTeaNotes } from "./hi-tea";
 
 export const CUSTOMER_MENU_TEMPLATE = "customer_menu_pdf";
-export const VENDOR_ORDER_TEMPLATE = "orderalertfinally";
+export const VENDOR_ORDER_TEMPLATE = "orderalertfinal";
 
 export type NotificationMaterial = {
   rawMaterialId: number;
@@ -141,7 +141,7 @@ export function planCustomerNotifications(before: NotificationOrder | null, next
       kind: before ? "menu_update" : "confirmation",
       payload: before
         ? { mode: "template", template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next, next.customerName) }
-        : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] },
+        : { mode: "template", template: "customerorder1", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] },
     });
   }
 
@@ -155,7 +155,7 @@ export function planCustomerNotifications(before: NotificationOrder | null, next
       kind: before ? "menu_update" : "confirmation",
       payload: before
         ? { mode: "template", template: CUSTOMER_MENU_TEMPLATE, params: selectedMenuTemplateParams(next, next.customer2Name || next.customerName) }
-        : { mode: "template", template: "customerorder", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] },
+        : { mode: "template", template: "customerorder1", params: [next.date.split("-").reverse().join("/"), next.venue, next.mealType] },
     });
   }
 
@@ -190,7 +190,7 @@ export function vendorTemplateParams(
   venue: string,
   updated: boolean,
 ): string[] {
-  // WhatsApp template: orderalertfinally
+  // WhatsApp template: orderalertfinal
   // Params:
   // {{1}} = Date (with time if set, plus UPDATED ORDER if modified)
   // {{2}} = Venue

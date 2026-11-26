@@ -23,7 +23,7 @@ test("customer and PDF sends use exact templates and return provider errors with
     const failed = await sendBookingConfirmation(options);
     assert.ok("error" in failed && failed.error.includes("Template rejected"));
     assert.equal(requests.length, 1);
-    assert.equal(requests[0].searchParams.get("text"), "customerorder");
+    assert.equal(requests[0].searchParams.get("text"), "customerorder1");
     assert.equal(requests[0].pathname, "/api/sendmsgutil.php");
     assert.equal(requests[0].searchParams.get("Params"), ["30/11/2026", options.eventVenue, options.meal].join(","));
 
@@ -37,7 +37,7 @@ test("customer and PDF sends use exact templates and return provider errors with
     };
     assert.deepEqual(await sendBookingConfirmation(options), { success: true });
     assert.equal(requests.length, 2);
-    assert.equal(requests[1].searchParams.get("text"), "customerorder");
+    assert.equal(requests[1].searchParams.get("text"), "customerorder1");
     assert.equal(requests[1].pathname, "/api/sendmsgutil.php");
     assert.equal(managerRequests.length, 0, "Booking confirmation must never be copied to the manager");
     const documentUrl = "https://example.com/api/menus/1/pdf?theme=standard&inline=true";
